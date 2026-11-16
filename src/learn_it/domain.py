@@ -83,3 +83,18 @@ class Decision(BaseModel):
         description="References backing this record, `path:lines` or `commit <sha>`, each "
         "followed by what it shows."
     )
+
+
+class Recommendation(BaseModel):
+    """A review item that can be sorted, exported and explicitly published as an issue."""
+
+    title: str = Field(min_length=1)
+    decision: str = Field(min_length=1, description="Decision being reviewed.")
+    verdict: Literal["keep", "improve", "replace"]
+    reasons: list[str] = Field(min_length=1)
+    proposal: str = ""
+    tradeoffs: list[str] = Field(default_factory=list)
+    effort: Literal["S", "M", "L"]
+    impact: Literal["low", "medium", "high"]
+    first_steps: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(min_length=1)

@@ -66,6 +66,19 @@ def verify(text: str, root: Path) -> EvidenceReport:
     return report
 
 
+def summary(report: EvidenceReport) -> str:
+    good = len(report.citations) - len(report.problems)
+    if not report.citations:
+        return "Aucune citation vérifiable trouvée ; les affirmations restent à vérifier."
+    return f"{good} citation(s) vérifiée(s), {len(report.problems)} introuvable(s)."
+
+
+def markdown_report(report: EvidenceReport) -> str:
+    lines = ["---", "", f"> Vérification des sources : {summary(report)}"]
+    lines += [f"> - {citation.ref} : {problem}" for citation, problem in report.problems.items()]
+    return "\n".join(lines)
+
+
 def _problem(citation: Citation, root: Path) -> str | None:
     if citation.sha:
         try:

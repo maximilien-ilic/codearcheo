@@ -13,13 +13,14 @@ from typing import Any
 from anthropic import beta_tool
 from anthropic.lib.tools import ToolError
 from pydantic import ValidationError
+from rich.markup import escape
 
-from learn_it import render
+from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
 from learn_it.agent.runner import Tool, ToolCallback, run_agent
 from learn_it.agent.tools import ProjectTools
 from learn_it.config import Settings
-from learn_it.domain import Decision, ProjectProfile
+from learn_it.domain import Decision, ProjectProfile, Recommendation
 from learn_it.sources import Project
 from learn_it.store import Store
 
@@ -34,10 +35,19 @@ class Session:
     settings: Settings
     on_tool: ToolCallback | None = None
 
-    def run(self, task: str, extra_tools: Sequence[Tool] = ()) -> str:
+    def checked(self, answer: str) -> str:
+        """Warn without hiding the answer; retain the same warning in saved reports."""
+        report = evidence.verify(answer, self.project.root)
+        render.err.print(escape(evidence.summary(report)))
+        for citation, problem in report.problems.items():
+            render.err.print(escape(f"  {citation.ref} : {problem}"))
+        return f"{answer.rstrip()}\n\n{evidence.markdown_report(report)}\n"
+
+    def run(self, task: str, extra_tools: Sequence[Tool] = (), *, check: bool = True) -> str:
         tools = ProjectTools(self.project.root).exploration()
         system = prompts.SYSTEM.format(profile=self.profile.model_dump_json(indent=1))
-        return run_agent(system, task, [*tools, *extra_tools], self.settings, self.on_tool)
+        answer = run_agent(system, task, [*tools, *extra_tools], self.settings, self.on_tool)
+        return self.checked(answer) if check else answer
 
 
 def ask(session: Session, question: str) -> str:
@@ -67,9 +77,13 @@ def decisions(session: Session) -> str:
         return f"Recorded decision {len(recorded)}: {recorded[-1].title}"
 
     tool = beta_tool(record_decision, input_schema=Decision)
-    synthesis = session.run(prompts.DECISIONS.format(language=session.settings.language), [tool])
-    session.store.save_decisions(recorded)
-    report = render.decisions_markdown(recorded, synthesis)
+    synthesis = session.run(
+        prompts.DECISIONS.format(language=session.settings.language), [tool], check=False
+    )
+    session.store.save_decisions(
+        recorded, head=session.profile.head if not session.profile.uncommitted else None
+    )
+    report = session.checked(render.decisions_markdown(recorded, synthesis))
     session.store.save_report("decisions", report)
     return report
 
@@ -83,8 +97,26 @@ def review(session: Session) -> str:
         if known
         else ""
     )
-    report = session.run(
-        prompts.REVIEW.format(known_decisions=known_block, language=session.settings.language)
+    recorded: list[Recommendation] = []
+
+    def record_recommendation(**fields: Any) -> str:
+        """Record one evidence-based recommendation about a technical decision."""
+        try:
+            recorded.append(Recommendation.model_validate(fields))
+        except ValidationError as exc:
+            raise ToolError(f"Invalid recommendation, fix it and call again:\n{exc}") from exc
+        return f"Recorded recommendation {len(recorded)}: {recorded[-1].title}"
+
+    tool = beta_tool(record_recommendation, input_schema=Recommendation)
+    task = prompts.REVIEW.format(known_decisions=known_block, language=session.settings.language)
+    task += (
+        "\nRecord each recommendation with record_recommendation, including keep verdicts. "
+        "Use keep/improve/replace, low/medium/high impact, S/M/L effort. Give reasons, proposal, "
+        "tradeoffs, first_steps and evidence. Then return a concise synthesis."
     )
+    synthesis = session.run(task, [tool], check=False)
+    recorded = recommendations.ordered(recorded)
+    session.store.save_recommendations(recorded)
+    report = session.checked(recommendations.markdown(recorded, synthesis))
     session.store.save_report("review", report)
     return report
