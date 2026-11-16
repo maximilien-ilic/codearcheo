@@ -130,18 +130,9 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 
 ## Roadmap
 
-- [x] CLI, projets locaux et dépôts GitHub
-- [x] `scan` : langages, stack, dates d'adoption, activité, zones chaudes, docs, travail en cours
-- [x] Agent Claude avec outils en lecture seule, et serveur MCP
-- [x] `ask`, `overview`, `decisions`, `why`, `review` (v0, prompts à éprouver)
-- [ ] Pull requests et issues GitHub liées aux commits : la meilleure source de *pourquoi*
-- [ ] Analyse syntaxique (tree-sitter) : symboles et graphe de dépendances entre modules
-- [ ] Export des décisions en ADR, un fichier par décision, dans le `docs/adr/` du projet
-- [ ] Mode conversation (`chat`) qui garde le contexte d'une question à l'autre
-- [ ] Suivi dans le temps : signaler les nouvelles décisions à chaque scan, en CI
-- [x] CI GitHub et jeu d'évaluation : cas de référence, vérification des citations et des commits
-- [ ] Vérifier les citations de chaque réponse dès son affichage (`evidence.py`)
-- [ ] Étoffer les cas de référence : d'autres langages, de plus gros dépôts
+Déjà fait : la CLI et ses sept commandes, le scan déterministe, l'agent Claude et son serveur MCP, la CI et l'évaluation des réponses.
+
+La suite tient en cinq jalons, de v0.2 (des réponses fiables) à v0.6 (expérience et diffusion), avec un ticket GitHub par étape. Le détail, et ce qui a été fait récemment, sont dans [docs/roadmap.md](docs/roadmap.md).
 
 ## Développement
 
