@@ -56,7 +56,7 @@ Les commits supprimés par force-push avant le prochain contrôle ne sont pas
 observables par ce mécanisme. « Run now » contourne le précontrôle Orca, mais le
 `claim` du prompt évite de refaire une revue déjà terminée.
 
-Le contrôle ne prouve pas l'absence de faille et ne fusionne aucune PR. La CI et les
-évaluations des réponses IA restent suivies dans #5. Pour une exécution indépendante
-de la machine et déclenchée à chaque événement push, il faudra une intégration
-côté serveur avec ses propres identifiants.
+Le contrôle ne prouve pas l'absence de faille et ne fusionne aucune PR. La CI
+(`.github/workflows/ci.yml`) et l'évaluation des réponses IA (`evals/`) sont décrites
+dans le README. Pour une exécution indépendante de la machine et déclenchée à chaque
+événement push, il faudra une intégration côté serveur avec ses propres identifiants.

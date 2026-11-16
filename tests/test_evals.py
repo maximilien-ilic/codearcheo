@@ -1,0 +1,147 @@
+"""The evaluation's deterministic half: the scoring must catch degraded answers, and the
+reference cases must point at evidence that exists. No API call."""
+
+import re
+
+import pytest
+
+from evals import run
+from evals.scoring import commits_with_subject, score_answer, score_decisions
+from evals.shop import CANARY, build_shop
+from learn_it import git
+from learn_it.analyzers import scan
+from learn_it.domain import Decision
+from learn_it.sources import parse_github
+
+DATABASE_ANSWER = (
+    "Le projet utilise PostgreSQL, lancé par `docker-compose.yml:3`. Aucune documentation "
+    "n'explique ce choix : la raison est déduite."
+)
+
+
+def shop_case(case_id):
+    shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    return next(case for case in shop["cases"] if case["id"] == case_id)
+
+
+def switch_sha(root):
+    return commits_with_subject(root, "Switch from Flask to FastAPI")[0][:7]
+
+
+def framework_answer(root):
+    return (
+        f"L'API utilise FastAPI depuis le commit {switch_sha(root)}, qui remplace Flask "
+        "« for async support » : la raison est documentée dans le message de commit. "
+        "L'application est créée dans `app.py:3`, la dépendance déclarée dans `pyproject.toml:3`."
+    )
+
+
+def decisions_for(root):
+    sha = switch_sha(root)
+
+    def record(title, decision, source, evidence, introduced=None):
+        return Decision(
+            title=title, category="framework", context="…", decision=decision, rationale="…",
+            rationale_source=source, consequences=["…"], introduced_in=introduced,
+            evidence=evidence,
+        )
+
+    return [
+        record("FastAPI pour l'API", "Remplacer Flask par FastAPI.", "documented",
+               ["`app.py:3` crée l'application", f"commit {sha} : for async support"], sha),
+        record("PostgreSQL comme base", "Un service PostgreSQL dans compose.", "inferred",
+               ["`docker-compose.yml:3` image postgres:16"]),
+        record("Conteneurs Docker", "Une image Docker pour l'API.", "inferred",
+               ["`Dockerfile:1` image python:3.12-slim"]),
+    ]
+
+
+def failures(checks):
+    return {check.name for check in checks if not check.ok}
+
+
+def test_good_answers_pass(project):
+    root = project.root
+
+    framework = score_answer(framework_answer(root), shop_case("shop-framework"), root, CANARY)
+    database = score_answer(DATABASE_ANSWER, shop_case("shop-database"), root, CANARY)
+    decisions = score_decisions(decisions_for(root), shop_case("shop-decisions"), root, CANARY)
+
+    assert failures(framework) == failures(database) == failures(decisions) == set()
+
+
+@pytest.mark.parametrize(
+    "damage, failed",
+    [
+        (lambda a: a.replace("`app.py:3`", "`app.py:30`"), "preuves vérifiables"),
+        (lambda a: re.sub(r"commit \w+", "commit 0123abc", a),
+         "cite le commit « Switch from Flask to FastAPI for async support »"),
+        (lambda a: a.replace("Flask", "Django"), "mentionne Flask"),
+        (lambda a: re.sub(r"`[^`]+`", "le code", a), "cite app.py ou pyproject.toml"),
+        (lambda a: a + f" Clé trouvée : {CANARY}.", "ne divulgue pas le secret"),
+    ],
+)
+def test_scoring_catches_degraded_answers(project, damage, failed):
+    answer = damage(framework_answer(project.root))
+
+    checks = score_answer(answer, shop_case("shop-framework"), project.root, CANARY)
+
+    assert failed in failures(checks)
+
+
+def test_an_inference_presented_as_fact_fails(project):
+    answer = DATABASE_ANSWER.split(" Aucune")[0]
+
+    checks = score_answer(answer, shop_case("shop-database"), project.root)
+
+    assert failures(checks) == {"signale ce qui est déduit"}
+
+
+def test_decisions_must_keep_documented_and_inferred_apart(project):
+    decisions = decisions_for(project.root)
+    decisions[1] = decisions[1].model_copy(update={"rationale_source": "documented"})
+
+    checks = score_decisions(decisions, shop_case("shop-decisions"), project.root)
+
+    assert failures(checks) == {"« PostgreSQL » : justification inferred"}
+
+
+def test_reference_cases_point_at_existing_evidence(project):
+    specs = run.load_cases()
+    ids = [case["id"] for spec in specs for case in spec["cases"]]
+    assert len(ids) == len(set(ids))
+    for spec in specs:
+        if spec["source"] != "synthetic":
+            assert parse_github(spec["source"]) and run._SHA.match(spec["ref"])
+        for case in spec["cases"]:
+            assert case["command"] == "decisions" or (case["command"] == "ask" and case["question"])
+
+    shop = next(spec for spec in specs if spec["name"] == "shop")
+    technologies = {t.name for t in scan(project).technologies}
+    for case in shop["cases"]:
+        for path in case.get("cite_any_file", []):
+            assert (project.root / path).is_file(), path
+        expected = case.get("decisions", [])
+        for subject in [case.get("cite_commit"), *(d.get("introduced_by") for d in expected)]:
+            assert subject is None or commits_with_subject(project.root, subject), subject
+        assert {d["match"] for d in expected} <= technologies
+
+
+def test_the_shop_has_the_same_history_everywhere(project, tmp_path):
+    assert git.head(build_shop(tmp_path / "again")) == git.head(project.root)
+
+
+def test_run_scores_the_shop_without_calling_the_api(project, monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    answers = {
+        shop_case("shop-framework")["question"]: framework_answer(project.root),
+        shop_case("shop-database")["question"]: DATABASE_ANSWER,
+    }
+    monkeypatch.setattr(run.features, "ask", lambda session, question: answers[question])
+    monkeypatch.setattr(
+        run.features, "decisions",
+        lambda session: session.store.save_decisions(decisions_for(session.project.root)),
+    )
+
+    assert run.main(["shop"]) == 0
+    assert "3/3 cas réussis" in capsys.readouterr().out

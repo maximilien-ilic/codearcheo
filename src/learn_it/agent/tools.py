@@ -17,7 +17,6 @@ from anthropic.lib.tools import ToolError
 
 from learn_it import git
 from learn_it.analyzers import inventory
-from learn_it.domain import ProjectProfile
 
 MAX_CHARS = 20_000  # per result: enough to be useful, small enough to keep the context lean
 MAX_FILES = 500
@@ -36,9 +35,8 @@ def _clip(text: str) -> str:
 
 
 class ProjectTools:
-    def __init__(self, root: Path, profile: ProjectProfile) -> None:
+    def __init__(self, root: Path) -> None:
         self.root = root.resolve()
-        self.profile = profile
         self.is_git = git.is_repo(self.root)
 
     def exploration(self) -> list[Callable[..., str]]:
@@ -71,12 +69,6 @@ class ProjectTools:
             raise ToolError(f"{path} is ignored by git, so learn-it does not read it.")
         return rel
 
-    def project_profile(self) -> str:
-        """The project's deterministic profile computed by `learn-it scan`: languages, stack with
-        the commit that adopted each technology, activity, hotspots, docs and uncommitted work.
-        Start here."""
-        return self.profile.model_dump_json(indent=1)
-
     def list_files(self, pattern: str = "*") -> str:
         """List the project's files, gitignored ones excluded, whose path matches a glob.
 
@@ -103,16 +95,20 @@ class ProjectTools:
         if self.is_git:
             pathspec = [pattern] if pattern else []
             out = self._git(
-                "grep", "-n", "-I", "-E", "--untracked", "-e", regex, "--", *pathspec, ok=(0, 1)
+                "grep", "-z", "-n", "-I", "-E", "--untracked", "-e", regex, "--", *pathspec,
+                ok=(0, 1),
             )
-            lines = out.splitlines()
+            # -z preserves the raw filename, even with quotes, colons or newlines.
+            # Each match is filename NUL line-number NUL content LF.
+            lines = []
+            while out:
+                path, number, rest = out.split("\0", 2)
+                content, _, out = rest.partition("\n")
+                if inventory.is_safe_path(self.root, path):
+                    lines.append(f"{path}:{number}:{content}")
         else:
             lines = self._grep_without_git(regex, pattern)
-        lines = [
-            line[:MAX_LINE]
-            for line in lines
-            if inventory.is_safe_path(self.root, line.split(":", 1)[0])
-        ]
+        lines = [line[:MAX_LINE] for line in lines]
         if not lines:
             return "No matches."
         more = len(lines) - MAX_MATCHES

@@ -1,0 +1,58 @@
+# Reference projects for `python -m evals.run`. The expectations check evidence and facts,
+# never the wording of an answer:
+#   mention          words the answer must contain (case-insensitive)
+#   cite_any_file    files of which at least one must be cited
+#   cite_commit      subject (prefix) of a commit the answer must cite by sha
+#   marks_inference  nothing documents the reason: the answer must say it is inferred
+#   decisions        records `decisions` must produce, with their justification source
+# Every cited `path:line` and commit must also exist, and `canary` must never leak.
+
+[[projects]]
+name = "shop"
+source = "synthetic"  # built by evals/shop.py
+canary = "sk_live_secret"
+
+[[projects.cases]]
+id = "shop-framework"
+command = "ask"
+question = "Pourquoi l'API utilise-t-elle FastAPI, et depuis quand ?"
+mention = ["FastAPI", "Flask", "async"]
+cite_any_file = ["app.py", "pyproject.toml"]
+cite_commit = "Switch from Flask to FastAPI for async support"
+
+[[projects.cases]]
+id = "shop-database"
+command = "ask"
+question = "Quelle base de données le projet utilise-t-il, et sait-on pourquoi ?"
+mention = ["PostgreSQL"]
+cite_any_file = ["docker-compose.yml"]
+marks_inference = true  # no commit, doc or comment explains this choice
+
+[[projects.cases]]
+id = "shop-decisions"
+command = "decisions"
+decisions = [
+  { match = "FastAPI", rationale_source = "documented", introduced_by = "Switch from Flask to FastAPI" },
+  { match = "PostgreSQL", rationale_source = "inferred" },
+  { match = "Docker" },
+]
+
+[[projects]]
+name = "itsdangerous"
+source = "https://github.com/pallets/itsdangerous"
+ref = "672971d66a2ef9f85151e53283113f33d642dabd"  # 2025-06-14
+
+[[projects.cases]]
+id = "itsdangerous-expiration"
+command = "ask"
+question = "Comment itsdangerous gère-t-il l'expiration d'une signature ?"
+mention = ["max_age"]
+cite_any_file = ["src/itsdangerous/timed.py"]
+
+[[projects.cases]]
+id = "itsdangerous-pyproject"
+command = "ask"
+question = "Quand et pourquoi le projet est-il passé à pyproject.toml ?"
+mention = ["pyproject.toml"]
+cite_any_file = ["CHANGES.rst", "pyproject.toml"]
+cite_commit = "switch to pyproject.toml"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from learn_it import analyzers
 from learn_it.agent.tools import ProjectTools
 from learn_it.features import Session
 
@@ -24,7 +25,15 @@ def build_server(session: Session) -> MCPServer:
             "`learn-it serve` a besoin de l'extra mcp : uv tool install --editable '.[mcp]'"
         ) from None
 
-    tools = ProjectTools(session.project.root, session.profile)
+    tools = ProjectTools(session.project.root)
+
+    def project_profile() -> str:
+        """The project's deterministic profile, recomputed at each call so that it follows work
+        in progress: languages, stack with the commit that adopted each technology, activity,
+        hotspots, docs and uncommitted work. Start here."""
+        profile = analyzers.scan(session.project)
+        session.store.save_profile(profile)
+        return profile.model_dump_json(indent=1)
 
     def project_decisions() -> str:
         """Technical decisions reconstructed by `learn-it decisions`, as ADR-shaped JSON."""
@@ -41,6 +50,6 @@ def build_server(session: Session) -> MCPServer:
             "git_blame to find why the code is the way it is."
         ),
     )
-    for fn in (tools.project_profile, project_decisions, *tools.exploration()):
+    for fn in (project_profile, project_decisions, *tools.exploration()):
         server.add_tool(fn)
     return server
