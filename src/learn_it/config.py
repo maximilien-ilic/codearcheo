@@ -21,6 +21,8 @@ class Settings:
     cache_dir: Path = field(default_factory=_default_cache_dir)  # where GitHub repos are cloned
     budget: int | None = None  # advisory API task budget in tokens, not dollars
     compact_threshold: int = 100_000  # context tokens; 0 disables automatic compaction
+    max_requests: int | None = None  # local HTTP attempt limit, shared across the session
+    max_output_tokens: int = 16_000  # enforced max_tokens for each generation request
 
     def __post_init__(self) -> None:
         if not self.model.strip():
@@ -33,10 +35,22 @@ class Settings:
             raise ValueError("Effort attendu : low, medium, high, xhigh, max, ou vide.")
         if self.compact_threshold < 0:
             raise ValueError("LEARN_IT_COMPACT_THRESHOLD ne peut pas être négatif.")
+        if self.max_requests is not None and (
+            type(self.max_requests) is not int or self.max_requests < 1
+        ):
+            raise ValueError("La limite de requêtes doit être un entier positif.")
+        if type(self.max_output_tokens) is not int or self.max_output_tokens < 1:
+            raise ValueError("La limite de tokens de sortie doit être un entier positif.")
 
     @classmethod
     def from_env(
-        cls, *, model: str | None = None, effort: str | None = None, budget: int | None = None
+        cls,
+        *,
+        model: str | None = None,
+        effort: str | None = None,
+        budget: int | None = None,
+        max_requests: int | None = None,
+        max_output_tokens: int | None = None,
     ) -> Settings:
         env = os.environ.get
         return cls(
@@ -49,4 +63,10 @@ class Settings:
             if budget is not None
             else (int(env("LEARN_IT_BUDGET")) if env("LEARN_IT_BUDGET") else None),
             compact_threshold=int(env("LEARN_IT_COMPACT_THRESHOLD", cls.compact_threshold)),
+            max_requests=max_requests
+            if max_requests is not None
+            else (int(env("LEARN_IT_MAX_REQUESTS")) if env("LEARN_IT_MAX_REQUESTS") else None),
+            max_output_tokens=max_output_tokens
+            if max_output_tokens is not None
+            else int(env("LEARN_IT_MAX_OUTPUT_TOKENS", cls.max_output_tokens)),
         )
