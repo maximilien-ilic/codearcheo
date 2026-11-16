@@ -47,3 +47,10 @@ def test_invented_citations_are_caught(project, citation, problem):
 
 def test_an_answer_without_citations_is_not_evidenced(project):
     assert not verify("FastAPI remplace Flask, sans source.", project.root).ok
+
+
+def test_plain_citations_are_checked_without_treating_time_as_a_file(project):
+    report = verify("À 12:30, lire app.py:1 et lost.py:12.", project.root)
+    assert len(report.citations) == 2
+    assert len(report.problems) == 1
+    assert next(iter(report.problems)).path == "lost.py"

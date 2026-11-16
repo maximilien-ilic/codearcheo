@@ -15,6 +15,11 @@ from learn_it import git
 from learn_it.analyzers import inventory
 
 _FILE = re.compile(r"`(?P<path>[^`\s:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
+_BARE_FILE = re.compile(
+    r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
+    r"|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
+    r":(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?"
+)
 _COMMIT = re.compile(r"\bcommits?\s+`?(?P<sha>[0-9a-f]{7,40})\b`?", re.IGNORECASE)
 _CODE_SPAN = re.compile(r"`([^`\s]+)`")
 
@@ -47,7 +52,7 @@ def find_citations(text: str) -> list[Citation]:
             start=int(m["start"]),
             end=int(m["end"] or m["start"]),
         )
-        for m in _FILE.finditer(text)
+        for pattern in (_FILE, _BARE_FILE) for m in pattern.finditer(text)
     ]
     citations += [Citation(ref=m[0], sha=m["sha"].lower()) for m in _COMMIT.finditer(text)]
     return list(dict.fromkeys(citations))  # unique, in order of appearance
@@ -89,7 +94,13 @@ def _problem(citation: Citation, root: Path) -> str | None:
     path = citation.path or ""
     if not inventory.is_safe_path(root, path) or not (root / path).is_file():
         return "fichier introuvable"
-    lines = len((root / path).read_text(encoding="utf-8", errors="replace").splitlines())
+    try:
+        full = root / path
+        if full.stat().st_size > 5_000_000:
+            return "fichier trop volumineux pour vérifier les lignes"
+        lines = len(full.read_text(encoding="utf-8", errors="replace").splitlines())
+    except OSError:
+        return "fichier illisible"
     if not 1 <= citation.start <= citation.end <= lines:
         return f"lignes hors du fichier ({lines} lignes)"
     return None

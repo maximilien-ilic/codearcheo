@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Commit(BaseModel):
@@ -98,3 +98,11 @@ class Recommendation(BaseModel):
     impact: Literal["low", "medium", "high"]
     first_steps: list[str] = Field(default_factory=list)
     evidence: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def actionable(self) -> Recommendation:
+        if self.verdict != "keep" and (not self.proposal.strip() or not self.first_steps):
+            raise ValueError("An improvement needs a proposal and at least one first step.")
+        if any(not item.strip() for item in [*self.reasons, *self.evidence, *self.first_steps]):
+            raise ValueError("Reasons, evidence and first steps must not be blank.")
+        return self

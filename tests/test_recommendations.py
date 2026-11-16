@@ -43,6 +43,13 @@ def test_publication_never_happens_without_confirmation(project, monkeypatch):
         recommendations.publish(project, [recommendation()])
 
 
+def test_an_improvement_must_have_an_actionable_first_step():
+    with pytest.raises(ValueError, match="proposal"):
+        recommendation(first_steps=[])
+    with pytest.raises(ValueError, match="blank"):
+        recommendation(evidence=[""])
+
+
 def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch):
     from dataclasses import replace
 

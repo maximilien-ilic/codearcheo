@@ -72,11 +72,13 @@ def publish(project: Project, items: list[Recommendation], *, confirmed: bool = 
         "issue", "list", "--repo", repo, "--state", "all", "--limit", "1000",
         "--json", "body,url",
     ))
+    if len(existing) >= 1000:
+        raise ValueError("Trop de tickets pour garantir la déduplication : publication annulée.")
     urls = []
     with tempfile.TemporaryDirectory(prefix="learn-it-issues-") as temporary:
         for item in candidates:
             marker = _marker(item)
-            previous = next((x for x in existing if marker in x.get("body", "")), None)
+            previous = next((x for x in existing if marker in (x.get("body") or "")), None)
             if previous:
                 urls.append(previous["url"])
                 continue
