@@ -9,6 +9,7 @@ and saved as JSON in `<LEARN_IT_CACHE_DIR>/evals/`.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import shutil
@@ -23,7 +24,7 @@ from typing import Any
 
 from evals.fixtures import build_fixture
 from evals.scoring import Check, score_answer, score_decisions
-from learn_it import features, git
+from learn_it import evidence, features, git
 from learn_it.agent.runner import AgentError
 from learn_it.agent.usage import UsageSummary
 from learn_it.analyzers import scan
@@ -117,7 +118,38 @@ def run_case(session: Session, case: dict[str, Any], canary: str | None) -> list
         return [Check("réponse obtenue", False, str(exc))]
 
 
-def main(names: list[str]) -> int:
+def compare_citation_repair(
+    metadata: dict[str, Any], case: dict[str, Any], root: Path, canary: str | None
+) -> dict[str, Any] | None:
+    """Grade the same initial answer and its selected repair, without a second task run."""
+    original, final = metadata.get("original_answer"), metadata.get("final_answer")
+    if not isinstance(original, str) or not isinstance(final, str):
+        return None
+    baseline = score_answer(original, case, root, canary)
+    selected = score_answer(final, case, root, canary)
+    before, after = evidence.verify(original, root), evidence.verify(final, root)
+    return {
+        "attempted": bool(metadata.get("attempted")),
+        "accepted": bool(metadata.get("accepted")),
+        "reason": metadata.get("reason"),
+        "original_answer": original,
+        "final_answer": final,
+        "before": {
+            "passed": all(check.ok for check in baseline),
+            "citations": len(before.citations), "invalid": len(before.problems),
+            "checks": [asdict(check) for check in baseline],
+        },
+        "after": {
+            "passed": all(check.ok for check in selected),
+            "citations": len(after.citations), "invalid": len(after.problems),
+            "checks": [asdict(check) for check in selected],
+        },
+    }
+
+
+def main(
+    names: list[str], *, repair_citations: bool = False, compare_citations: bool = False
+) -> int:
     settings = Settings.from_env()
     workdir = settings.cache_dir / "evals"
     results = []
@@ -140,6 +172,7 @@ def main(names: list[str]) -> int:
             "scan_seconds": scanned - prepared,
         })
         session = Session(project, profile, Store(project.root), settings)
+        session.repair_citations = repair_citations or compare_citations
         for case in spec["cases"]:
             usage = []
 
@@ -157,10 +190,18 @@ def main(names: list[str]) -> int:
             with context:
                 checks = run_case(session, case, spec.get("canary"))
             passed = all(check.ok for check in checks)
+            comparison = None
+            if compare_citations and case["command"] in {"ask", "why"}:
+                metadata = getattr(session, "last_repair", None)
+                if metadata:
+                    comparison = compare_citation_repair(
+                        metadata, case, project.root, spec.get("canary")
+                    )
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,
                  "elapsed_seconds": time.perf_counter() - started,
                  "usage": usage,
+                 **({"citation_repair": comparison} if compare_citations else {}),
                  "estimated_cost_usd": (
                      sum(item["estimated_cost_usd"] for item in usage)
                      if usage and all(item["estimated_cost_usd"] is not None for item in usage)
@@ -178,6 +219,8 @@ def main(names: list[str]) -> int:
     workdir.mkdir(parents=True, exist_ok=True)
     output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}.json"
     report = {"model": settings.model, "effort": settings.effort,
+              "repair_citations": repair_citations or compare_citations,
+              "compare_citations": compare_citations,
               "projects": measurements, "results": results}
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Résultats : {output}")
@@ -185,4 +228,14 @@ def main(names: list[str]) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("names", nargs="*", help="Reference project names; empty selects all.")
+    parser.add_argument("--repair-citations", action="store_true",
+                        help="Opt into at most one correction request for each text answer.")
+    parser.add_argument(
+        "--compare-citations", action="store_true",
+        help="Save original/repaired scores from the same task (uses the real API).",
+    )
+    options = parser.parse_args()
+    sys.exit(main(options.names, repair_citations=options.repair_citations,
+                  compare_citations=options.compare_citations))

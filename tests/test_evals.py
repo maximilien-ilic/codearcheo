@@ -266,3 +266,23 @@ def test_recorded_github_rationale_case_runs_offline(monkeypatch, tmp_path, caps
     monkeypatch.setattr(run.features, "ask", answer)
     assert run.main(["github-rationale"]) == 0
     assert "1/1 cas réussis" in capsys.readouterr().out
+
+
+def test_citation_repair_comparison_grades_the_same_answer_before_and_after(project):
+    original = framework_answer(project.root) + " Voir `lost.py:42`."
+    final = framework_answer(project.root)
+    result = run.compare_citation_repair(
+        {"original_answer": original, "final_answer": final,
+         "attempted": True, "accepted": True, "reason": "improved"},
+        shop_case("shop-framework"), project.root, CANARY,
+    )
+    assert result["before"]["invalid"] == 1
+    assert not result["before"]["passed"]
+    assert result["after"]["invalid"] == 0
+    assert result["after"]["passed"]
+    assert result["original_answer"] == original
+
+
+def test_missing_repair_metadata_is_not_counted_as_a_measured_improvement(project):
+    result = run.compare_citation_repair({}, shop_case("shop-framework"), project.root, CANARY)
+    assert result is None
