@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import re
 import tomllib
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
+
+import yaml
 
 from learn_it.domain import Technology
 
@@ -79,6 +82,28 @@ NOTABLE: dict[str, tuple[str, str]] = {
     "langchain": ("LangChain", "ai"),
     "torch": ("PyTorch", "ai"),
     "transformers": ("Hugging Face Transformers", "ai"),
+    # JVM, Ruby, PHP and .NET
+    "org.springframework.boot:spring-boot-starter": ("Spring Boot", "framework"),
+    "org.springframework.boot:spring-boot-starter-web": ("Spring Boot", "framework"),
+    "org.springframework:spring-webmvc": ("Spring MVC", "framework"),
+    "org.springframework:spring-context": ("Spring", "framework"),
+    "io.ktor:ktor-server-core": ("Ktor", "framework"),
+    "org.jetbrains.kotlin:kotlin-stdlib": ("Kotlin", "language"),
+    "org.hibernate.orm:hibernate-core": ("Hibernate", "data"),
+    "org.junit.jupiter:junit-jupiter": ("JUnit", "testing"),
+    "rails": ("Rails", "framework"),
+    "sinatra": ("Sinatra", "framework"),
+    "rspec": ("RSpec", "testing"),
+    "sidekiq": ("Sidekiq", "infra"),
+    "laravel/framework": ("Laravel", "framework"),
+    "symfony/framework-bundle": ("Symfony", "framework"),
+    "doctrine/orm": ("Doctrine ORM", "data"),
+    "phpunit/phpunit": ("PHPUnit", "testing"),
+    "microsoft.aspnetcore.app": ("ASP.NET Core", "framework"),
+    "microsoft.net.sdk.web": ("ASP.NET Core", "framework"),
+    "microsoft.entityframeworkcore": ("Entity Framework Core", "data"),
+    "npgsql": ("PostgreSQL", "data"),
+    "xunit": ("xUnit", "testing"),
 }
 
 # Container images (compose files) that reveal a backing service.
@@ -115,6 +140,12 @@ FILE_SIGNALS: dict[str, tuple[str, str]] = {
     "nx.json": ("Nx", "tooling"),
     "pnpm-workspace.yaml": ("pnpm workspaces", "tooling"),
     ".pre-commit-config.yaml": ("pre-commit", "tooling"),
+    "pom.xml": ("Maven", "tooling"),
+    "build.gradle": ("Gradle", "tooling"),
+    "build.gradle.kts": ("Gradle", "tooling"),
+    "Gemfile": ("Ruby", "language"),
+    "composer.json": ("PHP", "language"),
+    "*.csproj": (".NET", "framework"),
 }
 
 CATEGORIES = [
@@ -127,15 +158,86 @@ _REQUIREMENTS_FILE = re.compile(r"^requirements.*\.txt$")
 _GO_REQUIRE = re.compile(r"^\s*(?:require\s+)?([a-z0-9.-]+\.[a-z]{2,}/\S+)\s+v\S+", re.MULTILINE)
 _COMPOSE_FILE = re.compile(r"^(docker-)?compose(\.[\w-]+)?\.ya?ml$")
 _IMAGE = re.compile(r"^\s*image:\s*[\"']?([\w./-]+)", re.MULTILINE)
+MAX_MANIFEST_BYTES = 2_000_000
+_GRADLE_COORDINATE = re.compile(
+    r"[\"']([\w.-]+:[\w.-]+)(?::[^\"']*)?[\"']"
+)
+_GRADLE_MAP = re.compile(
+    r"group\s*[:=]\s*[\"']([\w.-]+)[\"']\s*,\s*name\s*[:=]\s*[\"']([\w.-]+)[\"']"
+)
+_GEM = re.compile(r"^\s*gem\s*(?:\(\s*)?[\"']([\w.-]+)[\"']", re.MULTILINE)
+_PROVIDER = re.compile(r'\bsource\s*=\s*"([\w./-]+)"')
+_LEGACY_PROVIDER = re.compile(r'\bprovider\s+"([\w-]+)"\s*\{')
+
+
+def _read(path: Path) -> str:
+    with path.open("rb") as file:
+        data = file.read(MAX_MANIFEST_BYTES + 1)
+    if len(data) > MAX_MANIFEST_BYTES:
+        raise ValueError("manifest exceeds size limit")
+    return data.decode("utf-8")
+
+
+def _xml(path: Path) -> ET.Element:
+    text = _read(path)
+    if "<!DOCTYPE" in text.upper() or "<!ENTITY" in text.upper():
+        raise ValueError("XML entities are not permitted")
+    return ET.fromstring(text)
+
+
+def _local_tag(element: ET.Element) -> str:
+    return element.tag.rsplit("}", 1)[-1]
+
+
+def _maven_deps(path: Path) -> list[str]:
+    names = []
+    for element in _xml(path).iter():
+        if _local_tag(element) not in {"dependency", "parent"}:
+            continue
+        fields = {_local_tag(child): (child.text or "").strip() for child in element}
+        if fields.get("groupId") and fields.get("artifactId"):
+            names.append(f"{fields['groupId']}:{fields['artifactId']}")
+    return names
+
+
+def _gradle_deps(path: Path) -> list[str]:
+    # Only literal declarations. Never execute Groovy/Kotlin to resolve expressions/catalogs.
+    text = re.sub(r"/\*.*?\*/|//[^\n]*", "", _read(path), flags=re.DOTALL)
+    return [*_GRADLE_COORDINATE.findall(text), *(f"{a}:{b}" for a, b in _GRADLE_MAP.findall(text))]
+
+
+def _ruby_deps(path: Path) -> list[str]:
+    return _GEM.findall(_read(path))
+
+
+def _php_deps(path: Path) -> list[str]:
+    data = json.loads(_read(path))
+    if not isinstance(data, dict):
+        raise ValueError("composer.json must contain an object")
+    return [
+        name for key in ("require", "require-dev")
+        for name in (data.get(key) or {}) if name != "php" and not name.startswith("ext-")
+    ]
+
+
+def _dotnet_deps(path: Path) -> list[str]:
+    root = _xml(path)
+    names = [root.attrib["Sdk"]] if "Sdk" in root.attrib else []
+    for element in root.iter():
+        if _local_tag(element) in {"PackageReference", "FrameworkReference"}:
+            name = element.attrib.get("Include") or element.attrib.get("Update")
+            if name:
+                names.append(name)
+    return names
 
 
 def _python_deps(path: Path) -> list[str]:
     if path.name != "pyproject.toml":  # requirements*.txt
-        lines = path.read_text().splitlines()
+        lines = _read(path).splitlines()
         specs = [line for line in lines if not line.lstrip().startswith(("#", "-"))]
         names = []
     else:
-        data = tomllib.loads(path.read_text())
+        data = tomllib.loads(_read(path))
         project = data.get("project", {})
         specs = list(project.get("dependencies", []))
         for group in project.get("optional-dependencies", {}).values():
@@ -151,17 +253,17 @@ def _python_deps(path: Path) -> list[str]:
 
 
 def _node_deps(path: Path) -> list[str]:
-    data = json.loads(path.read_text())
+    data = json.loads(_read(path))
     keys = ("dependencies", "devDependencies", "peerDependencies")
     return [name for key in keys for name in data.get(key, {})]
 
 
 def _go_deps(path: Path) -> list[str]:
-    return _GO_REQUIRE.findall(path.read_text())
+    return _GO_REQUIRE.findall(_read(path))
 
 
 def _cargo_deps(path: Path) -> list[str]:
-    data = tomllib.loads(path.read_text())
+    data = tomllib.loads(_read(path))
     workspace = data.get("workspace", {}).get("dependencies", {})
     return [*data.get("dependencies", {}), *data.get("dev-dependencies", {}), *workspace]
 
@@ -171,13 +273,60 @@ MANIFESTS: dict[str, Callable[[Path], list[str]]] = {
     "package.json": _node_deps,
     "go.mod": _go_deps,
     "Cargo.toml": _cargo_deps,
+    "pom.xml": _maven_deps,
+    "build.gradle": _gradle_deps,
+    "build.gradle.kts": _gradle_deps,
+    "Gemfile": _ruby_deps,
+    "composer.json": _php_deps,
 }
 
 
 def _lookup(dependency: str) -> tuple[str, str]:
     name = dependency.lower()
+    if name.startswith("org.springframework.boot:spring-boot-"):
+        return "Spring Boot", "framework"
+    if name.startswith("io.ktor:ktor-"):
+        return "Ktor", "framework"
     pep503 = re.sub(r"[-_.]+", "-", name)
     return NOTABLE.get(name) or NOTABLE.get(pep503) or (dependency, "library")
+
+
+def _infra(path: Path) -> list[tuple[str, str, str | None]]:
+    if path.suffix == ".tf":
+        text = re.sub(r"#[^\n]*|//[^\n]*|/\*.*?\*/", "", _read(path), flags=re.DOTALL)
+        providers = []
+        for match in re.finditer(r"\brequired_providers\s*\{", text):
+            depth, end = 1, match.end()
+            while end < len(text) and depth:
+                depth += (text[end] == "{") - (text[end] == "}")
+                end += 1
+            if depth == 0:
+                providers.extend(_PROVIDER.findall(text[match.end():end - 1]))
+        providers += [p for p in _LEGACY_PROVIDER.findall(text) if not any(
+            source.rsplit("/", 1)[-1] == p for source in providers
+        )]
+        return [(f"Terraform provider: {provider}", "infra", provider) for provider in providers]
+    if path.suffix not in {".yaml", ".yml"}:
+        return []
+    signals = []
+    for document in yaml.safe_load_all(_read(path)):
+        if not isinstance(document, dict):
+            continue
+        if (
+            isinstance(document.get("apiVersion"), str)
+            and isinstance(document.get("kind"), str)
+            and isinstance(document.get("metadata"), dict)
+        ):
+            signals.append(("Kubernetes", "infra", "apiVersion"))
+        if path.name == "Chart.yaml":
+            for dependency in document.get("dependencies", []) or []:
+                name = dependency.get("name") if isinstance(dependency, dict) else None
+                if isinstance(name, str):
+                    found = IMAGES.get(name)
+                    signals.append(
+                        (*found, name) if found else (f"Helm chart: {name}", "infra", name)
+                    )
+    return signals
 
 
 def detect(root: Path, files: list[str]) -> list[Technology]:
@@ -196,18 +345,33 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
         parser = MANIFESTS.get(p.name) or (
             _python_deps if _REQUIREMENTS_FILE.match(p.name) else None
         )
+        if p.suffix == ".csproj":
+            parser = _dotnet_deps
         if parser:
             try:
                 dependencies = parser(root / path)
-            except (OSError, ValueError):  # unreadable or malformed manifest
+            except (OSError, ValueError, TypeError, AttributeError, ET.ParseError):
                 dependencies = []
             for dep in dependencies:
                 name, category = _lookup(dep)
-                add(name, category, path, f'"{dep}"' if p.name == "package.json" else dep)
+                needle = f'"{dep}"' if p.name == "package.json" else dep
+                if p.name == "pom.xml":
+                    needle = dep.rsplit(":", 1)[-1]
+                add(name, category, path, needle)
+
+        try:
+            for name, category, needle in _infra(root / path):
+                add(name, category, path, needle)
+        except (OSError, ValueError, TypeError, AttributeError, yaml.YAMLError, RecursionError):
+            pass  # invalid/templated YAML and unreadable manifests are not executable
 
         if _COMPOSE_FILE.match(p.name):
             add("Docker Compose", "infra", path)
-            for image in _IMAGE.findall((root / path).read_text(errors="replace")):
+            try:
+                images = _IMAGE.findall(_read(root / path))
+            except (OSError, ValueError):
+                images = []
+            for image in images:
                 base = image.rsplit("/", 1)[-1].split(":")[0]
                 if base in IMAGES:
                     add(*IMAGES[base], path, base)

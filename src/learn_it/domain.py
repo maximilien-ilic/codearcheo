@@ -33,6 +33,24 @@ class Hotspot(BaseModel):
     commits: int
 
 
+class ExistingADR(BaseModel):
+    """An architecture decision already documented in the analysed project's own files."""
+
+    title: str
+    path: str
+    status: str | None = None
+    date: str | None = None
+    decision: str
+    context: str = ""
+    consequences: str = ""
+    start_line: int = 1
+    end_line: int = 1
+
+    @property
+    def evidence(self) -> str:
+        return f"`{self.path}:{self.start_line}-{self.end_line}`"
+
+
 class ProjectProfile(BaseModel):
     """Deterministic facts gathered by `learn-it scan`, before any LLM call."""
 
@@ -43,6 +61,7 @@ class ProjectProfile(BaseModel):
     languages: dict[str, int]
     technologies: list[Technology]
     docs: list[str]
+    existing_adrs: list[ExistingADR] = Field(default_factory=list)
     commits: int = 0
     contributors: int = 0
     first_commit: datetime | None = None

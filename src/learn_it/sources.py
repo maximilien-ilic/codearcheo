@@ -36,6 +36,17 @@ def parse_github(target: str) -> tuple[str, str] | None:
     return owner, repo
 
 
+def github_origin(root: Path) -> str | None:
+    """Canonical GitHub origin of a local checkout; credentials in remote URLs are not exposed."""
+    try:
+        remote = git.run(root, "remote", "get-url", "origin").strip()
+    except (git.GitError, FileNotFoundError):
+        return None
+    if names := parse_github(remote):
+        return f"https://github.com/{names[0]}/{names[1]}"
+    return None
+
+
 def resolve(target: str, cache_dir: Path, *, update: bool = False) -> Project:
     """Turn a CLI target into a project on disk.
 
@@ -60,4 +71,4 @@ def resolve(target: str, cache_dir: Path, *, update: bool = False) -> Project:
     root = Path(target).expanduser().resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"Dossier introuvable : {target}")
-    return Project(root=root, name=root.name)
+    return Project(root=root, name=root.name, origin=github_origin(root))

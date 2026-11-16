@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from learn_it import git
-from learn_it.analyzers import history, inventory, stack
+from learn_it.analyzers import adrs, history, inventory, stack
 from learn_it.domain import ProjectProfile
-from learn_it.sources import Project
+from learn_it.sources import Project, github_origin
 
 
 def scan(project: Project) -> ProjectProfile:
@@ -33,10 +33,11 @@ def scan(project: Project) -> ProjectProfile:
 
     return ProjectProfile(
         name=project.name,
-        origin=project.origin,
+        origin=project.origin or github_origin(root),
         files=len(files),
         languages=inventory.count_languages(files),
         technologies=technologies,
         docs=inventory.find_docs(files),
+        existing_adrs=adrs.detect(root, files),
         **facts,
     )
