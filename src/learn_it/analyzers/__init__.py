@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from learn_it import git
-from learn_it.analyzers import adrs, history, inventory, stack
+from learn_it.analyzers import adrs, code, history, inventory, stack
 from learn_it.domain import ProjectProfile
 from learn_it.sources import Project, github_origin
 
@@ -31,6 +31,7 @@ def scan(project: Project) -> ProjectProfile:
             "uncommitted": history.uncommitted(root),
         }
 
+    graph = code.analyze(root, files)
     return ProjectProfile(
         name=project.name,
         origin=project.origin or github_origin(root),
@@ -39,5 +40,6 @@ def scan(project: Project) -> ProjectProfile:
         technologies=technologies,
         docs=inventory.find_docs(files),
         existing_adrs=adrs.detect(root, files),
+        code_structure=graph.summary(facts.get("hotspots", ())) if graph is not None else None,
         **facts,
     )

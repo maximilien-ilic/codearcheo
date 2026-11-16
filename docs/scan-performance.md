@@ -44,3 +44,21 @@ La CI vérifie l'équivalence de la datation après suppression, réintroduction
 renommage, ainsi qu'avec plusieurs racines et une mailmap. Elle borne les appels
 Git quand on ajoute des dépendances au même manifeste. Un seuil de durée sur une
 machine CI variable ne remplace pas la mesure reproductible ci-dessus.
+
+## Avec le graphe syntaxique activé
+
+Après ajout de l'extra `code`, une seconde série de trois paires a été exécutée
+avec toutes les grammaires installées et `code_structure` calculé à chaque scan.
+Les profils optimisés et de référence restent strictement identiques :
+
+| Mesure | Optimisé + graphe | Référence + graphe |
+|---|---:|---:|
+| Durée médiane | **1,791 s** | 2,531 s |
+| Analyse syntaxique médiane | 0,227 s | 0,226 s |
+| Appels Git | 9 | 18 |
+
+Le JSON brut est `benchmarks/git-eacee88-code.json`. Commande de reproduction :
+
+```bash
+uv run --all-extras python scripts/benchmark_scan.py /tmp/learn-it-benchmark-git --compare --runs 3
+```

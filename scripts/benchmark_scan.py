@@ -14,7 +14,7 @@ from pathlib import Path
 from time import perf_counter
 
 from learn_it import git
-from learn_it.analyzers import history, inventory, scan, stack
+from learn_it.analyzers import code, history, inventory, scan, stack
 from learn_it.sources import Project
 
 
@@ -69,6 +69,7 @@ def measure(project: Project, *, reference: bool = False):
     wrap(history, "recent_commits")
     wrap(history, "activity", reference_activity if reference else None)
     wrap(history, "uncommitted")
+    wrap(code, "analyze")
     started = perf_counter()
     try:
         profile = scan(project)

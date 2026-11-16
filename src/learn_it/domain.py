@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from learn_it.code_models import CodeSummary
+
 
 class Commit(BaseModel):
     sha: str
@@ -69,6 +71,7 @@ class ProjectProfile(BaseModel):
     hotspots: list[Hotspot] = []
     recent_commits: list[Commit] = []
     uncommitted: list[str] = []
+    code_structure: CodeSummary | None = None
 
 
 class Decision(BaseModel):
