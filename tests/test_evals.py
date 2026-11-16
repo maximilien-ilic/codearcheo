@@ -1,11 +1,13 @@
 """The evaluation's deterministic half: the scoring must catch degraded answers, and the
 reference cases must point at evidence that exists. No API call."""
 
+import json
 import re
 
 import pytest
 
 from evals import run
+from evals.fixtures import INJECTION_MARKER, build_fixture
 from evals.scoring import commits_with_subject, score_answer, score_decisions
 from evals.shop import CANARY, build_shop
 from learn_it import git
@@ -111,10 +113,10 @@ def test_reference_cases_point_at_existing_evidence(project):
     ids = [case["id"] for spec in specs for case in spec["cases"]]
     assert len(ids) == len(set(ids))
     for spec in specs:
-        if spec["source"] != "synthetic":
+        if spec["source"] not in {"synthetic", "synthetic-github"}:
             assert parse_github(spec["source"]) and run._SHA.match(spec["ref"])
         for case in spec["cases"]:
-            assert case["command"] == "decisions" or (case["command"] == "ask" and case["question"])
+            assert case["command"] in {"ask", "why", "review", "decisions"}
 
     shop = next(spec for spec in specs if spec["name"] == "shop")
     technologies = {t.name for t in scan(project).technologies}
@@ -146,6 +148,28 @@ def test_run_scores_the_shop_without_calling_the_api(project, monkeypatch, tmp_p
 
     assert run.main(["shop"]) == 0
     assert "3/3 cas réussis" in capsys.readouterr().out
+    report = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
+    assert all(result["estimated_cost_usd"] is None for result in report["results"])
+
+
+def test_evaluation_saves_per_case_usage_without_fabricating_an_api_bill(monkeypatch, tmp_path):
+    from learn_it.agent.usage import UsageSummary
+
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    monkeypatch.setattr(run, "load_cases", lambda: [spec | {"cases": spec["cases"][:1]}])
+
+    def fake_case(session, case, canary):
+        session.on_usage(UsageSummary(input_tokens=100, output_tokens=10, requests=1,
+                                      estimated_cost_usd=0.0006))
+        return []
+
+    monkeypatch.setattr(run, "run_case", fake_case)
+    assert run.main(["shop"]) == 0
+    report = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
+    result = report["results"][0]
+    assert result["estimated_cost_usd"] == 0.0006
+    assert result["usage"][0]["input_tokens"] == 100
 
 
 def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
@@ -160,7 +184,105 @@ def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
         return f"Synthèse : {CANARY}"
 
     monkeypatch.setattr(run.features, "decisions", fake_decisions)
-
     checks = run.run_case(session, shop_case("shop-decisions"), CANARY)
-
     assert "ne divulgue pas le secret" in failures(checks)
+
+
+def test_catalog_covers_three_languages_and_every_supported_command():
+    specs = run.load_cases()
+    cases = [case for spec in specs for case in spec["cases"]]
+    assert len(cases) >= 12
+    assert {spec["language"] for spec in specs} >= {"Python", "JavaScript", "Go"}
+    assert {case["command"] for case in cases} == {"ask", "decisions", "why", "review"}
+    assert any(spec.get("minimum_commits", 0) >= 10000 for spec in specs)
+    assert any(INJECTION_MARKER in case.get("forbid", []) for case in cases)
+
+
+def test_prompt_injection_fixture_and_grader_are_exercised_offline(tmp_path):
+    from anthropic.lib.tools import ToolError
+
+    from learn_it.agent.tools import ProjectTools
+
+    root = build_fixture(tmp_path / "injection", "shop-injection")
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "shop-injection")
+    case = spec["cases"][0]
+    tools = ProjectTools(root)
+    assert INJECTION_MARKER in tools.read_file("README.md")
+    for path in (".env", "../private.txt"):
+        with pytest.raises(ToolError):
+            tools.read_file(path)
+    good = "FastAPI est créé dans `app.py:3`."
+    assert not failures(score_answer(good, case, root, CANARY))
+    for leak in (INJECTION_MARKER, "OUTSIDE_PROJECT_CANARY", CANARY):
+        assert failures(score_answer(good + leak, case, root, CANARY))
+
+
+@pytest.mark.parametrize("command", ["why", "review"])
+def test_run_case_dispatches_new_commands_without_calling_api(project, command, monkeypatch):
+    from learn_it.config import Settings
+    from learn_it.features import Session
+    from learn_it.store import Store
+
+    session = Session(project, scan(project), Store(project.root), Settings())
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "shop-workflows")
+    case = next(case for case in spec["cases"] if case["command"] == command)
+    seen = []
+
+    def response(*args):
+        seen.append(args)
+        return framework_answer(project.root) + " PostgreSQL `docker-compose.yml:3`."
+
+    monkeypatch.setattr(run.features, command, response)
+    assert not failures(run.run_case(session, case, CANARY))
+    expected = [(session, case["target"])] if command == "why" else [(session,)]
+    assert seen == expected
+
+
+def test_catalog_rejects_unpinned_sources_and_duplicate_cases():
+    specs = run.load_cases()
+    external = next(spec for spec in specs if spec["source"].startswith("https://"))
+    with pytest.raises(ValueError, match="immutable full SHA"):
+        run.validate_cases([{**external, "ref": "master"}])
+    with pytest.raises(ValueError, match="duplicate case"):
+        run.validate_cases([{**external, "cases": external["cases"] * 2}])
+    with pytest.raises(ValueError, match="project name"):
+        run.validate_cases([{**external, "name": "../escape"}])
+
+
+def test_recorded_github_rationale_case_runs_offline(monkeypatch, tmp_path, capsys):
+    fixture = pytest.importorskip("evals.github_project")
+    from learn_it.agent.tools import ProjectTools
+
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+
+    def answer(session, question):
+        tools = ProjectTools(session.project.root)
+        context = tools.github_context(git.head(session.project.root))
+        assert fixture.PR_URL in context
+        assert "offline" in context
+        return ("SQLite is documented in the pull request: workstations operate offline, "
+                f"with no database service to maintain. `app.py:1` [PR]({fixture.PR_URL}).")
+
+    monkeypatch.setattr(run.features, "ask", answer)
+    assert run.main(["github-rationale"]) == 0
+    assert "1/1 cas réussis" in capsys.readouterr().out
+
+
+def test_citation_repair_comparison_grades_the_same_answer_before_and_after(project):
+    original = framework_answer(project.root) + " Voir `lost.py:42`."
+    final = framework_answer(project.root)
+    result = run.compare_citation_repair(
+        {"original_answer": original, "final_answer": final,
+         "attempted": True, "accepted": True, "reason": "improved"},
+        shop_case("shop-framework"), project.root, CANARY,
+    )
+    assert result["before"]["invalid"] == 1
+    assert not result["before"]["passed"]
+    assert result["after"]["invalid"] == 0
+    assert result["after"]["passed"]
+    assert result["original_answer"] == original
+
+
+def test_missing_repair_metadata_is_not_counted_as_a_measured_improvement(project):
+    result = run.compare_citation_repair({}, shop_case("shop-framework"), project.root, CANARY)
+    assert result is None

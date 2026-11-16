@@ -15,6 +15,11 @@ from learn_it import git
 from learn_it.analyzers import inventory
 
 _FILE = re.compile(r"`(?P<path>[^`\s:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
+_BARE_FILE = re.compile(
+    r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
+    r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
+    r":(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?"
+)
 _COMMIT = re.compile(r"\bcommits?\s+`?(?P<sha>[0-9a-f]{7,40})\b`?", re.IGNORECASE)
 _CODE_SPAN = re.compile(r"`([^`\s]+)`")
 
@@ -47,7 +52,7 @@ def find_citations(text: str) -> list[Citation]:
             start=int(m["start"]),
             end=int(m["end"] or m["start"]),
         )
-        for m in _FILE.finditer(text)
+        for pattern in (_FILE, _BARE_FILE) for m in pattern.finditer(text)
     ]
     citations += [Citation(ref=m[0], sha=m["sha"].lower()) for m in _COMMIT.finditer(text)]
     return list(dict.fromkeys(citations))  # unique, in order of appearance
@@ -60,13 +65,27 @@ def mentioned_paths(text: str) -> set[str]:
 
 def verify(text: str, root: Path) -> EvidenceReport:
     report = EvidenceReport(find_citations(text))
+    allowed = set(inventory.list_files(root)) if any(c.path for c in report.citations) else set()
     for citation in report.citations:
-        if problem := _problem(citation, root):
+        if problem := _problem(citation, root, allowed):
             report.problems[citation] = problem
     return report
 
 
-def _problem(citation: Citation, root: Path) -> str | None:
+def summary(report: EvidenceReport) -> str:
+    good = len(report.citations) - len(report.problems)
+    if not report.citations:
+        return "Aucune citation vérifiable trouvée ; les affirmations restent à vérifier."
+    return f"{good} citation(s) vérifiée(s), {len(report.problems)} introuvable(s)."
+
+
+def markdown_report(report: EvidenceReport) -> str:
+    lines = ["---", "", f"> Vérification des sources : {summary(report)}"]
+    lines += [f"> - {citation.ref} : {problem}" for citation, problem in report.problems.items()]
+    return "\n".join(lines)
+
+
+def _problem(citation: Citation, root: Path, allowed: set[str]) -> str | None:
     if citation.sha:
         try:
             git.run(root, "cat-file", "-e", f"{citation.sha}^{{commit}}")
@@ -74,9 +93,15 @@ def _problem(citation: Citation, root: Path) -> str | None:
             return "commit introuvable"
         return None
     path = citation.path or ""
-    if not inventory.is_safe_path(root, path) or not (root / path).is_file():
+    if path not in allowed or not inventory.is_safe_path(root, path) or not (root / path).is_file():
         return "fichier introuvable"
-    lines = len((root / path).read_text(encoding="utf-8", errors="replace").splitlines())
+    try:
+        full = root / path
+        if full.stat().st_size > 5_000_000:
+            return "fichier trop volumineux pour vérifier les lignes"
+        lines = len(full.read_text(encoding="utf-8", errors="replace").splitlines())
+    except OSError:
+        return "fichier illisible"
     if not 1 <= citation.start <= citation.end <= lines:
         return f"lignes hors du fichier ({lines} lignes)"
     return None

@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from learn_it.code_models import CodeSummary
 
 
 class Commit(BaseModel):
@@ -33,6 +35,24 @@ class Hotspot(BaseModel):
     commits: int
 
 
+class ExistingADR(BaseModel):
+    """An architecture decision already documented in the analysed project's own files."""
+
+    title: str
+    path: str
+    status: str | None = None
+    date: str | None = None
+    decision: str
+    context: str = ""
+    consequences: str = ""
+    start_line: int = 1
+    end_line: int = 1
+
+    @property
+    def evidence(self) -> str:
+        return f"`{self.path}:{self.start_line}-{self.end_line}`"
+
+
 class ProjectProfile(BaseModel):
     """Deterministic facts gathered by `learn-it scan`, before any LLM call."""
 
@@ -43,6 +63,7 @@ class ProjectProfile(BaseModel):
     languages: dict[str, int]
     technologies: list[Technology]
     docs: list[str]
+    existing_adrs: list[ExistingADR] = Field(default_factory=list)
     commits: int = 0
     contributors: int = 0
     first_commit: datetime | None = None
@@ -50,6 +71,7 @@ class ProjectProfile(BaseModel):
     hotspots: list[Hotspot] = []
     recent_commits: list[Commit] = []
     uncommitted: list[str] = []
+    code_structure: CodeSummary | None = None
 
 
 class Decision(BaseModel):
@@ -83,3 +105,26 @@ class Decision(BaseModel):
         description="References backing this record, `path:lines` or `commit <sha>`, each "
         "followed by what it shows."
     )
+
+
+class Recommendation(BaseModel):
+    """A review item that can be sorted, exported and explicitly published as an issue."""
+
+    title: str = Field(min_length=1)
+    decision: str = Field(min_length=1, description="Decision being reviewed.")
+    verdict: Literal["keep", "improve", "replace"]
+    reasons: list[str] = Field(min_length=1)
+    proposal: str = ""
+    tradeoffs: list[str] = Field(default_factory=list)
+    effort: Literal["S", "M", "L"]
+    impact: Literal["low", "medium", "high"]
+    first_steps: list[str] = Field(default_factory=list)
+    evidence: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def actionable(self) -> Recommendation:
+        if self.verdict != "keep" and (not self.proposal.strip() or not self.first_steps):
+            raise ValueError("An improvement needs a proposal and at least one first step.")
+        if any(not item.strip() for item in [*self.reasons, *self.evidence, *self.first_steps]):
+            raise ValueError("Reasons, evidence and first steps must not be blank.")
+        return self

@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from learn_it import git
-from learn_it.analyzers import history, inventory, stack
+from learn_it.analyzers import adrs, code, history, inventory, stack
 from learn_it.domain import ProjectProfile
-from learn_it.sources import Project
+from learn_it.sources import Project, github_origin
 
 
 def scan(project: Project) -> ProjectProfile:
@@ -17,9 +17,7 @@ def scan(project: Project) -> ProjectProfile:
 
     facts: dict[str, Any] = {}
     if git.is_repo(root):
-        for tech in technologies:
-            if tech.category != "library":  # dating every utility would cost more than it says
-                tech.adopted = history.first_commit(root, tech.source, tech.needle)
+        history.date_technologies(root, technologies)
         commits = history.recent_commits(root)
         count, contributors, first = history.activity(root)
         facts = {
@@ -33,12 +31,15 @@ def scan(project: Project) -> ProjectProfile:
             "uncommitted": history.uncommitted(root),
         }
 
+    graph = code.analyze(root, files)
     return ProjectProfile(
         name=project.name,
-        origin=project.origin,
+        origin=project.origin or github_origin(root),
         files=len(files),
         languages=inventory.count_languages(files),
         technologies=technologies,
         docs=inventory.find_docs(files),
+        existing_adrs=adrs.detect(root, files),
+        code_structure=graph.summary(facts.get("hotspots", ())) if graph is not None else None,
         **facts,
     )

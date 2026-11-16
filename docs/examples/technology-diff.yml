@@ -1,0 +1,41 @@
+# Copy to .github/workflows/technology-diff.yml after merging the diff command.
+# The tool is installed from the trusted base, never from the PR being analysed.
+name: Technology changes
+on:
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: write
+concurrency:
+  group: technology-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: tool
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: project
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+        with:
+          python-version: "3.11"
+      - name: Compare without an AI call
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: uv run --project tool learn-it diff "$BASE_SHA" -p project > report.md
+      - name: Comment for same-repository PRs
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr comment "$PR_URL" --body-file report.md
+      # Fork PRs still produce a job log; their read-only token cannot post comments.

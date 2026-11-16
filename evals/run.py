@@ -9,20 +9,24 @@ and saved as JSON in `<LEARN_IT_CACHE_DIR>/evals/`.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import shutil
 import sys
+import time
 import tomllib
+from contextlib import nullcontext
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from evals.fixtures import build_fixture
 from evals.scoring import Check, score_answer, score_decisions
-from evals.shop import build_shop
-from learn_it import features, git
+from learn_it import evidence, features, git
 from learn_it.agent.runner import AgentError
+from learn_it.agent.usage import UsageSummary
 from learn_it.analyzers import scan
 from learn_it.config import Settings
 from learn_it.features import Session
@@ -34,15 +38,52 @@ _SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 def load_cases() -> list[dict[str, Any]]:
-    return tomllib.loads(CASES.read_text(encoding="utf-8"))["projects"]
+    specs = tomllib.loads(CASES.read_text(encoding="utf-8"))["projects"]
+    validate_cases(specs)
+    return specs
+
+
+def validate_cases(specs: list[dict[str, Any]]) -> None:
+    """Validate every reference offline; real repository checks happen after checkout."""
+    projects, cases = set(), set()
+    for spec in specs:
+        name = spec["name"]
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", name) or name in projects:
+            raise ValueError(f"Invalid or duplicate project name: {name}")
+        projects.add(name)
+        if not spec.get("language"):
+            raise ValueError(f"{name}: language is required")
+        if spec["source"] not in {"synthetic", "synthetic-github"}:
+            if not parse_github(spec["source"]) or not _SHA.fullmatch(spec.get("ref", "")):
+                raise ValueError(f"{name}: a GitHub source requires an immutable full SHA")
+        elif spec.get("fixture", "shop") not in {"shop", "shop-injection", "github-rationale"}:
+            raise ValueError(f"{name}: unknown fixture")
+        for case in spec["cases"]:
+            case_id, command = case["id"], case["command"]
+            if case_id in cases or command not in {"ask", "decisions", "why", "review"}:
+                raise ValueError(f"Invalid or duplicate case: {case_id}")
+            cases.add(case_id)
+            if command == "ask" and not case.get("question"):
+                raise ValueError(f"{case_id}: ask requires a question")
+            if command == "why" and not case.get("target"):
+                raise ValueError(f"{case_id}: why requires a target")
+            for path in case.get("cite_any_file", []):
+                if Path(path).is_absolute() or ".." in Path(path).parts:
+                    raise ValueError(f"{case_id}: evidence must stay inside the reference project")
 
 
 def prepare(spec: dict[str, Any], workdir: Path) -> Project:
     """The reference project on disk: rebuilt when synthetic, else cloned at its pinned commit."""
     root = workdir / spec["name"]
+    if spec["source"] == "synthetic-github":
+        from evals.github_project import build_github_project
+
+        shutil.rmtree(root, ignore_errors=True)
+        return Project(root=build_github_project(root), name=spec["name"])
     if spec["source"] == "synthetic":
         shutil.rmtree(root, ignore_errors=True)
-        return Project(root=build_shop(root), name=spec["name"])
+        fixture = spec.get("fixture", "shop")
+        return Project(root=build_fixture(root, fixture), name=spec["name"])
 
     if not parse_github(spec["source"]) or not _SHA.match(spec["ref"]):
         raise ValueError(f"{spec['name']} : source GitHub ou ref (sha complet) invalide")
@@ -62,28 +103,111 @@ def run_case(session: Session, case: dict[str, Any], canary: str | None) -> list
     try:
         if case["command"] == "decisions":
             answer = features.decisions(session)
-            return score_decisions(
-                session.store.load_decisions(), case, root, canary, answer=answer
-            )
-        return score_answer(features.ask(session, case["question"]), case, root, canary)
+            return score_decisions(session.store.load_decisions(), case, root, canary,
+                                   answer=answer)
+        if case["command"] == "ask":
+            answer = features.ask(session, case["question"])
+        elif case["command"] == "why":
+            answer = features.why(session, case["target"])
+        elif case["command"] == "review":
+            answer = features.review(session)
+        else:
+            raise ValueError(f"Unknown evaluation command: {case['command']}")
+        return score_answer(answer, case, root, canary)
     except AgentError as exc:
         return [Check("réponse obtenue", False, str(exc))]
 
 
-def main(names: list[str]) -> int:
+def compare_citation_repair(
+    metadata: dict[str, Any], case: dict[str, Any], root: Path, canary: str | None
+) -> dict[str, Any] | None:
+    """Grade the same initial answer and its selected repair, without a second task run."""
+    original, final = metadata.get("original_answer"), metadata.get("final_answer")
+    if not isinstance(original, str) or not isinstance(final, str):
+        return None
+    baseline = score_answer(original, case, root, canary)
+    selected = score_answer(final, case, root, canary)
+    before, after = evidence.verify(original, root), evidence.verify(final, root)
+    return {
+        "attempted": bool(metadata.get("attempted")),
+        "accepted": bool(metadata.get("accepted")),
+        "reason": metadata.get("reason"),
+        "original_answer": original,
+        "final_answer": final,
+        "before": {
+            "passed": all(check.ok for check in baseline),
+            "citations": len(before.citations), "invalid": len(before.problems),
+            "checks": [asdict(check) for check in baseline],
+        },
+        "after": {
+            "passed": all(check.ok for check in selected),
+            "citations": len(after.citations), "invalid": len(after.problems),
+            "checks": [asdict(check) for check in selected],
+        },
+    }
+
+
+def main(
+    names: list[str], *, repair_citations: bool = False, compare_citations: bool = False
+) -> int:
     settings = Settings.from_env()
     workdir = settings.cache_dir / "evals"
     results = []
+    measurements = []
     for spec in load_cases():
         if names and spec["name"] not in names:
             continue
+        started = time.perf_counter()
         project = prepare(spec, workdir)
-        session = Session(project, scan(project), Store(project.root), settings)
+        prepared = time.perf_counter()
+        profile = scan(project)
+        scanned = time.perf_counter()
+        minimum = spec.get("minimum_commits", 0)
+        if profile.commits < minimum:
+            raise ValueError(f"{spec['name']}: expected at least {minimum} commits, "
+                             f"got {profile.commits} (full history is required)")
+        measurements.append({
+            "project": spec["name"], "sha": profile.head, "commits": profile.commits,
+            "files": profile.files, "preparation_seconds": prepared - started,
+            "scan_seconds": scanned - prepared,
+        })
+        session = Session(project, profile, Store(project.root), settings)
+        session.repair_citations = repair_citations or compare_citations
         for case in spec["cases"]:
-            checks = run_case(session, case, spec.get("canary"))
+            usage = []
+
+            def record_usage(summary: UsageSummary, *, sink: list[dict] = usage) -> None:
+                sink.append(asdict(summary))
+                print(summary.format(), file=sys.stderr)
+
+            session.on_usage = record_usage
+            started = time.perf_counter()
+            context = nullcontext()
+            if spec["source"] == "synthetic-github":
+                from evals.github_project import replay_github
+
+                context = replay_github()
+            with context:
+                checks = run_case(session, case, spec.get("canary"))
             passed = all(check.ok for check in checks)
+            comparison = None
+            if compare_citations and case["command"] in {"ask", "why"}:
+                metadata = getattr(session, "last_repair", None)
+                if metadata:
+                    comparison = compare_citation_repair(
+                        metadata, case, project.root, spec.get("canary")
+                    )
             results.append(
-                {"case": case["id"], "passed": passed, "checks": [asdict(c) for c in checks]}
+                {"case": case["id"], "project": spec["name"], "passed": passed,
+                 "elapsed_seconds": time.perf_counter() - started,
+                 "usage": usage,
+                 **({"citation_repair": comparison} if compare_citations else {}),
+                 "estimated_cost_usd": (
+                     sum(item["estimated_cost_usd"] for item in usage)
+                     if usage and all(item["estimated_cost_usd"] is not None for item in usage)
+                     else None
+                 ),
+                 "checks": [asdict(c) for c in checks]}
             )
             print(f"{'✓' if passed else '✗'} {case['id']}")
             for check in checks:
@@ -94,11 +218,24 @@ def main(names: list[str]) -> int:
     print(f"\n{passed}/{len(results)} cas réussis · {settings.model}, effort {settings.effort}")
     workdir.mkdir(parents=True, exist_ok=True)
     output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}.json"
-    report = {"model": settings.model, "effort": settings.effort, "results": results}
+    report = {"model": settings.model, "effort": settings.effort,
+              "repair_citations": repair_citations or compare_citations,
+              "compare_citations": compare_citations,
+              "projects": measurements, "results": results}
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Résultats : {output}")
     return 0 if results and passed == len(results) else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("names", nargs="*", help="Reference project names; empty selects all.")
+    parser.add_argument("--repair-citations", action="store_true",
+                        help="Opt into at most one correction request for each text answer.")
+    parser.add_argument(
+        "--compare-citations", action="store_true",
+        help="Save original/repaired scores from the same task (uses the real API).",
+    )
+    options = parser.parse_args()
+    sys.exit(main(options.names, repair_citations=options.repair_citations,
+                  compare_citations=options.compare_citations))
