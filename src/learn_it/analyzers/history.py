@@ -85,16 +85,19 @@ def date_technologies(root: Path, technologies: list[Technology]) -> None:
         for tech in group:
             tech.adopted = None
         try:
-            # NUL cannot occur in textual patches: git represents NUL-containing files as
-            # binary. Unlike a printable/control-character sentinel it cannot be forged by
-            # a line in the manifest. No configured external diff/textconv is executed.
+            # Anchor NUL-delimited headers to output lines below rather than trusting an
+            # arbitrary control character in patch data. No external diff/textconv executes.
             out = git.run(
                 root, "log", "-p", "--no-ext-diff", "--no-textconv", "--no-renames",
                 "--format=%x00%H%x1f%an%x1f%aI%x1f%s", "--", path,
             )
         except git.GitError:
             continue
-        for record in out.split("\0")[1:]:
+        # A repository can force binary files to be shown as text via .gitattributes.
+        # In patches every content line has a diff prefix, so only an actual record
+        # boundary starts with NUL + commit id at the beginning of an output line.
+        records = re.split(r"(?:^|\n)\x00(?=[0-9a-f]{40}\x1f)", out)[1:]
+        for record in records:
             header, _, patch = record.partition("\n")
             sha, author, date, subject = header.split(_SEP, 3)
             commit = Commit(sha=sha, author=author, date=datetime.fromisoformat(date),
@@ -102,7 +105,7 @@ def date_technologies(root: Path, technologies: list[Technology]) -> None:
             added, removed = [], []
             created = False
             in_hunk = False
-            for line in patch.splitlines():
+            for line in patch.split("\n"):
                 if line.startswith("diff --git "):
                     in_hunk = False
                 elif line.startswith("new file mode "):

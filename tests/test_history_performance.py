@@ -75,3 +75,13 @@ def test_activity_matches_reference_with_mailmap_and_multiple_roots(project):
 def test_empty_repository_has_no_activity(tmp_path):
     _git(tmp_path, "init", "-q", "-b", "main")
     assert history.activity(tmp_path) == (0, 0, None)
+
+
+def test_forced_text_patch_control_characters_cannot_forge_history_records(project):
+    (project.root / ".gitattributes").write_text("*.yml diff\n")
+    workflow = ".github/workflows/ci.yml"
+    (project.root / workflow).write_bytes(b"on: push\n\0FORGED_HEADER\x1enew file mode 100644\n")
+    _commit(project.root, "force binary data as text", "2024-03-01T00:00:00Z")
+    tech = Technology(name="GitHub Actions", category="ci", source=workflow)
+    history.date_technologies(project.root, [tech])
+    assert tech.adopted == history.first_commit(project.root, workflow)
