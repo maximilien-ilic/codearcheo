@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from anthropic import beta_tool
@@ -28,6 +28,7 @@ from learn_it.agent.runner import (
 )
 from learn_it.agent.tools import ProjectTools
 from learn_it.analyzers import adrs, code
+from learn_it.citation_repair import RepairResult, repair_answer
 from learn_it.config import Settings
 from learn_it.domain import Decision, ProjectProfile, Recommendation
 from learn_it.sources import Project
@@ -45,19 +46,50 @@ class Session:
     on_tool: ToolCallback | None = None
     on_text: TextCallback | None = None
     on_usage: UsageCallback | None = None
+    repair_citations: bool = False
+    _last_repair: RepairResult | None = field(default=None, init=False, repr=False)
 
-    def checked(self, answer: str) -> str:
+    @property
+    def last_repair(self) -> dict[str, Any] | None:
+        """A fresh view of immutable initial/final evidence metadata for offline comparisons."""
+        return self._last_repair.as_dict() if self._last_repair is not None else None
+
+    def checked(self, answer: str, *, repair: bool = False) -> str:
         """Warn without hiding the answer; retain the same warning in saved reports."""
         report = evidence.verify(answer, self.project.root)
+        repair_note = ""
+        if repair and self.repair_citations:
+            options: dict[str, Any] = {}
+            if self.on_usage is not None:
+                options["on_usage"] = self.on_usage
+            # The shared session limiter is supplied by the CLI/session integration.
+            limits = getattr(self, "limits", None)
+            if limits is not None:
+                options["limits"] = limits
+            self._last_repair = repair_answer(
+                answer, self.project.root, self.settings, initial=report,
+                commits=[{"sha": c.sha, "subject": c.subject} for c in self.profile.recent_commits],
+                call_options=options,
+            )
+            answer = self._last_repair.selected_answer
+            report = self._last_repair.selected_report.report()
+            if self._last_repair.attempted:
+                repair_note = f"\n\n{self._last_repair.markdown()}"
         render.err.print(escape(evidence.summary(report)))
         for citation, problem in report.problems.items():
             render.err.print(escape(f"  {citation.ref} : {problem}"))
-        return f"{answer.rstrip()}\n\n{evidence.markdown_report(report)}\n"
+        return f"{answer.rstrip()}\n\n{evidence.markdown_report(report)}{repair_note}\n"
 
-    def run(self, task: str, extra_tools: Sequence[Tool] = (), *, check: bool = True) -> str:
+    def run(
+        self, task: str, extra_tools: Sequence[Tool] = (), *, check: bool = True,
+        buffer_text: bool = False,
+    ) -> str:
+        self._last_repair = None
         tools = ProjectTools(self.project.root).exploration()
         system = prompts.SYSTEM.format(profile=self.profile.model_dump_json(indent=1))
-        options = {"on_text": self.on_text} if self.on_text is not None else {}
+        repair = self.repair_citations and check and not extra_tools
+        buffered = buffer_text or repair
+        options = {"on_text": self.on_text} if self.on_text is not None and not buffered else {}
         if self.on_usage is not None:
             options["on_usage"] = self.on_usage
         answer = run_agent(
@@ -65,9 +97,9 @@ class Session:
         )
         if not check:
             return answer
-        checked = self.checked(answer)
+        checked = self.checked(answer, repair=repair)
         if self.on_text is not None:
-            self.on_text(checked[len(answer.rstrip()):])
+            self.on_text(checked if buffered else checked[len(answer.rstrip()):])
         return checked
 
 
@@ -85,7 +117,7 @@ def overview(session: Session) -> str:
             "and explain it; do not invent edges. Unresolved, external and dynamic imports "
             "are not edges.\n<actual_imports>\n" + diagram + "\n</actual_imports>"
         )
-    report = session.run(task, check=False)
+    report = session.run(task, check=False, buffer_text=session.repair_citations)
     if diagram:
         fence = f"```mermaid\n{diagram}\n```"
         pattern = re.compile(r"```mermaid[^\n]*\n.*?```", re.DOTALL | re.IGNORECASE)
@@ -93,8 +125,18 @@ def overview(session: Session) -> str:
             report = report[:match.start()] + fence + pattern.sub("", report[match.end():])
         else:
             report += f"\n\n## Imports statiques observés\n\n{fence}"
-    report = session.checked(report)
+    report = session.checked(report, repair=session.repair_citations)
+    initial = session._last_repair
+    if initial is not None and initial.accepted:
+        identity = initial.as_dict()["original_sha256"][:16]
+        original = (
+            f"{initial.original_answer.rstrip()}\n\n"
+            f"{evidence.markdown_report(initial.initial_report.report())}\n"
+        )
+        session.store.save_report(f"overview-initial-{identity}", original)
     session.store.save_report("overview", report)
+    if session.repair_citations and session.on_text is not None:
+        session.on_text(report)
     return report
 
 

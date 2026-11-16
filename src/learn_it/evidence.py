@@ -33,6 +33,15 @@ class Citation:
     sha: str | None = None
 
 
+@dataclass(frozen=True)
+class CitationMatch:
+    """One exact occurrence, so editing a citation cannot also change a longer path."""
+
+    start: int
+    end: int
+    citation: Citation
+
+
 @dataclass
 class EvidenceReport:
     citations: list[Citation] = field(default_factory=list)
@@ -44,18 +53,32 @@ class EvidenceReport:
         return bool(self.citations) and not self.problems
 
 
+def _line_number(value: str) -> int:
+    # A model can emit thousands of digits. Keep it invalid without Python's int-size error.
+    return int(value) if len(value) <= 10 else 10**11
+
+
 def find_citations(text: str) -> list[Citation]:
-    citations = [
-        Citation(
-            ref=m[0],
-            path=m["path"].removeprefix("./"),
-            start=int(m["start"]),
-            end=int(m["end"] or m["start"]),
+    return list(dict.fromkeys(match.citation for match in find_matches(text)))
+
+
+def find_matches(text: str) -> list[CitationMatch]:
+    """Return original spans without treating a bare path inside a backtick as a new match."""
+    matches = [
+        CitationMatch(
+            start=m.start(), end=m.end(),
+            citation=Citation(
+                ref=m[0], path=m["path"].removeprefix("./"),
+                start=_line_number(m["start"]), end=_line_number(m["end"] or m["start"]),
+            ),
         )
         for pattern in (_FILE, _BARE_FILE) for m in pattern.finditer(text)
     ]
-    citations += [Citation(ref=m[0], sha=m["sha"].lower()) for m in _COMMIT.finditer(text)]
-    return list(dict.fromkeys(citations))  # unique, in order of appearance
+    matches += [
+        CitationMatch(m.start(), m.end(), Citation(ref=m[0], sha=m["sha"].lower()))
+        for m in _COMMIT.finditer(text)
+    ]
+    return matches
 
 
 def mentioned_paths(text: str) -> set[str]:
