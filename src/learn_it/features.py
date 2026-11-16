@@ -19,6 +19,7 @@ from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
 from learn_it.agent.runner import Tool, ToolCallback, run_agent
 from learn_it.agent.tools import ProjectTools
+from learn_it.analyzers import adrs
 from learn_it.config import Settings
 from learn_it.domain import Decision, ProjectProfile, Recommendation
 from learn_it.sources import Project
@@ -71,10 +72,20 @@ def decisions(session: Session) -> str:
     def record_decision(**fields: Any) -> str:
         """Record one technical decision of the project as an architecture decision record."""
         try:
-            recorded.append(Decision.model_validate(fields))
+            record = adrs.anchor_decision(
+                Decision.model_validate(fields), session.profile.existing_adrs
+            )
         except ValidationError as exc:
             raise ToolError(f"Invalid record, fix it and call again:\n{exc}") from exc
-        return f"Recorded decision {len(recorded)}: {recorded[-1].title}"
+        previous = next(
+            (i for i, value in enumerate(recorded) if value.title.casefold() == record.title.casefold()),
+            None,
+        )
+        if previous is None:
+            recorded.append(record)
+        else:
+            recorded[previous] = record
+        return f"Recorded decision: {record.title}"
 
     tool = beta_tool(record_decision, input_schema=Decision)
     synthesis = session.run(
