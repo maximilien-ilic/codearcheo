@@ -25,12 +25,62 @@ def test_snapshots_are_immutable_and_dirty_work_is_not_labelled_as_committed(pro
     dirty = scan(project)
     store.save_profile(dirty)
     assert store.history_profile(dirty.head) is None
-    clean = dirty.model_copy(update={"uncommitted": []})
+    (project.root / "notes.md").unlink()
+    clean = scan(project)
     store.save_profile(clean)
     changed = clean.model_copy(update={"files": 10000})
     store.save_profile(changed)
     assert store.history_profile(clean.head).files == clean.files
     assert store.load_profile().files == 10000
+
+
+def test_corrupt_historical_json_is_unavailable_instead_of_breaking_diff(project):
+    store = Store(project.root)
+    sha = git.head(project.root)
+    store.save_report("setup", "")
+    folder = store.dir / "history" / sha
+    folder.mkdir(parents=True)
+    (folder / "profile.json").write_text("{")
+    (folder / "decisions.json").write_text("{")
+    assert store.history_profile(sha) is None
+    assert store.history_decisions(sha) is None
+    assert compare(project, store, sha).before == sha
+
+
+def test_historical_subdirectory_links_are_not_followed(tmp_path):
+    from evals.shop import _commit, _git
+    from learn_it.sources import Project
+    from learn_it.timeline import profile_at
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "pyproject.toml").write_text('[project]\ndependencies=["PRIVATE_CANARY"]\n')
+    _git(root, "init", "-q", "-b", "main")
+    (root / "app").symlink_to(outside, target_is_directory=True)
+    _commit(root, "old link", "2020-01-01T00:00:00Z")
+    sha = git.head(root)
+    (root / "app").unlink()
+    (root / "app").mkdir()
+    (root / "app/README.md").write_text("Public\n")
+    _commit(root, "normal folder", "2020-02-01T00:00:00Z")
+    with pytest.raises(OSError, match="lien symbolique"):
+        profile_at(Project(root / "app", "app"), sha)
+
+
+def test_historical_checkout_does_not_execute_global_filters(project, tmp_path, monkeypatch):
+    from evals.shop import _commit
+    from learn_it.timeline import profile_at
+
+    marker = tmp_path / "FILTER_EXECUTED"
+    config = tmp_path / "gitconfig"
+    config.write_text(f'[filter "canary"]\n  smudge = touch {marker}; cat\n')
+    (project.root / ".gitattributes").write_text("app.py filter=canary\n")
+    _commit(project.root, "attributes", "2024-03-01T00:00:00Z")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(config))
+    profile_at(project, git.head(project.root))
+    assert not marker.exists()
 
 
 def test_snapshot_refuses_linked_history_and_revision_paths(project, tmp_path):

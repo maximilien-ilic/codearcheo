@@ -52,7 +52,8 @@ def test_more_dependencies_do_not_add_git_history_walks(project, monkeypatch):
                               if tech.category != "library"})
     assert len([args for args in walks if args[-1] == "package.json"]) == 1
     assert not any(any(str(arg).startswith("-S") for arg in args) for args in calls)
-    assert len(calls) <= 12
+    # GitHub origin detection adds one bounded lookup, never a history traversal.
+    assert len(calls) <= 13
 
 
 def test_activity_matches_reference_with_mailmap_and_multiple_roots(project):

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from learn_it import git
-from learn_it.analyzers import scan
+from learn_it.analyzers import inventory, scan
 from learn_it.domain import Decision, ProjectProfile
 from learn_it.sources import Project
 from learn_it.store import Store
@@ -46,7 +47,12 @@ def profile_at(project: Project, sha: str) -> ProjectProfile:
     """Use a disposable shared clone; never execute code or hooks from the target."""
     top = Path(git.run(project.root, "rev-parse", "--show-toplevel").strip()).resolve()
     relative = project.root.resolve().relative_to(top)
-    with TemporaryDirectory(prefix="learn-it-diff-") as tmp:
+    settings = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    settings.update({
+        "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull, "GIT_CONFIG_COUNT": "0", "GIT_ATTR_NOSYSTEM": "1",
+    })
+    with git.environment(settings), TemporaryDirectory(prefix="learn-it-diff-") as tmp:
         destination = Path(tmp) / "revision"
         git.run(
             Path(tmp), "-c", "core.hooksPath=/dev/null", "clone", "--quiet",
@@ -56,6 +62,10 @@ def profile_at(project: Project, sha: str) -> ProjectProfile:
             destination, "-c", "core.hooksPath=/dev/null", "checkout", "--quiet", "--detach", sha
         )
         root = destination / relative
+        if not inventory.is_safe_path(destination, relative.as_posix()):
+            raise OSError("Lien symbolique ou chemin interdit dans le dossier historique.")
+        if not root.resolve().is_relative_to(destination.resolve()):
+            raise OSError("Le dossier historique sort du clone temporaire.")
         if not root.is_dir():
             raise ValueError("Ce dossier n'existait pas dans la révision demandée.")
         return scan(Project(root, project.name, project.origin))

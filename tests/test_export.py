@@ -41,6 +41,15 @@ def test_export_checks_whole_batch_before_writing(tmp_path, decision):
     assert not list(tmp_path.glob("*different*"))
 
 
+def test_force_does_not_match_an_unrelated_title_suffix(tmp_path, decision):
+    old = tmp_path / "0001-old-database.md"
+    old.write_text("unchanged")
+    decision = decision.model_copy(update={"title": "Database"})
+    paths = export_decisions(tmp_path, [decision], tmp_path, force=True)
+    assert paths[0].name == "0002-database.md"
+    assert old.read_text() == "unchanged"
+
+
 def test_export_refuses_links_and_escape_even_with_force(tmp_path, decision):
     root = tmp_path / "root"
     root.mkdir()

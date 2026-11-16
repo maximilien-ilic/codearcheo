@@ -87,7 +87,10 @@ def decisions(session: Session) -> str:
         except ValidationError as exc:
             raise ToolError(f"Invalid record, fix it and call again:\n{exc}") from exc
         previous = next(
-            (i for i, value in enumerate(recorded) if value.title.casefold() == record.title.casefold()),
+            (
+                i for i, value in enumerate(recorded)
+                if value.title.casefold() == record.title.casefold()
+            ),
             None,
         )
         if previous is None:

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import os
 import re
+import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 from pydantic import TypeAdapter, ValidationError
 
+from learn_it import git
 from learn_it.domain import Decision, ProjectProfile, Recommendation
 
 _decisions = TypeAdapter(list[Decision])
@@ -36,7 +40,7 @@ class Store:
     def save_profile(self, profile: ProjectProfile) -> Path:
         text = profile.model_dump_json(indent=2)
         path = self._write("profile.json", text)
-        if profile.head and not profile.uncommitted:
+        if profile.head and not profile.uncommitted and self.matches_clean_head(profile.head):
             self._snapshot(profile.head, "profile.json", text)
         return path
 
@@ -50,7 +54,7 @@ class Store:
     def save_decisions(self, decisions: list[Decision], *, head: str | None = None) -> Path:
         text = _decisions.dump_json(decisions, indent=2).decode()
         path = self._write("decisions.json", text)
-        if head:
+        if head and self.matches_clean_head(head):
             self._snapshot(head, "decisions.json", text)
         return path
 
@@ -64,27 +68,40 @@ class Store:
             raise OSError("Lien symbolique dans l'historique learn-it.")
         return path
 
+    def matches_clean_head(self, sha: str) -> bool:
+        root = self.dir.parent
+        try:
+            return git.head(root) == sha and not git.run(root, "status", "--porcelain").strip()
+        except (git.GitError, OSError):
+            return False
+
     def _snapshot(self, sha: str, name: str, content: str) -> None:
         path = self._snapshot_path(sha, name)
         path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, filename = tempfile.mkstemp(dir=path.parent)
+        temporary = Path(filename)
         try:
-            with path.open("x", encoding="utf-8") as output:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as output:
                 output.write(content)
-        except FileExistsError:
-            pass  # Preserve the first complete analysis for this revision.
+                output.flush()
+                os.fsync(output.fileno())
+            with suppress(FileExistsError):
+                os.link(temporary, path)  # Install complete JSON without replacing prior analysis.
+        finally:
+            temporary.unlink(missing_ok=True)
 
     def history_profile(self, sha: str) -> ProjectProfile | None:
         path = self._snapshot_path(sha, "profile.json")
         try:
             return ProjectProfile.model_validate_json(path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValidationError, UnicodeError):
             return None
 
     def history_decisions(self, sha: str) -> list[Decision] | None:
         path = self._snapshot_path(sha, "decisions.json")
         try:
             return _decisions.validate_json(path.read_text(encoding="utf-8"))
-        except FileNotFoundError:
+        except (FileNotFoundError, ValidationError, UnicodeError):
             return None
 
     def latest_history(self, *, excluding: str | None = None) -> str | None:

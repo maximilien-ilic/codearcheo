@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Annotated, NoReturn
 
 import anthropic
 import typer
 from rich.markup import escape
 
-from learn_it import analyzers, features, git, render, sources
+from learn_it import analyzers, features, git, recommendations, render, sources, timeline
 from learn_it.agent.runner import AgentError
 from learn_it.config import Settings
+from learn_it.export import export_decisions
 from learn_it.features import Session
 from learn_it.store import Store
 
@@ -169,18 +171,25 @@ def decisions(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    export: Annotated[
+        Path | None, typer.Option("--export", help="Dossier ADR dans le projet.")
+    ] = None,
+    force: Annotated[bool, typer.Option("--force", help="Remplacer un ADR du même titre.")] = False,
 ) -> None:
     """Reconstitue les décisions techniques du projet (format ADR) : quoi, quand, pourquoi."""
-    render.markdown(
-        _run_agent(
-            project,
-            "reconstitue les décisions",
-            features.decisions,
-            model=model,
-            effort=effort,
-            budget=budget,
-        )
-    )
+    if force and export is None:
+        _fail("--force s'utilise avec --export.")
+    with _friendly_errors():
+        session = _session(project, model=model, effort=effort, budget=budget)
+        with render.err.status("Claude reconstitue les décisions…"):
+            report = features.decisions(session)
+        render.markdown(report)
+        if export is not None:
+            paths = export_decisions(
+                session.project.root, session.store.load_decisions(), export, force=force
+            )
+            for path in paths:
+                render.err.print(f"ADR enregistré : {path}", markup=False)
 
 
 @app.command()
@@ -211,18 +220,45 @@ def review(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    issues: Annotated[
+        bool, typer.Option("--issues", help="Proposer la création de tickets.")
+    ] = False,
 ) -> None:
     """Évalue les décisions : garder, améliorer ou remplacer, avec effort, impact et plan."""
-    render.markdown(
-        _run_agent(
-            project,
-            "évalue les décisions",
-            features.review,
-            model=model,
-            effort=effort,
-            budget=budget,
-        )
+    with _friendly_errors():
+        session = _session(project, model=model, effort=effort, budget=budget)
+        with render.err.status("Claude évalue les décisions…"):
+            report = features.review(session)
+        render.markdown(report)
+        candidates = [r for r in session.store.load_recommendations() if r.verdict != "keep"]
+        if issues and candidates:
+            if typer.confirm(f"Publier jusqu'à {len(candidates)} ticket(s) sur l'origine GitHub ?"):
+                for url in recommendations.publish(session.project, candidates, confirmed=True):
+                    render.err.print(url, markup=False)
+        elif issues:
+            render.err.print("Aucune recommandation à publier.")
+
+
+@app.command()
+def diff(
+    ref: Annotated[str | None, typer.Argument(help="Révision Git de référence.")] = None,
+    project: ProjectOption = ".",
+    as_json: Annotated[
+        bool, typer.Option("--json", help="Changements structurés en JSON.")
+    ] = False,
+) -> None:
+    """Technos et décisions ajoutées, retirées ou modifiées, sans appel IA."""
+    import json
+
+    with _friendly_errors():
+        settings = Settings.from_env()
+        target = sources.resolve(project, settings.cache_dir)
+        changes = timeline.compare(target, Store(target.root), ref)
+    output = (
+        json.dumps(changes.as_dict(), ensure_ascii=False, indent=2)
+        if as_json else changes.markdown()
     )
+    print(output)
 
 
 @app.command()

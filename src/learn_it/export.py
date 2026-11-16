@@ -54,7 +54,11 @@ def export_decisions(
     next_number = max(numbers, default=0) + 1
     plan = []
     for decision, slug in zip(decisions, slugs, strict=True):
-        matches = [file for file in existing if file.name.endswith(f"-{slug}.md")]
+        matches = [
+            file for file in existing
+            if (prefix := _NUMBER.match(file.name))
+            and file.name[prefix.end():] == f"{slug}.md"
+        ]
         if matches:
             if len(matches) > 1:
                 raise ValueError(f"Plusieurs ADR existants correspondent à {decision.title!r}.")

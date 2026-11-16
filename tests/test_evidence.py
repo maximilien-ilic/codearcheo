@@ -54,3 +54,11 @@ def test_plain_citations_are_checked_without_treating_time_as_a_file(project):
     assert len(report.citations) == 2
     assert len(report.problems) == 1
     assert next(iter(report.problems)).path == "lost.py"
+
+
+def test_hidden_and_ignored_files_are_not_valid_evidence(project):
+    (project.root / "credentials.json").write_text("{}")
+    (project.root / ".gitignore").write_text(".env\ncredentials.json\n")
+    report = verify("app.py:1 and .env:1 and `credentials.json:1`", project.root)
+    assert len(report.citations) == 3
+    assert len(report.problems) == 2

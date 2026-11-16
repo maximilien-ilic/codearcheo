@@ -42,7 +42,11 @@ def interactive(session: Session, *, read: Callable[[], str] | None = None) -> N
                 path = session.store.save_report(f"chat-{uuid.uuid4().hex}", agent.markdown())
                 render.err.print(f"Conversation enregistrée dans {path}", markup=False)
                 continue
-            agent.ask(question, on_tool=session.on_tool, on_text=stream_text)
+            answer = agent.ask(question, on_tool=session.on_tool, on_text=stream_text)
+            if isinstance(answer, str):
+                checked = session.checked(answer)
+                stream_text(checked[len(answer.rstrip()):])
+                agent.transcript[-1] = ("Claude", checked)
             stream_text("\n")
     finally:
         agent.close()

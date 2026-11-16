@@ -17,7 +17,7 @@ from learn_it.analyzers import inventory
 _FILE = re.compile(r"`(?P<path>[^`\s:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
-    r"|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
+    r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
     r":(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?"
 )
 _COMMIT = re.compile(r"\bcommits?\s+`?(?P<sha>[0-9a-f]{7,40})\b`?", re.IGNORECASE)
@@ -65,8 +65,9 @@ def mentioned_paths(text: str) -> set[str]:
 
 def verify(text: str, root: Path) -> EvidenceReport:
     report = EvidenceReport(find_citations(text))
+    allowed = set(inventory.list_files(root)) if any(c.path for c in report.citations) else set()
     for citation in report.citations:
-        if problem := _problem(citation, root):
+        if problem := _problem(citation, root, allowed):
             report.problems[citation] = problem
     return report
 
@@ -84,7 +85,7 @@ def markdown_report(report: EvidenceReport) -> str:
     return "\n".join(lines)
 
 
-def _problem(citation: Citation, root: Path) -> str | None:
+def _problem(citation: Citation, root: Path, allowed: set[str]) -> str | None:
     if citation.sha:
         try:
             git.run(root, "cat-file", "-e", f"{citation.sha}^{{commit}}")
@@ -92,7 +93,7 @@ def _problem(citation: Citation, root: Path) -> str | None:
             return "commit introuvable"
         return None
     path = citation.path or ""
-    if not inventory.is_safe_path(root, path) or not (root / path).is_file():
+    if path not in allowed or not inventory.is_safe_path(root, path) or not (root / path).is_file():
         return "fichier introuvable"
     try:
         full = root / path
