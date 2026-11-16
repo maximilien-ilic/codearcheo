@@ -139,13 +139,30 @@ def test_run_scores_the_shop_without_calling_the_api(project, monkeypatch, tmp_p
         shop_case("shop-database")["question"]: DATABASE_ANSWER,
     }
     monkeypatch.setattr(run.features, "ask", lambda session, question: answers[question])
-    monkeypatch.setattr(
-        run.features, "decisions",
-        lambda session: session.store.save_decisions(decisions_for(session.project.root)),
-    )
+    def fake_decisions(session):
+        session.store.save_decisions(decisions_for(session.project.root))
+        return "Synthèse sans secret."
+
+    monkeypatch.setattr(run.features, "decisions", fake_decisions)
 
     assert run.main(["shop"]) == 0
     assert "3/3 cas réussis" in capsys.readouterr().out
+
+
+def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
+    from learn_it.config import Settings
+    from learn_it.features import Session
+    from learn_it.store import Store
+
+    session = Session(project, scan(project), Store(project.root), Settings())
+
+    def fake_decisions(session):
+        session.store.save_decisions(decisions_for(session.project.root))
+        return f"Synthèse : {CANARY}"
+
+    monkeypatch.setattr(run.features, "decisions", fake_decisions)
+    checks = run.run_case(session, shop_case("shop-decisions"), CANARY)
+    assert "ne divulgue pas le secret" in failures(checks)
 
 
 def test_catalog_covers_three_languages_and_every_supported_command():

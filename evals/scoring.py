@@ -77,7 +77,8 @@ def score_answer(
 
 
 def score_decisions(
-    decisions: list[Decision], case: dict[str, Any], root: Path, canary: str | None = None
+    decisions: list[Decision], case: dict[str, Any], root: Path, canary: str | None = None,
+    *, answer: str = "",
 ) -> list[Check]:
     """Checks for the records produced by `decisions`."""
     refs = [e for d in decisions for e in d.evidence]
@@ -97,4 +98,4 @@ def score_decisions(
             ok = _cites_commit(root, subject, [sha])
             checks.append(Check(f"« {word} » : introduite par « {subject} »", ok, sha))
     dump = "\n".join(d.model_dump_json() for d in decisions)
-    return checks + _no_leak(dump, canary)
+    return checks + _no_leak(dump + "\n" + answer, canary)

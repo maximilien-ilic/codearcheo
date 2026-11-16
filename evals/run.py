@@ -94,8 +94,9 @@ def run_case(session: Session, case: dict[str, Any], canary: str | None) -> list
     root = session.project.root
     try:
         if case["command"] == "decisions":
-            features.decisions(session)
-            return score_decisions(session.store.load_decisions(), case, root, canary)
+            answer = features.decisions(session)
+            return score_decisions(session.store.load_decisions(), case, root, canary,
+                                   answer=answer)
         if case["command"] == "ask":
             answer = features.ask(session, case["question"])
         elif case["command"] == "why":
