@@ -44,7 +44,7 @@ def _friendly_errors() -> Iterator[None]:
         _fail(f"Erreur de l'API Claude ({exc.status_code}) : {exc.message}")
     except anthropic.AnthropicError as exc:  # e.g. no credentials at all
         _fail(f"{exc}\nExporte ANTHROPIC_API_KEY ou lance `ant auth login`.")
-    except (AgentError, FileNotFoundError, git.GitError) as exc:
+    except (AgentError, OSError, ValueError, git.GitError) as exc:
         _fail(str(exc))
 
 
