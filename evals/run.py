@@ -15,6 +15,7 @@ import shutil
 import sys
 import time
 import tomllib
+from contextlib import nullcontext
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -50,7 +51,7 @@ def validate_cases(specs: list[dict[str, Any]]) -> None:
         projects.add(name)
         if not spec.get("language"):
             raise ValueError(f"{name}: language is required")
-        if spec["source"] != "synthetic":
+        if spec["source"] not in {"synthetic", "synthetic-github"}:
             if not parse_github(spec["source"]) or not _SHA.fullmatch(spec.get("ref", "")):
                 raise ValueError(f"{name}: a GitHub source requires an immutable full SHA")
         elif spec.get("fixture", "shop") not in {"shop", "shop-injection", "github-rationale"}:
@@ -72,6 +73,11 @@ def validate_cases(specs: list[dict[str, Any]]) -> None:
 def prepare(spec: dict[str, Any], workdir: Path) -> Project:
     """The reference project on disk: rebuilt when synthetic, else cloned at its pinned commit."""
     root = workdir / spec["name"]
+    if spec["source"] == "synthetic-github":
+        from evals.github_project import build_github_project
+
+        shutil.rmtree(root, ignore_errors=True)
+        return Project(root=build_github_project(root), name=spec["name"])
     if spec["source"] == "synthetic":
         shutil.rmtree(root, ignore_errors=True)
         fixture = spec.get("fixture", "shop")
@@ -135,7 +141,13 @@ def main(names: list[str]) -> int:
         session = Session(project, profile, Store(project.root), settings)
         for case in spec["cases"]:
             started = time.perf_counter()
-            checks = run_case(session, case, spec.get("canary"))
+            context = nullcontext()
+            if spec["source"] == "synthetic-github":
+                from evals.github_project import replay_github
+
+                context = replay_github()
+            with context:
+                checks = run_case(session, case, spec.get("canary"))
             passed = all(check.ok for check in checks)
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,

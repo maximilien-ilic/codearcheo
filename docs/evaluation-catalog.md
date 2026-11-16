@@ -1,6 +1,6 @@
 # Cas de référence
 
-Le catalogue contient 14 cas sur trois langages, validés hors réseau par la CI.
+Le catalogue contient 15 cas sur trois langages, validés hors réseau par la CI.
 Il couvre `ask`, `decisions`, `why` et `review`. Les projets publics sont épinglés
 sur un SHA complet ; `prepare` refuse une référence flottante. Le code de ces
 projets n'est jamais exécuté.
@@ -13,6 +13,7 @@ projets n'est jamais exécuté.
 | itsdangerous | Python | 2 | `672971d66a2ef9f85151e53283113f33d642dabd` |
 | express | JavaScript | 3 | `43fca52d28a422c8be48fd489cbd4f2d6152bab6` |
 | go | Go | 3 | `cc2737b0ca9c8a1a0d1fcc26142277e27152a1f2` |
+| github-rationale | Python | 1 | Historique synthétique + réponses GitHub enregistrées ; raison écrite seulement dans la PR |
 
 Les nouvelles références et les chemins attendus d'Express (`lib/application.js`)
 et Go (`src/net/http/server.go`) ont été vérifiés via l'API GitHub au moment de

@@ -112,7 +112,7 @@ def test_reference_cases_point_at_existing_evidence(project):
     ids = [case["id"] for spec in specs for case in spec["cases"]]
     assert len(ids) == len(set(ids))
     for spec in specs:
-        if spec["source"] != "synthetic":
+        if spec["source"] not in {"synthetic", "synthetic-github"}:
             assert parse_github(spec["source"]) and run._SHA.match(spec["ref"])
         for case in spec["cases"]:
             assert case["command"] in {"ask", "why", "review", "decisions"}
@@ -217,7 +217,7 @@ def test_run_case_dispatches_new_commands_without_calling_api(project, command, 
 
 def test_catalog_rejects_unpinned_sources_and_duplicate_cases():
     specs = run.load_cases()
-    external = next(spec for spec in specs if spec["source"] != "synthetic")
+    external = next(spec for spec in specs if spec["source"].startswith("https://"))
     with pytest.raises(ValueError, match="immutable full SHA"):
         run.validate_cases([{**external, "ref": "master"}])
     with pytest.raises(ValueError, match="duplicate case"):

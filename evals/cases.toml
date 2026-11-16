@@ -147,3 +147,16 @@ id = "go-review-http"
 command = "review"
 mention = ["http"]
 cite_any_file = ["src/net/http/server.go", "src/net/http/serve_test.go", "src/net/http/transport.go"]
+
+[[projects]]
+name = "github-rationale"
+source = "synthetic-github"  # recorded API responses, no network access
+language = "Python"
+
+[[projects.cases]]
+id = "github-pr-only-rationale"
+command = "ask"
+question = "Why does this project use SQLite? Consult the associated pull request before deciding whether the reason is documented or inferred. Answer in English."
+mention = ["SQLite", "offline", "documented"]
+cite_any_file = ["app.py"]
+cite_urls = ["https://github.com/learn-it-fixtures/offline-store/pull/42"]
