@@ -62,3 +62,23 @@ Le JSON brut est `benchmarks/git-eacee88-code.json`. Commande de reproduction :
 ```bash
 uv run --all-extras python scripts/benchmark_scan.py /tmp/learn-it-benchmark-git --compare --runs 3
 ```
+
+## Vérification après intégration des sources et ADR
+
+Une dernière série utilise le code intégré, avec l'origine GitHub, les ADR
+existants, les nouveaux parseurs de stack et toutes les grammaires activés. Les
+deux versions ont exactement les mêmes enrichissements ; seuls les parcours de
+datation et d'activité sont remplacés pour la référence.
+
+| Mesure | Optimisé intégré | Référence intégrée |
+|---|---:|---:|
+| Durée médiane | **1,852 s** | 2,584 s |
+| Appels Git | **10** | 19 |
+| Détection de stack médiane | 0,092 s | 0,091 s |
+| Analyse syntaxique médiane | 0,222 s | 0,221 s |
+| Origine GitHub médiane | 0,0015 s | 0,0016 s |
+| Lecture des ADR médiane | 0,0017 s | 0,0017 s |
+
+Les profils sont encore strictement identiques sur les trois paires. Le dixième
+appel Git lit l'origine du projet : il n'ajoute pas de parcours d'historique.
+La mesure complète est `benchmarks/git-eacee88-integrated.json`.

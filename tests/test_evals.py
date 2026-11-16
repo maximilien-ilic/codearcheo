@@ -224,3 +224,22 @@ def test_catalog_rejects_unpinned_sources_and_duplicate_cases():
         run.validate_cases([{**external, "cases": external["cases"] * 2}])
     with pytest.raises(ValueError, match="project name"):
         run.validate_cases([{**external, "name": "../escape"}])
+
+
+def test_recorded_github_rationale_case_runs_offline(monkeypatch, tmp_path, capsys):
+    fixture = pytest.importorskip("evals.github_project")
+    from learn_it.agent.tools import ProjectTools
+
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+
+    def answer(session, question):
+        tools = ProjectTools(session.project.root)
+        context = tools.github_context(git.head(session.project.root))
+        assert fixture.PR_URL in context
+        assert "offline" in context
+        return ("SQLite is documented in the pull request: workstations operate offline, "
+                f"with no database service to maintain. `app.py:1` [PR]({fixture.PR_URL}).")
+
+    monkeypatch.setattr(run.features, "ask", answer)
+    assert run.main(["github-rationale"]) == 0
+    assert "1/1 cas réussis" in capsys.readouterr().out

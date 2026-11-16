@@ -7,6 +7,7 @@ No target code or AI API is executed. Clone/fetch time is deliberately outside t
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import statistics
 from datetime import datetime
@@ -41,7 +42,7 @@ def measure(project: Project, *, reference: bool = False):
     calls = []
     originals = []
 
-    def wrap(owner, attribute, replacement=None):
+    def wrap(owner, attribute, replacement=None, label=None):
         original = getattr(owner, attribute)
         originals.append((owner, attribute, original))
         function = replacement or original
@@ -51,7 +52,8 @@ def measure(project: Project, *, reference: bool = False):
             try:
                 return function(*args, **kwargs)
             finally:
-                stages[attribute] = stages.get(attribute, 0.0) + perf_counter() - started
+                key = label or attribute
+                stages[key] = stages.get(key, 0.0) + perf_counter() - started
 
         setattr(owner, attribute, timed)
 
@@ -70,6 +72,16 @@ def measure(project: Project, *, reference: bool = False):
     wrap(history, "activity", reference_activity if reference else None)
     wrap(history, "uncommitted")
     wrap(code, "analyze")
+    # Keep the harness usable both before and after optional profile enrichments.
+    analyzer_package = importlib.import_module("learn_it.analyzers")
+    if hasattr(analyzer_package, "github_origin"):
+        wrap(analyzer_package, "github_origin", label="github_origin")
+    try:
+        adrs = importlib.import_module("learn_it.analyzers.adrs")
+    except ImportError:
+        pass
+    else:
+        wrap(adrs, "detect", label="existing_adrs")
     started = perf_counter()
     try:
         profile = scan(project)

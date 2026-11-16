@@ -1,0 +1,102 @@
+{
+  "optimized": [
+    {
+      "seconds": 1.864088215996162,
+      "stages": {
+        "list_files": 0.14071543799946085,
+        "detect": 0.09427011899970239,
+        "date_technologies": 0.5577501169973402,
+        "recent_commits": 0.14370349299861118,
+        "activity": 0.6612062929998501,
+        "uncommitted": 0.0062309729983098805,
+        "analyze": 0.2275050120006199,
+        "github_origin": 0.0014697950027766638,
+        "existing_adrs": 0.001700144995993469
+      },
+      "git_calls": 10
+    },
+    {
+      "seconds": 1.8515847369999392,
+      "stages": {
+        "list_files": 0.14007329999731155,
+        "detect": 0.09226511400629533,
+        "date_technologies": 0.5532749379999586,
+        "recent_commits": 0.14084757800446823,
+        "activity": 0.6562974209955428,
+        "uncommitted": 0.007827381996321492,
+        "analyze": 0.22154813499946613,
+        "github_origin": 0.0014264060009736568,
+        "existing_adrs": 0.0017587189940968528
+      },
+      "git_calls": 10
+    },
+    {
+      "seconds": 1.8465595890011173,
+      "stages": {
+        "list_files": 0.1379025419955724,
+        "detect": 0.0895847740030149,
+        "date_technologies": 0.5590781100036111,
+        "recent_commits": 0.14165985400177306,
+        "activity": 0.6516987159993732,
+        "uncommitted": 0.005836235999595374,
+        "analyze": 0.2218237749984837,
+        "github_origin": 0.0015563359993393533,
+        "existing_adrs": 0.0017197159977513365
+      },
+      "git_calls": 10
+    }
+  ],
+  "reference": [
+    {
+      "seconds": 2.586471269001777,
+      "stages": {
+        "list_files": 0.13842511999973794,
+        "detect": 0.09089454099739669,
+        "date_technologies": 0.5506167549974634,
+        "recent_commits": 0.15058852400397882,
+        "activity": 1.391022886004066,
+        "uncommitted": 0.005718952001188882,
+        "analyze": 0.220638056001917,
+        "github_origin": 0.0015573880009469576,
+        "existing_adrs": 0.0017032690011546947
+      },
+      "git_calls": 19
+    },
+    {
+      "seconds": 2.5836130089955986,
+      "stages": {
+        "list_files": 0.1372333300023456,
+        "detect": 0.09050487400236307,
+        "date_technologies": 0.5477426670040586,
+        "recent_commits": 0.15131156099960208,
+        "activity": 1.3959796199997072,
+        "uncommitted": 0.007413646999339107,
+        "analyze": 0.2206574969968642,
+        "github_origin": 0.001568541003507562,
+        "existing_adrs": 0.0016989439973258413
+      },
+      "git_calls": 19
+    },
+    {
+      "seconds": 2.5812465979979606,
+      "stages": {
+        "list_files": 0.13925006500357995,
+        "detect": 0.09178464699652977,
+        "date_technologies": 0.5486962619979749,
+        "recent_commits": 0.1430967479973333,
+        "activity": 1.3932249639983638,
+        "uncommitted": 0.007582129997899756,
+        "analyze": 0.2254508230034844,
+        "github_origin": 0.0015053919996717013,
+        "existing_adrs": 0.0017161310024675913
+      },
+      "git_calls": 19
+    }
+  ],
+  "profiles_identical": true,
+  "sha": "eacee88cf8a27cb141c64433465da2542806facf",
+  "commits": 83007,
+  "files": 4871,
+  "optimized_median_seconds": 1.8515847369999392,
+  "reference_median_seconds": 2.5836130089955986
+}

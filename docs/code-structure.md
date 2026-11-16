@@ -54,9 +54,10 @@ projet à 50 Mo / 10 000 fichiers analysés. Les dépassements et grammaires man
 sont signalés, jamais présentés comme une analyse exhaustive. Les fichiers malformés
 restent marqués `syntax_errors` dans l'export.
 
-Le budget de scan a été recontrôlé avec **toutes les grammaires installées et le
-graphe activé** sur Git (83 007 commits) : médiane **1,791 s**, contre 2,531 s pour
-les parcours d'historique de référence ; profils strictement identiques sur trois
-paires. L'étape syntaxique prend environ 0,227 s. Voir
+Le budget de scan a été recontrôlé avec **toutes les grammaires installées, le
+graphe, les nouvelles sources et les ADR activés** sur Git (83 007 commits) :
+médiane **1,852 s**, contre 2,584 s pour les parcours d'historique de référence ;
+profils strictement identiques sur trois paires. L'étape syntaxique prend environ
+0,222 s. Voir
 [`scan-performance.md`](scan-performance.md) et la mesure brute
-[`benchmarks/git-eacee88-code.json`](benchmarks/git-eacee88-code.json).
+[`benchmarks/git-eacee88-integrated.json`](benchmarks/git-eacee88-integrated.json).
