@@ -35,7 +35,7 @@ class Session:
     on_tool: ToolCallback | None = None
 
     def run(self, task: str, extra_tools: Sequence[Tool] = ()) -> str:
-        tools = ProjectTools(self.project.root, self.profile).exploration()
+        tools = ProjectTools(self.project.root).exploration()
         system = prompts.SYSTEM.format(profile=self.profile.model_dump_json(indent=1))
         return run_agent(system, task, [*tools, *extra_tools], self.settings, self.on_tool)
 

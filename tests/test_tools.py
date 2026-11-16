@@ -8,11 +8,11 @@ from learn_it.analyzers import scan
 
 @pytest.fixture
 def tools(project):
-    return ProjectTools(project.root, scan(project))
+    return ProjectTools(project.root)
 
 
 def test_every_tool_has_a_schema_built_from_its_docstring(tools):
-    for fn in [tools.project_profile, *tools.exploration()]:
+    for fn in tools.exploration():
         spec = beta_tool(fn).to_dict()
         assert spec["description"]
         assert spec["input_schema"]["type"] == "object"
@@ -54,8 +54,6 @@ def test_git_show_refuses_options(tools):
 
 @pytest.mark.parametrize("use_git", [True, False])
 def test_exploration_excludes_symlinks(project, tmp_path, use_git):
-    from learn_it.sources import Project
-
     root = project.root if use_git else tmp_path / "plain"
     root.mkdir(exist_ok=True)
     private = tmp_path / "private.txt"
@@ -66,7 +64,7 @@ def test_exploration_excludes_symlinks(project, tmp_path, use_git):
     (root / "alias.txt").symlink_to(hidden)
     if use_git:
         (root / ".gitignore").write_text(".env\nignored.txt\n")
-    tools = ProjectTools(root, scan(Project(root, "demo")))
+    tools = ProjectTools(root)
 
     assert "notes.txt" not in tools.list_files().splitlines()
     assert "alias.txt" not in tools.list_files().splitlines()
@@ -105,7 +103,7 @@ def test_git_internals_and_secret_directories_are_off_limits(project):
     secret = project.root / "secrets.key"
     secret.mkdir()
     (secret / "config").write_text("SECRET_CANARY\n")
-    tools = ProjectTools(project.root, scan(project))
+    tools = ProjectTools(project.root)
 
     assert "nested/.git/config" not in inventory.list_files(project.root)
     assert "secrets.key/config" not in inventory.list_files(project.root)

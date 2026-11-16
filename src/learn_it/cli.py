@@ -49,14 +49,17 @@ def _friendly_errors() -> Iterator[None]:
 
 
 def _session(target: str) -> Session:
-    """Resolve the project and reuse its profile while HEAD has not moved, else rescan."""
+    """Resolve the project and profile it afresh.
+
+    A project in progress changes between two commands, committed or not, with or without
+    git. Rescanning costs well under a second even on repositories with thousands of commits,
+    against tens of seconds for the agent, so no cached profile can go stale.
+    """
     settings = Settings.from_env()
     project = sources.resolve(target, settings.cache_dir)
     store = Store(project.root)
-    profile = store.load_profile()
-    if profile is None or profile.head != git.head(project.root):
-        profile = analyzers.scan(project)
-        store.save_profile(profile)
+    profile = analyzers.scan(project)
+    store.save_profile(profile)
     return Session(project, profile, store, settings, on_tool=render.tool_call)
 
 

@@ -17,7 +17,6 @@ from anthropic.lib.tools import ToolError
 
 from learn_it import git
 from learn_it.analyzers import inventory
-from learn_it.domain import ProjectProfile
 
 MAX_CHARS = 20_000  # per result: enough to be useful, small enough to keep the context lean
 MAX_FILES = 500
@@ -36,9 +35,8 @@ def _clip(text: str) -> str:
 
 
 class ProjectTools:
-    def __init__(self, root: Path, profile: ProjectProfile) -> None:
+    def __init__(self, root: Path) -> None:
         self.root = root.resolve()
-        self.profile = profile
         self.is_git = git.is_repo(self.root)
 
     def exploration(self) -> list[Callable[..., str]]:
@@ -70,12 +68,6 @@ class ProjectTools:
         if self.is_git and rel != "." and self._git("check-ignore", "--", rel, ok=(0, 1)).strip():
             raise ToolError(f"{path} is ignored by git, so learn-it does not read it.")
         return rel
-
-    def project_profile(self) -> str:
-        """The project's deterministic profile computed by `learn-it scan`: languages, stack with
-        the commit that adopted each technology, activity, hotspots, docs and uncommitted work.
-        Start here."""
-        return self.profile.model_dump_json(indent=1)
 
     def list_files(self, pattern: str = "*") -> str:
         """List the project's files, gitignored ones excluded, whose path matches a glob.
