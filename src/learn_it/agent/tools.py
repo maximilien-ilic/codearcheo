@@ -17,7 +17,8 @@ from pathlib import Path
 from anthropic.lib.tools import ToolError
 
 from learn_it import git, github
-from learn_it.analyzers import inventory
+from learn_it.agent.code_tools import CodeTools
+from learn_it.analyzers import code, inventory
 from learn_it.sources import github_origin, parse_github
 
 MAX_CHARS = 20_000  # per result: enough to be useful, small enough to keep the context lean
@@ -36,7 +37,7 @@ def _clip(text: str) -> str:
     return text[:MAX_CHARS] + f"\n… [{len(text) - MAX_CHARS} more characters: narrow the request]"
 
 
-class ProjectTools:
+class ProjectTools(CodeTools):
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
         self.is_git = git.is_repo(self.root)
@@ -47,6 +48,8 @@ class ProjectTools:
     def exploration(self) -> list[Callable[..., str]]:
         """Tools to explore code and history; the git ones only exist in a git repository."""
         tools = [self.list_files, self.search_code, self.read_file]
+        if code.available():
+            tools += [self.find_symbol, self.module_dependencies]
         if self.is_git:
             tools += [self.git_log, self.git_show, self.git_blame]
         if self.github_origin:

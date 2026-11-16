@@ -136,6 +136,13 @@ La suite tient en cinq jalons, de v0.2 (des réponses fiables) à v0.6 (expérie
 
 ## Développement
 
+Les [commandes de suivi des décisions](docs/decision-workflow.md) décrivent la
+vérification des citations, l'export ADR, les recommandations en JSON, les tickets
+sur confirmation et `learn-it diff`. Voir aussi les
+[sources GitHub et ADR](docs/project-sources.md), le
+[graphe des imports](docs/code-structure.md) et le
+[chat, streaming et bilan d'usage](docs/agent-experience.md).
+
 ```bash
 uv sync --all-extras
 uv run pytest

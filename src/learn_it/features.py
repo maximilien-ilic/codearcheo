@@ -6,6 +6,7 @@ Adding a feature: a prompt in `agent/prompts.py`, a function here, a command in 
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -19,7 +20,7 @@ from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
 from learn_it.agent.runner import TextCallback, Tool, ToolCallback, run_agent
 from learn_it.agent.tools import ProjectTools
-from learn_it.analyzers import adrs
+from learn_it.analyzers import adrs, code
 from learn_it.config import Settings
 from learn_it.domain import Decision, ProjectProfile, Recommendation
 from learn_it.sources import Project
@@ -65,7 +66,24 @@ def ask(session: Session, question: str) -> str:
 
 
 def overview(session: Session) -> str:
-    report = session.run(prompts.OVERVIEW.format(language=session.settings.language))
+    graph = code.analyze(session.project.root)
+    task = prompts.OVERVIEW.format(language=session.settings.language)
+    diagram = graph.mermaid() if graph is not None else None
+    if diagram:
+        task += (
+            "\nThis diagram is computed from actual static imports. Use this exact diagram "
+            "and explain it; do not invent edges. Unresolved, external and dynamic imports "
+            "are not edges.\n<actual_imports>\n" + diagram + "\n</actual_imports>"
+        )
+    report = session.run(task, check=False)
+    if diagram:
+        fence = f"```mermaid\n{diagram}\n```"
+        pattern = re.compile(r"```mermaid[^\n]*\n.*?```", re.DOTALL | re.IGNORECASE)
+        if match := pattern.search(report):
+            report = report[:match.start()] + fence + pattern.sub("", report[match.end():])
+        else:
+            report += f"\n\n## Imports statiques observés\n\n{fence}"
+    report = session.checked(report)
     session.store.save_report("overview", report)
     return report
 

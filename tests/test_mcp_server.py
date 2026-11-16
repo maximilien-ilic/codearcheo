@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from learn_it.analyzers import scan
+from learn_it.analyzers import code, scan
 from learn_it.config import Settings
 from learn_it.features import Session
 from learn_it.store import Store
@@ -21,7 +21,7 @@ def test_server_exposes_profile_decisions_and_exploration_tools(project):
     assert names == {
         "project_profile", "project_decisions", "list_files", "search_code", "read_file",
         "git_log", "git_show", "git_blame",
-    }
+    } | ({"find_symbol", "module_dependencies"} if code.available() else set())
 
 
 def test_profile_tool_follows_work_in_progress(project):

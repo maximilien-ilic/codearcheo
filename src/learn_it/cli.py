@@ -106,14 +106,27 @@ def _run_agent(
 def scan(
     target: Annotated[str, typer.Argument(help="Dossier local ou URL GitHub.")] = ".",
     as_json: Annotated[bool, typer.Option("--json", help="Affiche le profil en JSON.")] = False,
+    graph_json: Annotated[
+        bool, typer.Option("--graph-json", help="Affiche le graphe complet (extra code).")
+    ] = False,
 ) -> None:
     """Analyse sans IA : stack, dates d'adoption, historique, zones chaudes, travail en cours."""
     with _friendly_errors():
+        if as_json and graph_json:
+            _fail("Choisir --json ou --graph-json.")
         settings = Settings.from_env()
         with render.err.status("Analyse du projet…"):
             project = sources.resolve(target, settings.cache_dir, update=True)
             profile = analyzers.scan(project)
         path = Store(project.root).save_profile(profile)
+        if graph_json:
+            from learn_it.analyzers import code
+
+            graph = code.analyze(project.root)
+            if graph is None:
+                _fail("Installer l'extra code : uv tool install 'learn-it[code]'.")
+            print(graph.export_json())
+            return
     if as_json:
         print(profile.model_dump_json(indent=2))
         return

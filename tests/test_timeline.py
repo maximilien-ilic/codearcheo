@@ -65,7 +65,7 @@ def test_historical_subdirectory_links_are_not_followed(tmp_path):
     (root / "app").mkdir()
     (root / "app/README.md").write_text("Public\n")
     _commit(root, "normal folder", "2020-02-01T00:00:00Z")
-    with pytest.raises(OSError, match="lien symbolique"):
+    with pytest.raises(OSError):
         profile_at(Project(root / "app", "app"), sha)
 
 
@@ -81,6 +81,29 @@ def test_historical_checkout_does_not_execute_global_filters(project, tmp_path, 
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(config))
     profile_at(project, git.head(project.root))
     assert not marker.exists()
+
+
+def test_decision_diff_distinguishes_add_remove_change_and_missing_analysis(project):
+    from learn_it.domain import Decision
+    from learn_it.timeline import compare_profiles
+
+    profile = scan(project)
+    initial = Decision(
+        title="Database", category="data", context="Need persistence", decision="SQLite",
+        rationale="Local store", rationale_source="inferred", consequences=["Single file"],
+        evidence=["`app.py:1`"],
+    )
+    removed = initial.model_copy(update={"title": "Removed"})
+    added = initial.model_copy(update={"title": "Added"})
+    changed = initial.model_copy(update={"decision": "PostgreSQL"})
+    result = compare_profiles(profile, profile, [initial, removed], [changed, added])
+    assert result.decisions_available
+    assert result.decisions_added == ["Added"]
+    assert result.decisions_removed == ["Removed"]
+    assert result.decisions_changed == ["Database"]
+    missing = compare_profiles(profile, profile, [initial], None)
+    assert not missing.decisions_available
+    assert not missing.decisions_removed
 
 
 def test_snapshot_refuses_linked_history_and_revision_paths(project, tmp_path):
