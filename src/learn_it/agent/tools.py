@@ -103,16 +103,20 @@ class ProjectTools:
         if self.is_git:
             pathspec = [pattern] if pattern else []
             out = self._git(
-                "grep", "-n", "-I", "-E", "--untracked", "-e", regex, "--", *pathspec, ok=(0, 1)
+                "grep", "-z", "-n", "-I", "-E", "--untracked", "-e", regex, "--", *pathspec,
+                ok=(0, 1),
             )
-            lines = out.splitlines()
+            # -z preserves the raw filename, even with quotes, colons or newlines.
+            # Each match is filename NUL line-number NUL content LF.
+            lines = []
+            while out:
+                path, number, rest = out.split("\0", 2)
+                content, _, out = rest.partition("\n")
+                if inventory.is_safe_path(self.root, path):
+                    lines.append(f"{path}:{number}:{content}")
         else:
             lines = self._grep_without_git(regex, pattern)
-        lines = [
-            line[:MAX_LINE]
-            for line in lines
-            if inventory.is_safe_path(self.root, line.split(":", 1)[0])
-        ]
+        lines = [line[:MAX_LINE] for line in lines]
         if not lines:
             return "No matches."
         more = len(lines) - MAX_MATCHES
