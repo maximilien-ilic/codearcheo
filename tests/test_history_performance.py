@@ -85,3 +85,11 @@ def test_forced_text_patch_control_characters_cannot_forge_history_records(proje
     tech = Technology(name="GitHub Actions", category="ci", source=workflow)
     history.date_technologies(project.root, [tech])
     assert tech.adopted == history.first_commit(project.root, workflow)
+
+
+def test_batch_adoption_is_independent_of_color_configuration(project):
+    git.run(project.root, "config", "color.ui", "always")
+    tech = Technology(name="FastAPI", category="framework", source="pyproject.toml",
+                      needle="fastapi")
+    history.date_technologies(project.root, [tech])
+    assert tech.adopted == history.first_commit(project.root, tech.source, tech.needle)

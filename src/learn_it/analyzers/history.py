@@ -88,7 +88,8 @@ def date_technologies(root: Path, technologies: list[Technology]) -> None:
             # Anchor NUL-delimited headers to output lines below rather than trusting an
             # arbitrary control character in patch data. No external diff/textconv executes.
             out = git.run(
-                root, "log", "-p", "--no-ext-diff", "--no-textconv", "--no-renames",
+                root, "log", "-p", "--no-color", "--no-show-signature", "--no-ext-diff",
+                "--no-textconv", "--no-renames",
                 "--format=%x00%H%x1f%an%x1f%aI%x1f%s", "--", path,
             )
         except git.GitError:
