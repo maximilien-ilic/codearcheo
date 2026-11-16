@@ -31,6 +31,8 @@ learn-it rassemble ces indices et les fait parler.
 | `decisions` | Quelles décisions techniques ont été prises, quand, pourquoi, avec quelles conséquences ? | oui |
 | `why <cible>` | Pourquoi ce fichier, cette dépendance ou ce choix existe-t-il ? | oui |
 | `review` | Ces décisions sont-elles toujours les bonnes ? Que changer, à quel coût, par où commencer ? | oui |
+| `chat` | Enchaîner les questions avec historique, streaming et sauvegarde. | oui |
+| `diff [REF]` | Quelles technos et décisions ont changé depuis une révision Git ? | non |
 | `serve` | Les mêmes outils, pour ton agent (Claude Code, Cursor…) via MCP. | — |
 
 La cible est un dossier local (par défaut le dossier courant) ou une URL GitHub : en argument pour `scan`, avec `-p/--project` pour les autres commandes. Un dépôt GitHub est cloné une fois, historique complet compris, dans `~/.cache/learn-it/`.
@@ -81,7 +83,7 @@ flowchart LR
 Principes :
 
 - **Recherche agentique plutôt que RAG vectoriel.** Pas d'index à reconstruire : l'agent voit toujours l'état actuel du code, y compris le travail non commité d'un projet en cours ([ADR 0002](docs/adr/0002-recherche-agentique.md)).
-- **Lecture seule.** Rien n'est exécuté ni modifié. L'agent ne lit pas les fichiers ignorés par git (`.env`…), les fichiers sensibles connus (`*.pem`, `id_rsa`…) ni le dossier `.git`.
+- **Outils d'enquête en lecture seule.** L'analyse lit le code et l'historique ; elle exclut les fichiers ignorés par git (`.env`…), les fichiers sensibles connus (`*.pem`, `id_rsa`…) et les internes Git. Les rapports vont dans `.learn-it/`. L'export ADR est explicite ; la publication de recommandations en tickets exige une confirmation.
 - Les liens symboliques (fichiers et dossiers) sont exclus de l'analyse. Les sorties dans `.learn-it/` et les chemins du cache GitHub refusent également les liens symboliques.
 - **Local d'abord.** L'analyse tourne sur ta machine ; seuls le profil et les extraits lus par l'agent partent vers l'API Claude.
 

@@ -12,7 +12,14 @@ En deux jours, learn-it est passé d'une idée à une v0 testée et relue en con
 - **Un profil toujours à jour ([#3]).** Chaque commande rescanne le projet, avec ou sans git. Le scan prend moins d'une seconde, même sur fastapi (8 125 commits).
 - **Une CI et une évaluation ([#5]).** Le lint et les tests tournent sous Python 3.11 et 3.14 sur chaque PR. Les citations `fichier:ligne` et les commits cités sont vérifiés automatiquement, et des cas de référence notent les vraies réponses de Claude sans comparer leur texte.
 
-Les trois derniers points sont dans la PR [#9], qui intègre [#8] et attend d'être fusionnée : 82 tests, CI verte. Elle fermera [#1], [#3] et [#5].
+Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et une CI verte.
+
+La PR [#29] propose maintenant les fonctionnalités des tickets #11 à #23 : citations
+contrôlées, cas de référence étendus, usage et conversation, sources GitHub et ADR,
+nouveaux écosystèmes, export et recommandations, historique et graphe des imports.
+Le code est testé sans appel IA réel. Les expérimentations API de #10, la licence et
+la diffusion de #24 et la revue serveur de #25 restent reportées à la demande du
+propriétaire. Les tâches restantes de #11 et #13 sont détaillées dans leurs tickets.
 
 ## La suite
 
@@ -108,3 +115,4 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 [#23]: https://github.com/maximilien-ilic/learn-it/issues/23
 [#24]: https://github.com/maximilien-ilic/learn-it/issues/24
 [#25]: https://github.com/maximilien-ilic/learn-it/issues/25
+[#29]: https://github.com/maximilien-ilic/learn-it/pull/29
