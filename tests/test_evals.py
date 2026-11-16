@@ -1,6 +1,7 @@
 """The evaluation's deterministic half: the scoring must catch degraded answers, and the
 reference cases must point at evidence that exists. No API call."""
 
+import json
 import re
 
 import pytest
@@ -147,6 +148,28 @@ def test_run_scores_the_shop_without_calling_the_api(project, monkeypatch, tmp_p
 
     assert run.main(["shop"]) == 0
     assert "3/3 cas réussis" in capsys.readouterr().out
+    report = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
+    assert all(result["estimated_cost_usd"] is None for result in report["results"])
+
+
+def test_evaluation_saves_per_case_usage_without_fabricating_an_api_bill(monkeypatch, tmp_path):
+    from learn_it.agent.usage import UsageSummary
+
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    monkeypatch.setattr(run, "load_cases", lambda: [spec | {"cases": spec["cases"][:1]}])
+
+    def fake_case(session, case, canary):
+        session.on_usage(UsageSummary(input_tokens=100, output_tokens=10, requests=1,
+                                      estimated_cost_usd=0.0006))
+        return []
+
+    monkeypatch.setattr(run, "run_case", fake_case)
+    assert run.main(["shop"]) == 0
+    report = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
+    result = report["results"][0]
+    assert result["estimated_cost_usd"] == 0.0006
+    assert result["usage"][0]["input_tokens"] == 100
 
 
 def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):

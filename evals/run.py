@@ -25,6 +25,7 @@ from evals.fixtures import build_fixture
 from evals.scoring import Check, score_answer, score_decisions
 from learn_it import features, git
 from learn_it.agent.runner import AgentError
+from learn_it.agent.usage import UsageSummary
 from learn_it.analyzers import scan
 from learn_it.config import Settings
 from learn_it.features import Session
@@ -140,6 +141,13 @@ def main(names: list[str]) -> int:
         })
         session = Session(project, profile, Store(project.root), settings)
         for case in spec["cases"]:
+            usage = []
+
+            def record_usage(summary: UsageSummary, *, sink: list[dict] = usage) -> None:
+                sink.append(asdict(summary))
+                print(summary.format(), file=sys.stderr)
+
+            session.on_usage = record_usage
             started = time.perf_counter()
             context = nullcontext()
             if spec["source"] == "synthetic-github":
@@ -152,6 +160,12 @@ def main(names: list[str]) -> int:
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,
                  "elapsed_seconds": time.perf_counter() - started,
+                 "usage": usage,
+                 "estimated_cost_usd": (
+                     sum(item["estimated_cost_usd"] for item in usage)
+                     if usage and all(item["estimated_cost_usd"] is not None for item in usage)
+                     else None
+                 ),
                  "checks": [asdict(c) for c in checks]}
             )
             print(f"{'✓' if passed else '✗'} {case['id']}")
