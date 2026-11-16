@@ -1,0 +1,84 @@
+{
+  "optimized": [
+    {
+      "seconds": 1.9080020440014778,
+      "stages": {
+        "list_files": 0.1872274639972602,
+        "detect": 0.03987451700231759,
+        "date_technologies": 0.6940483139987919,
+        "recent_commits": 0.16676607100089313,
+        "activity": 0.779742532002274,
+        "uncommitted": 0.007803729000443127
+      },
+      "git_calls": 9
+    },
+    {
+      "seconds": 1.7282029540001531,
+      "stages": {
+        "list_files": 0.17521883299923502,
+        "detect": 0.035937917993578594,
+        "date_technologies": 0.61666690200218,
+        "recent_commits": 0.15619167900149478,
+        "activity": 0.7036659389996203,
+        "uncommitted": 0.00794841100287158
+      },
+      "git_calls": 9
+    },
+    {
+      "seconds": 1.635351728000387,
+      "stages": {
+        "list_files": 0.1386848909969558,
+        "detect": 0.03421665300265886,
+        "date_technologies": 0.5969151280005462,
+        "recent_commits": 0.14888861199870007,
+        "activity": 0.683247102999303,
+        "uncommitted": 0.0065771609952207655
+      },
+      "git_calls": 9
+    }
+  ],
+  "reference": [
+    {
+      "seconds": 2.5527203189994907,
+      "stages": {
+        "list_files": 0.15649424400180578,
+        "detect": 0.043636115005938336,
+        "date_technologies": 0.6357636180036934,
+        "recent_commits": 0.16235054199933074,
+        "activity": 1.517614248994505,
+        "uncommitted": 0.0070535839986405335
+      },
+      "git_calls": 18
+    },
+    {
+      "seconds": 2.415667711000424,
+      "stages": {
+        "list_files": 0.14619693699933123,
+        "detect": 0.036548596995999105,
+        "date_technologies": 0.5965095780047704,
+        "recent_commits": 0.15026498199586058,
+        "activity": 1.450991197998519,
+        "uncommitted": 0.0077967019969946705
+      },
+      "git_calls": 18
+    },
+    {
+      "seconds": 2.413212431994907,
+      "stages": {
+        "list_files": 0.140957083000103,
+        "detect": 0.03515211699414067,
+        "date_technologies": 0.5814412659965456,
+        "recent_commits": 0.1532494979983312,
+        "activity": 1.462887251000211,
+        "uncommitted": 0.006132987000455614
+      },
+      "git_calls": 18
+    }
+  ],
+  "profiles_identical": true,
+  "sha": "eacee88cf8a27cb141c64433465da2542806facf",
+  "commits": 83007,
+  "files": 4871,
+  "optimized_median_seconds": 1.7282029540001531,
+  "reference_median_seconds": 2.415667711000424
+}

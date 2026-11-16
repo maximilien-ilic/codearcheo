@@ -17,9 +17,7 @@ def scan(project: Project) -> ProjectProfile:
 
     facts: dict[str, Any] = {}
     if git.is_repo(root):
-        for tech in technologies:
-            if tech.category != "library":  # dating every utility would cost more than it says
-                tech.adopted = history.first_commit(root, tech.source, tech.needle)
+        history.date_technologies(root, technologies)
         commits = history.recent_commits(root)
         count, contributors, first = history.activity(root)
         facts = {
