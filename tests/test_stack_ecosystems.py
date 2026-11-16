@@ -46,6 +46,8 @@ def test_each_ecosystem_reports_technologies_and_adoption(tmp_path, name, conten
     ("deployment.yaml", 'apiVersion: [unterminated'),
     ("pyproject.toml", '[invalid'),
     ("package.json", '{"dependencies":null}'),
+    ("package.json", '{"dependencies":[123]}'),
+    ("package.json", '[]'),
 ])
 def test_malformed_manifests_are_ignored_without_execution(tmp_path, name, content):
     (tmp_path / name).write_text(content)

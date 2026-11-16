@@ -254,7 +254,11 @@ def _python_deps(path: Path) -> list[str]:
 
 def _node_deps(path: Path) -> list[str]:
     data = json.loads(_read(path))
+    if not isinstance(data, dict):
+        raise ValueError("package.json must contain an object")
     keys = ("dependencies", "devDependencies", "peerDependencies")
+    if any(key in data and not isinstance(data[key], dict) for key in keys):
+        raise ValueError("package dependencies must be objects")
     return [name for key in keys for name in data.get(key, {})]
 
 
@@ -353,6 +357,8 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
             except (OSError, ValueError, TypeError, AttributeError, ET.ParseError):
                 dependencies = []
             for dep in dependencies:
+                if not isinstance(dep, str):
+                    continue
                 name, category = _lookup(dep)
                 needle = f'"{dep}"' if p.name == "package.json" else dep
                 if p.name == "pom.xml":
