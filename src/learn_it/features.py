@@ -17,7 +17,7 @@ from rich.markup import escape
 
 from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
-from learn_it.agent.runner import Tool, ToolCallback, run_agent
+from learn_it.agent.runner import TextCallback, Tool, ToolCallback, run_agent
 from learn_it.agent.tools import ProjectTools
 from learn_it.analyzers import adrs
 from learn_it.config import Settings
@@ -35,6 +35,7 @@ class Session:
     store: Store
     settings: Settings
     on_tool: ToolCallback | None = None
+    on_text: TextCallback | None = None
 
     def checked(self, answer: str) -> str:
         """Warn without hiding the answer; retain the same warning in saved reports."""
@@ -47,8 +48,16 @@ class Session:
     def run(self, task: str, extra_tools: Sequence[Tool] = (), *, check: bool = True) -> str:
         tools = ProjectTools(self.project.root).exploration()
         system = prompts.SYSTEM.format(profile=self.profile.model_dump_json(indent=1))
-        answer = run_agent(system, task, [*tools, *extra_tools], self.settings, self.on_tool)
-        return self.checked(answer) if check else answer
+        options = {"on_text": self.on_text} if self.on_text is not None else {}
+        answer = run_agent(
+            system, task, [*tools, *extra_tools], self.settings, self.on_tool, **options
+        )
+        if not check:
+            return answer
+        checked = self.checked(answer)
+        if self.on_text is not None:
+            self.on_text(checked[len(answer.rstrip()):])
+        return checked
 
 
 def ask(session: Session, question: str) -> str:
