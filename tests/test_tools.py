@@ -50,3 +50,66 @@ def test_git_tools_trace_a_decision(tools):
 def test_git_show_refuses_options(tools):
     with pytest.raises(ToolError):
         tools.git_show("--output=/tmp/pwned")
+
+
+@pytest.mark.parametrize("use_git", [True, False])
+def test_exploration_excludes_symlinks(project, tmp_path, use_git):
+    from learn_it.sources import Project
+
+    root = project.root if use_git else tmp_path / "plain"
+    root.mkdir(exist_ok=True)
+    private = tmp_path / "private.txt"
+    private.write_text("PRIVATE_CANARY\n")
+    (root / "notes.txt").symlink_to(private)
+    hidden = root / "ignored.txt"
+    hidden.write_text("IGNORED_CANARY\n")
+    (root / "alias.txt").symlink_to(hidden)
+    if use_git:
+        (root / ".gitignore").write_text(".env\nignored.txt\n")
+    tools = ProjectTools(root, scan(Project(root, "demo")))
+
+    assert "notes.txt" not in tools.list_files().splitlines()
+    assert "alias.txt" not in tools.list_files().splitlines()
+    assert "PRIVATE_CANARY" not in tools.search_code("PRIVATE_CANARY")
+    for path in ("notes.txt", "alias.txt"):
+        with pytest.raises(ToolError):
+            tools.read_file(path)
+
+
+def test_inventory_does_not_follow_replaced_directories(project, tmp_path):
+    from learn_it import git
+    from learn_it.analyzers import inventory
+
+    folder = project.root / "config"
+    folder.mkdir()
+    manifest = folder / "package.json"
+    manifest.write_text('{}')
+    git.run(project.root, "add", "config/package.json")
+    manifest.unlink()
+    folder.rmdir()
+    external = tmp_path / "external"
+    external.mkdir()
+    (external / "package.json").write_text('{"dependencies":{"private-canary":"1"}}')
+    folder.symlink_to(external, target_is_directory=True)
+
+    assert "config/package.json" not in inventory.list_files(project.root)
+    assert "private-canary" not in scan(project).model_dump_json()
+
+
+def test_git_internals_and_secret_directories_are_off_limits(project):
+    from learn_it.analyzers import inventory
+
+    nested = project.root / "nested" / ".git"
+    nested.mkdir(parents=True)
+    (nested / "config").write_text("INTERNAL_CANARY\n")
+    secret = project.root / "secrets.key"
+    secret.mkdir()
+    (secret / "config").write_text("SECRET_CANARY\n")
+    tools = ProjectTools(project.root, scan(project))
+
+    assert "nested/.git/config" not in inventory.list_files(project.root)
+    assert "secrets.key/config" not in inventory.list_files(project.root)
+    assert tools.search_code("INTERNAL_CANARY|SECRET_CANARY") == "No matches."
+    for path in ("nested/.git/config", "secrets.key/config"):
+        with pytest.raises(ToolError):
+            tools.read_file(path)

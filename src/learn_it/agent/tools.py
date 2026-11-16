@@ -57,6 +57,9 @@ class ProjectTools:
     def _safe_path(self, path: str) -> str:
         """Normalize a project-relative path, refusing what lies outside the project, in .git,
         ignored by git or likely to hold secrets."""
+        # Inspect the original spelling before resolve() erases symlinks.
+        if not inventory.is_safe_path(self.root, path):
+            raise ToolError(f"{path} is off limits: symlink, git internals or likely secrets.")
         full = (self.root / path).resolve()
         if not full.is_relative_to(self.root):
             raise ToolError(f"{path} is outside the project.")
@@ -106,7 +109,9 @@ class ProjectTools:
         else:
             lines = self._grep_without_git(regex, pattern)
         lines = [
-            line[:MAX_LINE] for line in lines if not inventory.is_secret(line.split(":", 1)[0])
+            line[:MAX_LINE]
+            for line in lines
+            if inventory.is_safe_path(self.root, line.split(":", 1)[0])
         ]
         if not lines:
             return "No matches."

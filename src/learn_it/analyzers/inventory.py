@@ -45,8 +45,28 @@ _DOC_SUFFIXES = {".md", ".mdx", ".rst", ".adoc", ".txt", ""}
 
 
 def is_secret(path: str) -> bool:
-    name = PurePosixPath(path).name
-    return name not in SECRET_EXCEPTIONS and any(fnmatch(name, p) for p in SECRET_PATTERNS)
+    return any(
+        name not in SECRET_EXCEPTIONS and any(fnmatch(name, p) for p in SECRET_PATTERNS)
+        for name in PurePosixPath(path).parts
+    )
+
+
+def is_safe_path(root: Path, path: str) -> bool:
+    """Reject secrets, git internals and symlinks, including symlinked parent directories.
+
+    Keep this policy shared by the inventory, manifest scan and exploration tools.
+    """
+    relative = PurePosixPath(path)
+    if relative.is_absolute() or ".." in relative.parts:
+        return False
+    if ".git" in relative.parts or is_secret(path):
+        return False
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            return False
+    return True
 
 
 def list_files(root: Path) -> list[str]:
@@ -62,7 +82,7 @@ def list_files(root: Path) -> list[str]:
             rel = Path(dirpath).relative_to(root)
             paths.update((rel / name).as_posix() for name in filenames)
     # is_file() drops deleted-but-staged entries and submodules
-    return sorted(p for p in paths if not is_secret(p) and (root / p).is_file())
+    return sorted(p for p in paths if is_safe_path(root, p) and (root / p).is_file())
 
 
 def count_languages(files: list[str]) -> dict[str, int]:
