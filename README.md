@@ -11,7 +11,7 @@ learn-it decisions                              # les décisions techniques, au 
 learn-it review                                 # garder, améliorer ou remplacer, et par où commencer
 ```
 
-> **Statut : v0.** `scan` fonctionne et est testé. Les commandes IA sont branchées et testées sans appel réel à l'API ; elles restent à éprouver sur de vrais projets. Voir la [roadmap](#roadmap).
+> **Statut : v0.** `scan` fonctionne et est testé, et la CI tourne sur chaque PR. Les commandes IA sont testées sans appel réel à l'API ; `evals/` mesure leurs vraies réponses sur des projets de référence (voir [Évaluation](#évaluation)). Voir aussi la [roadmap](#roadmap).
 
 ## Le problème
 
@@ -51,7 +51,7 @@ learn-it decisions
 learn-it review
 ```
 
-Les résultats sont enregistrés dans `.learn-it/` à la racine du projet analysé (`profile.json`, `overview.md`, `decisions.md` et `.json`, `review.md`). Ce dossier s'exclut lui-même de git.
+Les résultats sont enregistrés dans `.learn-it/` à la racine du projet analysé (`profile.json`, `overview.md`, `decisions.md` et `.json`, `review.md`). Ce dossier s'exclut lui-même de git. Le profil est recalculé à chaque commande, donc il suit le travail non commité ; un scan prend moins d'une seconde sur des dépôts de plusieurs milliers de commits.
 
 ### Depuis ton agent, via MCP
 
@@ -103,9 +103,16 @@ src/learn_it/
 │   ├── prompts.py      consignes de chaque tâche
 │   └── runner.py       boucle d'outils Claude
 ├── features.py       ask · overview · decisions · why · review
+├── evidence.py       vérification des citations : fichier:ligne et commits
 ├── store.py          persistance dans .learn-it/
 ├── render.py         affichage terminal et rapports Markdown
 └── mcp_server.py     learn-it serve
+
+evals/                évaluation des réponses IA
+├── cases.toml        projets de référence, questions et preuves attendues
+├── shop.py           projet synthétique à l'historique figé (aussi utilisé par les tests)
+├── scoring.py        barème : citations valides, faits, sources, déductions signalées
+└── run.py            exécution avec la vraie API (jamais en CI)
 ```
 
 Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore tout de la CLI. Pour ajouter une fonctionnalité : un prompt dans `agent/prompts.py`, une fonction dans `features.py`, une commande dans `cli.py`.
@@ -132,7 +139,9 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 - [ ] Export des décisions en ADR, un fichier par décision, dans le `docs/adr/` du projet
 - [ ] Mode conversation (`chat`) qui garde le contexte d'une question à l'autre
 - [ ] Suivi dans le temps : signaler les nouvelles décisions à chaque scan, en CI
-- [ ] Jeu d'évaluation : des questions de référence sur des dépôts connus, pour mesurer la qualité des réponses
+- [x] CI GitHub et jeu d'évaluation : cas de référence, vérification des citations et des commits
+- [ ] Vérifier les citations de chaque réponse dès son affichage (`evidence.py`)
+- [ ] Étoffer les cas de référence : d'autres langages, de plus gros dépôts
 
 ## Développement
 
@@ -141,5 +150,18 @@ uv sync --all-extras
 uv run pytest
 uv run ruff check .
 ```
+
+La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 et 3.14, sur chaque PR et chaque push sur `master`.
+
+### Évaluation
+
+`pytest` ne couvre que la partie déterministe. Pour mesurer les vraies réponses de Claude, avec une clé API :
+
+```bash
+uv run python -m evals.run           # tous les projets de référence (consomme des tokens)
+uv run python -m evals.run shop      # seulement ceux nommés
+```
+
+Chaque cas de `evals/cases.toml` vérifie que les citations `fichier:ligne` et les commits cités existent, que les faits et les sources attendus sont présents, que ce que rien ne documente est signalé comme déduit, et qu'aucun secret ne fuit. Le texte exact n'est jamais comparé.
 
 Les décisions techniques de learn-it sont elles-mêmes documentées dans [`docs/adr/`](docs/adr/), au format ADR que l'outil vise à produire.

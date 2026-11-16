@@ -17,4 +17,5 @@ Un LLM sait inventer une justification plausible à n'importe quel choix techniq
 
 - `scan` est gratuit, rapide, utilisable hors ligne, et ses résultats se testent.
 - Les réponses se vérifient, et l'utilisateur sait quand il lit une déduction.
+- Le profil est recalculé à chaque commande, avec ou sans git : il suit le travail non commité. Le coût mesuré reste sous la seconde (0,75 s pour fastapi : 8 125 commits, 3 268 fichiers), contre des dizaines de secondes pour une session de l'agent.
 - Chaque écosystème demande son détecteur dans `analyzers/stack.py` : la liste des technos repérées s'enrichira avec l'usage.
