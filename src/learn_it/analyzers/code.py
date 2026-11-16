@@ -281,9 +281,9 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
                 if name.startswith("."):
                     dots = len(name) - len(name.lstrip("."))
                     package = _python_names(str(PurePosixPath(source).parent / "__init__.py"))
-                    bases = [base.split(".") for base in package]
+                    bases = [base.split(".") for base in package if base]
                     names = [".".join([*base[:len(base) - dots + 1], name.lstrip(".")]).strip(".")
-                             for base in bases if dots <= len(base) + 1]
+                             for base in bases if dots <= len(base)]
                 else:
                     names = [name]
                 for name in names:
@@ -300,10 +300,13 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
                     except (OSError, ValueError):
                         continue
                     variants = [relative]
-                    variants += [relative + suffix
-                                 for suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs")]
-                    variants += [relative + "/index" + suffix for suffix in (".ts", ".tsx", ".js")]
-                    if relative.endswith(".js"):
+                    suffixes = (
+                        (".js", ".jsx", ".mjs", ".cjs") if module.language == "javascript"
+                        else (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs")
+                    )
+                    variants += [relative + suffix for suffix in suffixes]
+                    variants += [relative + "/index" + suffix for suffix in suffixes]
+                    if module.language in {"typescript", "tsx"} and relative.endswith(".js"):
                         variants.append(relative[:-3] + ".ts")
                     targets = next(([path] for path in variants if path in graph.modules), [])
             elif module.language == "go":
@@ -321,13 +324,19 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
                 value = item.module.replace(" ", "")
                 if value.startswith(("crate::", "self::", "super::")):
                     parts = list(PurePosixPath(source).parent.parts)
+                    crate_root = parts[:parts.index("src") + 1] if "src" in parts else []
                     if value.startswith("crate::"):
-                        parts = parts[:parts.index("src") + 1] if "src" in parts else []
+                        parts = crate_root.copy()
                     elif PurePosixPath(source).stem not in {"lib", "main", "mod"}:
                         parts.append(PurePosixPath(source).stem)
                     while value.startswith("super::"):
+                        if len(parts) <= len(crate_root):
+                            parts = []
+                            break
                         parts = parts[:-1]
                         value = value[len("super::"):]
+                    if value.startswith("super::"):
+                        continue
                     value = value.removeprefix("crate::").removeprefix("self::")
                     segments = value.split("::")
                     while segments:

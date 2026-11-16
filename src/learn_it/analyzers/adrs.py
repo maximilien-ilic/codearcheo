@@ -95,13 +95,12 @@ def detect(root: Path, files: list[str]) -> list[ExistingADR]:
 def anchor_decision(decision: Decision, records: list[ExistingADR]) -> Decision:
     """Keep an already documented decision documented, even if an agent labels it inferred.
 
-    A match requires its title or the actual ADR path in the evidence, not a fuzzy guess.
+    A match requires its normalized title. Citing an old ADR may describe a rejected option,
+    so an ADR path in the evidence alone must not relabel an unrelated decision documented.
     This does not claim that the current code still follows the ADR: the agent must check it.
     """
     for record in records:
-        if _label(decision.title) == _label(record.title) or any(
-            record.path in evidence for evidence in decision.evidence
-        ):
+        if _label(decision.title) == _label(record.title):
             refs = [*decision.evidence]
             if record.evidence not in refs:
                 refs.append(record.evidence)

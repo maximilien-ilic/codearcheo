@@ -14,7 +14,16 @@ from learn_it.store import Store
     (features.review, (), "review.md"),
 ])
 def test_answers_warn_about_false_citations(project, monkeypatch, capsys, command, args, filename):
-    monkeypatch.setattr(features, "run_agent", lambda *a, **kw: "Voir `app.py:1` et `lost.py:12`.")
+    def fake(system, task, tools, settings, on_tool=None):
+        for tool in tools:
+            if getattr(tool, "name", "") == "record_recommendation":
+                tool.call(dict(
+                    title="Keep", decision="Existing design", verdict="keep", reasons=["Fits"],
+                    impact="low", effort="S", evidence=["`app.py:1`"],
+                ))
+        return "Voir `app.py:1` et `lost.py:12`."
+
+    monkeypatch.setattr(features, "run_agent", fake)
     session = Session(project, scan(project), Store(project.root), Settings())
     report = command(session, *args)
     assert "1 citation(s) vérifiée(s), 1 introuvable(s)" in report

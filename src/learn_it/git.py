@@ -31,7 +31,8 @@ def run(root: Path, *args: str, ok: tuple[int, ...] = (0,)) -> str:
     Raise GitError when the exit code is not in `ok` (git grep exits 1 on "no match").
     """
     proc = subprocess.run(
-        ["git", "-c", "core.quotepath=false", "-C", str(root), *args],
+        ["git", "-c", "core.quotepath=false", "-c", "log.showSignature=false",
+         "-c", "color.ui=false", "-C", str(root), *args],
         capture_output=True,
         text=True,
         encoding="utf-8",

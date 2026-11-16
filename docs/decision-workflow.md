@@ -27,8 +27,9 @@ d'un autre ne lui correspond pas. Les destinations restent dans le projet et les
 liens symboliques sont refusés. Le lot est validé avant écriture, mais les écritures
 de plusieurs fichiers ne forment pas une transaction en cas de panne disque.
 
-Les ADR déjà présents figurent dans le profil. Les titres reconnus ou les sources
-ADR explicitement citées ancrent les décisions comme documentées ; les prompts
+Les ADR déjà présents figurent dans le profil. Les titres reconnus ancrent les
+décisions comme documentées ; citer un ancien ADR ne suffit pas à documenter un
+choix différent. Les prompts
 demandent de vérifier si le code suit encore ces documents.
 
 ## Recommandations et tickets

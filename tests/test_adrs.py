@@ -70,3 +70,5 @@ def test_existing_documented_rationale_cannot_be_relabelled_inferred():
     assert anchored.evidence == [record.evidence]
     unrelated = decision.model_copy(update={"title": "Use PostgreSQL"})
     assert adrs.anchor_decision(unrelated, [record]).rationale_source == "inferred"
+    refers_to_old_choice = unrelated.model_copy(update={"evidence": [record.evidence]})
+    assert adrs.anchor_decision(refers_to_old_choice, [record]).rationale_source == "inferred"

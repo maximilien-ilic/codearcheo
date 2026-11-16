@@ -50,6 +50,17 @@ def test_an_improvement_must_have_an_actionable_first_step():
         recommendation(evidence=[""])
 
 
+def test_a_prose_only_review_never_erases_previous_recommendations(project, monkeypatch):
+    from learn_it.agent.runner import AgentError
+
+    store = Store(project.root)
+    store.save_recommendations([recommendation()])
+    monkeypatch.setattr(features, "run_agent", lambda *args, **kwargs: "Just prose.")
+    with pytest.raises(AgentError, match="aucune recommandation"):
+        features.review(Session(project, scan(project), store, Settings()))
+    assert len(store.load_recommendations()) == 1
+
+
 def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch):
     from dataclasses import replace
 

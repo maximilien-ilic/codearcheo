@@ -88,3 +88,14 @@ def test_analysis_changed_during_agent_run_is_not_archived_under_old_sha(project
     features.decisions(session)
     assert session.store.load_decisions()
     assert session.store.history_decisions(session.profile.head) is None
+
+
+def test_a_prose_only_analysis_never_erases_previous_decisions(project, monkeypatch):
+    from learn_it.agent.runner import AgentError
+
+    store = Store(project.root)
+    store.save_decisions([record()])
+    monkeypatch.setattr(features, "run_agent", lambda *args, **kwargs: "Just prose.")
+    with pytest.raises(AgentError, match="aucune décision"):
+        features.decisions(Session(project, scan(project), store, Settings()))
+    assert len(store.load_decisions()) == 1

@@ -108,6 +108,37 @@ def test_unresolved_external_dynamic_and_ambiguous_imports_do_not_fabricate_edge
     assert {item.module for item in graph.modules["app.py"].imports} == {"requests", "helper"}
 
 
+def test_python_relative_import_cannot_escape_above_the_top_level_package(tmp_path):
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg/a.py").write_text("from ..utils import run\n")
+    (tmp_path / "utils.py").write_text("def run(): pass\n")
+    assert code.analyze(tmp_path).edges() == []
+
+
+def test_javascript_require_prefers_javascript_over_a_sibling_typescript_file(tmp_path):
+    if code._parser("javascript") is None or code._parser("typescript") is None:
+        pytest.skip("optional JS and TS grammars")
+    (tmp_path / "main.js").write_text("const util = require('./util');\n")
+    (tmp_path / "util.js").write_text("exports.run = () => 1;\n")
+    (tmp_path / "util.ts").write_text("export const run = () => 2;\n")
+    assert code.analyze(tmp_path).edges() == [("main.js", "util.js")]
+    (tmp_path / "util.js").unlink()
+    (tmp_path / "main.js").write_text("const util = require('./util.js');\n")
+    assert code.analyze(tmp_path).edges() == []
+
+
+def test_rust_super_import_cannot_escape_above_the_crate_root(tmp_path):
+    if code._parser("rust") is None:
+        pytest.skip("optional Rust grammar")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src/lib.rs").write_text("mod foo;\n")
+    (tmp_path / "src/foo.rs").write_text("use super::super::outside::Thing;\n")
+    (tmp_path / "outside.rs").write_text("pub struct Thing;\n")
+    graph = code.analyze(tmp_path)
+    assert ("src/lib.rs", "src/foo.rs") in graph.edges()
+    assert ("src/foo.rs", "outside.rs") not in graph.edges()
+
+
 def test_inventory_safety_size_bounds_and_syntax_errors_are_preserved(code_project, tmp_path):
     outside = tmp_path / "outside.py"
     outside.write_text("def PRIVATE_CANARY(): pass\n")

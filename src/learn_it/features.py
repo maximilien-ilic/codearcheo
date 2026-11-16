@@ -18,7 +18,7 @@ from rich.markup import escape
 
 from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
-from learn_it.agent.runner import TextCallback, Tool, ToolCallback, run_agent
+from learn_it.agent.runner import AgentError, TextCallback, Tool, ToolCallback, run_agent
 from learn_it.agent.tools import ProjectTools
 from learn_it.analyzers import adrs, code
 from learn_it.config import Settings
@@ -121,6 +121,8 @@ def decisions(session: Session) -> str:
     synthesis = session.run(
         prompts.DECISIONS.format(language=session.settings.language), [tool], check=False
     )
+    if not recorded:
+        raise AgentError("L'analyse n'a produit aucune décision structurée. Relancer la demande.")
     session.store.save_decisions(
         recorded, head=session.profile.head if not session.profile.uncommitted else None
     )
@@ -156,6 +158,10 @@ def review(session: Session) -> str:
         "tradeoffs, first_steps and evidence. Then return a concise synthesis."
     )
     synthesis = session.run(task, [tool], check=False)
+    if not recorded:
+        raise AgentError(
+            "L'analyse n'a produit aucune recommandation structurée. Relancer la demande."
+        )
     recorded = recommendations.ordered(recorded)
     session.store.save_recommendations(recorded)
     report = session.checked(recommendations.markdown(recorded, synthesis))
