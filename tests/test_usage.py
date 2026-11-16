@@ -24,6 +24,8 @@ def test_usage_accumulates_every_request_and_reports_observed_cache_hits():
         "claude-opus-5-5",
     )
     assert summary.cache_share == 0
+    assert summary.first_cache_read_response is None
+    assert summary.second_response_cache_read_tokens is None
     summary.add(
         message(input_tokens=30, output_tokens=10, cache_read_input_tokens=2100), "claude-opus-5-5"
     )
@@ -33,9 +35,25 @@ def test_usage_accumulates_every_request_and_reports_observed_cache_hits():
     assert summary.output_tokens == 30
     assert summary.cache_creation_input_tokens == 2000
     assert summary.cache_read_input_tokens == 2100
+    assert summary.first_cache_read_response == 2
+    assert summary.second_response_cache_read_tokens == 2100
     assert summary.cache_share == pytest.approx(2100 / 4230)
     assert summary.estimated_cost_usd == pytest.approx(0.01154)
     assert "cache écrit 2000, lu 2100" in summary.format()
+    assert "cache au 2e retour : 2100 token(s) lus" in summary.format()
+
+
+def test_cache_diagnostics_distinguish_a_measured_miss_from_missing_usage():
+    summary = UsageSummary()
+    summary.add(message(input_tokens=100, output_tokens=20), "claude-opus-5-5")
+    summary.add(message(input_tokens=200, output_tokens=20), "claude-opus-5-5")
+    assert summary.second_response_cache_read_tokens == 0
+    assert "cache au 2e retour : 0 token(s) lus" in summary.format()
+    missing = UsageSummary()
+    missing.add(message(input_tokens=100, output_tokens=20), "claude-opus-5-5")
+    missing.add(SimpleNamespace(content=[]), "claude-opus-5-5")
+    assert missing.second_response_cache_read_tokens is None
+    assert "cache au 2e retour : non mesuré" in missing.format()
 
 
 def test_one_hour_writes_and_separate_compaction_tokens_are_billed_once():

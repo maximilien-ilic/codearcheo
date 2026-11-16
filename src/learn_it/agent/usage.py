@@ -33,6 +33,8 @@ class UsageSummary:
     estimated_cost_usd: float | None = 0.0
     missing_usage: bool = False
     last_context_tokens: int = 0
+    first_cache_read_response: int | None = None
+    second_response_cache_read_tokens: int | None = None
 
     def add(self, message: Any, default_model: str) -> None:
         self.requests += 1
@@ -43,11 +45,17 @@ class UsageSummary:
             self.estimated_cost_usd = None
             return
         model = getattr(message, "model", default_model)
+        before_reads = self.cache_read_input_tokens
         self._add_usage(usage, model)
         # Compaction iterations are billed separately, outside the top-level totals.
         for item in _value(usage, "iterations", []) or []:
             if _value(item, "type") == "compaction":
                 self._add_usage(item, model, update_context=False)
+        observed_reads = self.cache_read_input_tokens - before_reads
+        if observed_reads and self.first_cache_read_response is None:
+            self.first_cache_read_response = self.requests
+        if self.requests == 2:
+            self.second_response_cache_read_tokens = observed_reads
 
     def _add_usage(self, usage: Any, model: str, *, update_context: bool = True) -> None:
         inputs = _value(usage, "input_tokens", 0) or 0
@@ -91,9 +99,15 @@ class UsageSummary:
             else "coût indisponible"
         )
         suffix = " · usage partiel/indisponible" if self.missing_usage else ""
+        second = self.second_response_cache_read_tokens
+        cache_status = (
+            "cache au 2e retour : non mesuré" if second is None
+            else f"cache au 2e retour : {second} token(s) lus"
+        )
         return (
             f"Usage : entrée {self.input_tokens} · sortie {self.output_tokens} · "
             f"cache écrit {self.cache_creation_input_tokens}, lu {self.cache_read_input_tokens} "
             f"({self.cache_share:.0%} des entrées) · {self.requests} requête(s), "
-            f"{self.tool_calls} appel(s) d'outils · {self.elapsed_seconds:.2f} s · {cost}{suffix}"
+            f"{self.tool_calls} appel(s) d'outils · {self.elapsed_seconds:.2f} s · "
+            f"{cache_status} · {cost}{suffix}"
         )
