@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 
 from learn_it import git
-from learn_it.domain import Commit, Hotspot
+from learn_it.domain import Commit, Hotspot, Technology
 
 _SEP, _RECORD = "\x1f", "\x1e"
 _FORMAT = f"--format={_RECORD}%H{_SEP}%an{_SEP}%aI{_SEP}%s"
@@ -69,16 +69,74 @@ def first_commit(root: Path, path: str, needle: str | None = None) -> Commit | N
     return commits[-1] if commits else None
 
 
+def date_technologies(root: Path, technologies: list[Technology]) -> None:
+    """Date every notable technology with one patch-history read per source manifest.
+
+    Pickaxe -S tests whether a literal's occurrence count changes. Counting additions minus
+    removals in each complete patch gives the same test for our single-line literals, while
+    avoiding one full history traversal per dependency. Keep first_commit as the independent
+    reference implementation (and for arbitrary multiline needles).
+    """
+    sources: dict[str, list[Technology]] = {}
+    for tech in technologies:
+        if tech.category != "library":
+            sources.setdefault(tech.source, []).append(tech)
+    for path, group in sources.items():
+        for tech in group:
+            tech.adopted = None
+        try:
+            # NUL cannot occur in textual patches: git represents NUL-containing files as
+            # binary. Unlike a printable/control-character sentinel it cannot be forged by
+            # a line in the manifest. No configured external diff/textconv is executed.
+            out = git.run(
+                root, "log", "-p", "--no-ext-diff", "--no-textconv", "--no-renames",
+                "--format=%x00%H%x1f%an%x1f%aI%x1f%s", "--", path,
+            )
+        except git.GitError:
+            continue
+        for record in out.split("\0")[1:]:
+            header, _, patch = record.partition("\n")
+            sha, author, date, subject = header.split(_SEP, 3)
+            commit = Commit(sha=sha, author=author, date=datetime.fromisoformat(date),
+                            subject=subject)
+            added, removed = [], []
+            created = False
+            in_hunk = False
+            for line in patch.splitlines():
+                if line.startswith("diff --git "):
+                    in_hunk = False
+                elif line.startswith("new file mode "):
+                    created = True
+                elif line.startswith("@@"):
+                    in_hunk = True
+                elif in_hunk and line.startswith("+"):
+                    added.append(line[1:])
+                elif in_hunk and line.startswith("-"):
+                    removed.append(line[1:])
+            additions, removals = "\n".join(added), "\n".join(removed)
+            for tech in group:
+                needle = tech.needle
+                if (not needle and created) or (
+                    needle and "\n" not in needle
+                    and additions.count(needle) != removals.count(needle)
+                ):
+                    # Log is newest-first, just like first_commit: last match wins.
+                    tech.adopted = commit
+        for tech in group:
+            if tech.needle and "\n" in tech.needle:
+                tech.adopted = first_commit(root, path, tech.needle)
+
+
 def activity(root: Path) -> tuple[int, int, datetime | None]:
     """Number of commits, number of contributors, date of the first commit."""
     try:
-        count = int(git.run(root, "rev-list", "--count", "HEAD"))
-        contributors = len(git.run(root, "shortlog", "-sn", "HEAD").splitlines())
-        roots = git.run(root, "rev-list", "--max-parents=0", "HEAD").split()
-        first = min(
-            datetime.fromisoformat(git.run(root, "log", "-1", "--format=%aI", sha).strip())
-            for sha in roots
-        )
+        # One walk replaces rev-list --count, shortlog, root discovery and a command per
+        # root. %aN applies .mailmap, as shortlog does; parentless commits give root dates.
+        fields = git.run(root, "log", "--format=%aN%x00%aI%x00%P%x00", "HEAD").split("\0")
+        records = [fields[i:i + 3] for i in range(0, len(fields) - 1, 3)]
+        count = len(records)
+        contributors = len({author.removeprefix("\n") for author, _, _ in records})
+        first = min(datetime.fromisoformat(date) for _, date, parents in records if not parents)
     except git.GitError:  # no commit yet
         return 0, 0, None
     return count, contributors, first
