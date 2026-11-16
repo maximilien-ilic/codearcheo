@@ -111,3 +111,18 @@ def test_git_internals_and_secret_directories_are_off_limits(project):
     for path in ("nested/.git/config", "secrets.key/config"):
         with pytest.raises(ToolError):
             tools.read_file(path)
+
+
+@pytest.mark.parametrize("filename", ['quoted"name.txt', "colon:name.txt", "new\nline.txt"])
+def test_search_filters_raw_git_paths_before_display(project, filename):
+    from learn_it import git
+
+    secret = project.root / ".netrc"
+    secret.mkdir()
+    (secret / filename).write_text("QUOTED_SECRET_CANARY\n")
+    git.run(project.root, "add", "-f", str(secret / filename))
+    (project.root / "ordinary:name.txt").write_text("ORDINARY_CANARY\n")
+    tools = ProjectTools(project.root)
+
+    assert tools.search_code("QUOTED_SECRET_CANARY") == "No matches."
+    assert "ordinary:name.txt:1:ORDINARY_CANARY" in tools.search_code("ORDINARY_CANARY")
