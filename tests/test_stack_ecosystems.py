@@ -143,3 +143,18 @@ def test_fixture_package_name_does_not_hide_primary_dependency(tmp_path):
         tmp_path, ["package.json", "tests/fixtures/react/package.json"],
     )}
     assert "React" in names
+
+
+def test_technologies_only_found_in_examples_are_auxiliary(tmp_path):
+    """Flask: Redis and Celery only come from examples/celery/ (#33)."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "flask"\ndependencies = ["click>=8.1"]\n'
+    )
+    example = tmp_path / "examples" / "celery"
+    example.mkdir(parents=True)
+    (example / "requirements.txt").write_text("celery\nclick\nredis\n")
+    files = ["examples/celery/requirements.txt", "pyproject.toml"]
+
+    auxiliary = {t.name: t.auxiliary for t in stack.detect(tmp_path, files)}
+
+    assert auxiliary == {"Click": False, "Celery": True, "Redis": True}

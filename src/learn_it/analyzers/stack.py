@@ -378,7 +378,11 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
 
     def add(name: str, category: str, source: str, needle: str | None = None) -> None:
         if name not in found:  # first source wins
-            found[name] = Technology(name=name, category=category, source=source, needle=needle)
+            # Main sources are read first, so an auxiliary first source means no main one.
+            found[name] = Technology(
+                name=name, category=category, source=source, needle=needle,
+                auxiliary=_priority(source)[0],
+            )
 
     # The root manifest must win over an example or a test fixture declaring the same package.
     ordered = [

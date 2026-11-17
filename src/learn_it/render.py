@@ -35,11 +35,12 @@ def profile(p: ProjectProfile) -> None:
         )
 
     notable = [t for t in p.technologies if t.category != "library"]
-    if notable:
+    stack = [t for t in notable if not t.auxiliary]
+    if stack:
         table = Table(title="Stack technique", title_justify="left", show_lines=False)
         for column in ("Techno", "Catégorie", "Détectée dans", "Adoptée"):
             table.add_column(column)
-        for t in notable:
+        for t in stack:
             adopted = (
                 f"{_day(t.adopted.date)} · {t.adopted.sha[:7]} · {t.adopted.subject[:60]}"
                 if t.adopted
@@ -47,6 +48,9 @@ def profile(p: ProjectProfile) -> None:
             )
             table.add_row(escape(t.name), t.category, escape(t.source), escape(adopted))
         console.print(table)
+    if auxiliary := [t for t in notable if t.auxiliary]:
+        shown = ", ".join(f"{t.name} ({t.source})" for t in auxiliary)
+        console.print(f"[bold]Exemples, tests et docs[/bold] : {escape(shown)}")
     if libraries := len(p.technologies) - len(notable):
         console.print(f"[dim]+ {libraries} autre(s) dépendance(s)[/dim]")
 

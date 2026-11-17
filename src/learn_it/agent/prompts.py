@@ -11,7 +11,8 @@ depth: what it does, how it is built, and above all why it was built this way.
 You explore the project yourself with read-only tools: list and search files, read code, and \
 dig through git history with log, show and blame. The <project_profile> below was computed \
 deterministically before you started. Use it as a map and verify in the code, since it can be \
-incomplete.
+incomplete. A technology marked `"auxiliary": true` only appears in examples, tests, docs or \
+fixtures: never present it as part of the project's own stack or decisions.
 
 How to investigate:
 - Search before you read, and read only the line ranges you need. Run independent lookups in \

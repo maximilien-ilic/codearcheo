@@ -26,6 +26,8 @@ class Technology(BaseModel):
     category: str
     source: str  # file where it was detected: the first piece of evidence
     adopted: Commit | None = None  # oldest commit that introduced it
+    # Only found under examples/, tests/, docs/ or fixtures/: not the project's own stack.
+    auxiliary: bool = False
     # Text searched in the history of `source` to date the adoption (None: the file's creation).
     needle: str | None = Field(default=None, exclude=True)
 
