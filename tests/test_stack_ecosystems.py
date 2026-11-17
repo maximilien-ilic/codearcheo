@@ -73,3 +73,37 @@ def test_terraform_module_sources_are_not_reported_as_providers(tmp_path):
     )
     found = stack.detect(tmp_path, ["modules.tf"])
     assert [technology.name for technology in found] == ["Terraform"]
+
+
+def test_root_manifest_wins_and_the_project_is_not_its_own_dependency(tmp_path):
+    """Flask: examples/ sorts before pyproject.toml and its examples depend on flask."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "Flask"\ndependencies = ["click>=8.1"]\n'
+    )
+    example = tmp_path / "examples" / "celery"
+    example.mkdir(parents=True)
+    (example / "pyproject.toml").write_text(
+        '[project]\nname = "flask-example-celery"\ndependencies = ["flask", "celery"]\n'
+    )
+    (example / "requirements.txt").write_text("click\nredis\n")
+    files = ["examples/celery/pyproject.toml", "examples/celery/requirements.txt", "pyproject.toml"]
+
+    sources = {t.name: t.source for t in stack.detect(tmp_path, files)}
+
+    assert sources["Click"] == "pyproject.toml"
+    assert "Flask" not in sources
+    assert sources["Celery"] == "examples/celery/pyproject.toml"  # only found there: kept
+
+
+def test_monorepo_members_are_not_technologies(tmp_path):
+    for name, deps in [("a", '{"@acme/b": "1", "react": "19"}'), ("b", "{}")]:
+        package = tmp_path / "packages" / name
+        package.mkdir(parents=True)
+        (package / "package.json").write_text(
+            f'{{"name": "@acme/{name}", "dependencies": {deps}}}'
+        )
+    files = ["packages/a/package.json", "packages/b/package.json"]
+
+    names = {t.name for t in stack.detect(tmp_path, files)}
+
+    assert "React" in names and "@acme/b" not in names
