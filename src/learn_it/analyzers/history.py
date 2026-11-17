@@ -69,14 +69,17 @@ def first_commit(root: Path, path: str, needle: str | None = None) -> Commit | N
     return commits[-1] if commits else None
 
 
-def date_technologies(root: Path, technologies: list[Technology]) -> None:
+def date_technologies(root: Path, technologies: list[Technology]) -> dict[str, str]:
     """Date every notable technology with one patch-history read per source manifest.
 
     Pickaxe -S tests whether a literal's occurrence count changes. Counting additions minus
     removals in each complete patch gives the same test for our single-line literals, while
     avoiding one full history traversal per dependency. Keep first_commit as the independent
     reference implementation (and for arbitrary multiline needles).
+
+    Return the commit that created each source manifest, for trace_migrations.
     """
+    created_by: dict[str, str] = {}
     sources: dict[str, list[Technology]] = {}
     for tech in technologies:
         if tech.category != "library":
@@ -111,6 +114,7 @@ def date_technologies(root: Path, technologies: list[Technology]) -> None:
                     in_hunk = False
                 elif line.startswith("new file mode "):
                     created = True
+                    created_by[path] = sha  # newest-first: the oldest creation is kept
                 elif line.startswith("@@"):
                     in_hunk = True
                 elif in_hunk and line.startswith("+"):
@@ -129,6 +133,76 @@ def date_technologies(root: Path, technologies: list[Technology]) -> None:
         for tech in group:
             if tech.needle and "\n" in tech.needle:
                 tech.adopted = first_commit(root, path, tech.needle)
+    return created_by
+
+
+# Manifests a project commonly migrates away from: where a dependency may have lived before.
+_LEGACY = re.compile(
+    r"(^|/)(setup\.py|setup\.cfg|Pipfile|requirements[^/]*\.txt|package\.json|Cargo\.toml"
+    r"|go\.mod|pom\.xml|build\.gradle(\.kts)?|Gemfile|composer\.json)$"
+)
+
+
+def _changes(root: Path, sha: str) -> list[tuple[str, str, str]]:
+    """(status, old path, new path) of every file a commit touched, renames detected."""
+    try:
+        out = git.run(root, "show", "--no-color", "--format=", "--name-status", "-M", "-z", sha)
+    except git.GitError:
+        return []
+    fields, changes, i = out.split("\0"), [], 0
+    while i < len(fields) and fields[i]:
+        status = fields[i][0]
+        if status in "RC":
+            changes.append((status, fields[i + 1], fields[i + 2]))
+            i += 3
+        else:
+            changes.append((status, fields[i + 1], fields[i + 1]))
+            i += 2
+    return changes
+
+
+def trace_migrations(
+    root: Path, technologies: list[Technology], created_by: dict[str, str], max_hops: int = 3
+) -> None:
+    """Follow a dependency back through the manifests its current one replaced.
+
+    When a dependency seems adopted by the very commit that created its manifest (a switch
+    from setup.py to pyproject.toml, a moved package.json), the real adoption is earlier: look
+    for the dependency in the manifests that commit deleted, renamed or rewrote.
+    """
+    changes: dict[str, list[tuple[str, str, str]]] = {}
+    for tech in technologies:
+        if tech.category == "library" or tech.adopted is None or not tech.needle:
+            continue
+        # Only a dependency manifest can replace an older one, and only when it was created
+        # by the adopting commit: otherwise no extra git call is spent on this technology.
+        name = PurePosixPath(tech.source).name
+        if name != "pyproject.toml" and not _LEGACY.search(name):
+            continue
+        if created_by.get(tech.source) != tech.adopted.sha:
+            continue
+        commit, path = tech.adopted, tech.source
+        for _ in range(max_hops):
+            touched = changes.setdefault(commit.sha, _changes(root, commit.sha))
+            if not any(new == path and status in "ARC" for status, _, new in touched):
+                break  # the manifest already existed: this commit really adopted it
+            legacy = {
+                old for status, old, new in touched
+                if old != path and status in "DMRC" and _LEGACY.search(old)
+            }
+            earlier = []
+            for candidate in legacy:
+                try:
+                    out = git.run(root, "log", f"-S{tech.needle}", _FORMAT, f"{commit.sha}^",
+                                  "--", candidate)
+                except git.GitError:  # root commit: nothing before it
+                    continue
+                if found := _parse(out):
+                    earlier.append((found[-1], candidate))
+            if not earlier:
+                break
+            commit, path = min(earlier, key=lambda item: item[0].date)
+            tech.adopted, tech.adopted_from = commit, path
 
 
 def activity(root: Path) -> tuple[int, int, datetime | None]:

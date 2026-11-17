@@ -43,6 +43,7 @@ def profile(p: ProjectProfile) -> None:
         for t in stack:
             adopted = (
                 f"{_day(t.adopted.date)} · {t.adopted.sha[:7]} · {t.adopted.subject[:60]}"
+                + (f" (via {t.adopted_from})" if t.adopted_from else "")
                 if t.adopted
                 else "—"
             )
