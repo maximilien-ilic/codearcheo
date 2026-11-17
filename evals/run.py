@@ -148,10 +148,25 @@ def compare_citation_repair(
     }
 
 
+def citation_repair_available() -> bool:
+    """Refuse a requested mode before API calls if its Session integration is unavailable."""
+    return (
+        "repair_citations" in getattr(Session, "__dataclass_fields__", {})
+        and hasattr(Session, "last_repair")
+    )
+
+
 def main(
     names: list[str], *, repair_citations: bool = False, compare_citations: bool = False,
     max_requests: int | None = None, max_output_tokens: int | None = None,
 ) -> int:
+    if (repair_citations or compare_citations) and not citation_repair_available():
+        print(
+            "Citation repair is not implemented; evaluation cancelled before any API call. "
+            "Run without --repair-citations/--compare-citations for the baseline (issue #11).",
+            file=sys.stderr,
+        )
+        return 2
     settings = Settings.from_env(max_requests=max_requests, max_output_tokens=max_output_tokens)
     limits = (
         SessionLimits.from_settings(settings)
@@ -197,12 +212,18 @@ def main(
                 checks = run_case(session, case, spec.get("canary"))
             passed = all(check.ok for check in checks)
             comparison = None
-            if compare_citations and case["command"] in {"ask", "why"}:
+            if (repair_citations or compare_citations) and case["command"] in {"ask", "why"}:
                 metadata = getattr(session, "last_repair", None)
-                if metadata:
+                if compare_citations and metadata:
                     comparison = compare_citation_repair(
                         metadata, case, project.root, spec.get("canary")
                     )
+                if passed and (not metadata or (compare_citations and comparison is None)):
+                    checks.append(Check(
+                        "correction/comparaison disponible", False,
+                        "Métadonnées de correction absentes ; le mode demandé n'a pas été vérifié.",
+                    ))
+                    passed = False
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,
                  "elapsed_seconds": time.perf_counter() - started,
@@ -237,7 +258,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("names", nargs="*", help="Reference project names; empty selects all.")
     parser.add_argument("--repair-citations", action="store_true",
-                        help="Opt into at most one correction request for each text answer.")
+                        help="Opt into one bounded correction request for each text answer.")
     parser.add_argument(
         "--compare-citations", action="store_true",
         help="Save original/repaired scores from the same task (uses the real API).",

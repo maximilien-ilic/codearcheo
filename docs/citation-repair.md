@@ -23,8 +23,9 @@ la réponse initiale et ses avertissements sont conservés.
 
 Le modèle propose un plan JSON de remplacement des références, pas une nouvelle réponse.
 Le programme applique uniquement les références invalides reconnues à leurs positions
-exactes : les phrases, conclusions, références valides et le diagramme Mermaid restent
-inchangés. Une référence proposée doit exister et ne contenir aucun texte supplémentaire.
+exactes : le texte extérieur à ces fragments, les références valides et le diagramme
+Mermaid restent inchangés. Il n'accepte jamais une réécriture libre de la réponse.
+Une référence proposée doit exister et ne contenir aucun texte supplémentaire.
 Le modèle doit choisir un remplacement seulement si l'extrait soutient la même affirmation.
 Les blocs de code ou Mermaid, fermés ou non, sont exclus des références à corriger.
 Les formes réseau reconnues (IP, URL, nom d'hôte sans suffixe de code/texte) avec port

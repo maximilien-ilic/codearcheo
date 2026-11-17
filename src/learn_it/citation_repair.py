@@ -203,8 +203,8 @@ def repair_answer(
 ) -> RepairResult:
     """Make at most one tool-free model call, and accept only a strict source-ref improvement.
 
-    The host applies a citation edit plan, so the model cannot rewrite conclusions or the
-    Mermaid diagram. Metadata retains the exact original answer and its initial report.
+    The host accepts only edits within recognised citation spans, never a rewritten answer
+    or changes to fenced diagrams. Metadata retains the original answer and initial report.
     """
     before = initial if initial is not None else evidence.verify(answer, root)
     snapshot = ReportSnapshot.capture(before)
