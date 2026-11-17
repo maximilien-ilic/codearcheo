@@ -11,7 +11,7 @@ learn-it decisions                              # les décisions techniques, au 
 learn-it review                                 # garder, améliorer ou remplacer, et par où commencer
 ```
 
-> **Statut : v0.** `scan` fonctionne et est testé, et la CI tourne sur chaque PR. Les commandes IA sont testées sans appel réel à l'API ; `evals/` mesure leurs vraies réponses sur des projets de référence (voir [Évaluation](#évaluation)). Voir aussi la [roadmap](#roadmap).
+> **Statut :** les neuf commandes fonctionnent et sont testées, sans appel IA réel. La qualité des vraies réponses n'a pas encore été mesurée contre l'API. Voir [Où en est le projet](#où-en-est-le-projet).
 
 ## Le problème
 
@@ -130,11 +130,38 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | `LEARN_IT_MAX_ITERATIONS` | `40` | nombre maximal d'allers-retours de l'agent |
 | `LEARN_IT_CACHE_DIR` | `~/.cache/learn-it` | où sont clonés les dépôts GitHub |
 
-## Roadmap
+## Où en est le projet
 
-Déjà fait : la CLI et ses sept commandes, le scan déterministe, l'agent Claude et son serveur MCP, la CI et l'évaluation des réponses.
+*État au 17 novembre 2026.*
 
-La suite tient en cinq jalons, de v0.2 (des réponses fiables) à v0.6 (expérience et diffusion), avec un ticket GitHub par étape. Le détail, et ce qui a été fait récemment, sont dans [docs/roadmap.md](docs/roadmap.md).
+**Ce qui marche.** Les neuf commandes sont en place, couvertes par 288 tests qui tournent sous Python 3.11 et 3.14 à chaque PR.
+
+- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter, en moins d'une seconde sur un dépôt de 8 000 commits.
+- **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
+- **Les décisions.** Elles s'exportent en ADR (`decisions --export`), les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
+- **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`.
+
+**Ce qui n'est pas encore prouvé.** Aucune réponse n'a été mesurée contre la vraie API : tout le comportement IA est testé avec un faux client. C'est la priorité.
+
+**Ce qu'il reste à faire.**
+
+| # | Étape | Ticket | En attente de |
+|---|---|---|---|
+| 1 | Mesurer les vraies réponses et régler les prompts | [#10] | une clé API |
+| 2 | Dater une dépendance à travers les migrations de manifeste (`setup.py` → `pyproject.toml`) | [#32] | — |
+| 3 | Distinguer la stack du projet de celle de ses exemples et tests | [#33] | — |
+| 4 | Corriger aussi les preuves des décisions et recommandations | [#34] | la mesure de #10 |
+| 5 | Licence, versions et publication sur PyPI | [#24] | le choix de la licence |
+| 6 | Revue automatique côté serveur, sans Orca | [#25] | le choix des identifiants |
+
+Les jalons, l'historique du projet et le détail de chaque étape sont dans [docs/roadmap.md](docs/roadmap.md).
+
+[#10]: https://github.com/maximilien-ilic/learn-it/issues/10
+[#24]: https://github.com/maximilien-ilic/learn-it/issues/24
+[#25]: https://github.com/maximilien-ilic/learn-it/issues/25
+[#32]: https://github.com/maximilien-ilic/learn-it/issues/32
+[#33]: https://github.com/maximilien-ilic/learn-it/issues/33
+[#34]: https://github.com/maximilien-ilic/learn-it/issues/34
 
 ## Développement
 

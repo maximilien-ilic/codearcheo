@@ -153,6 +153,12 @@ CATEGORIES = [
     "library",
 ]
 _VENDORED = {"node_modules", "vendor", "third_party"}
+# Manifests in these folders describe examples, tests or docs, not the project itself.
+_AUXILIARY = {
+    "example", "examples", "sample", "samples", "demo", "demos", "doc", "docs",
+    "test", "tests", "testdata", "fixtures", "benchmarks",
+}
+_SELF_DECLARING = {"pyproject.toml", "package.json", "Cargo.toml", "go.mod"}
 _REQUIREMENT = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 _REQUIREMENTS_FILE = re.compile(r"^requirements.*\.txt$")
 _GO_REQUIRE = re.compile(r"^\s*(?:require\s+)?([a-z0-9.-]+\.[a-z]{2,}/\S+)\s+v\S+", re.MULTILINE)
@@ -285,6 +291,37 @@ MANIFESTS: dict[str, Callable[[Path], list[str]]] = {
 }
 
 
+def _priority(path: str) -> tuple[bool, int, str]:
+    """Main manifests first: the root, then shallower paths, auxiliary folders last."""
+    parts = PurePosixPath(path).parts
+    auxiliary = bool(_AUXILIARY & {part.lower() for part in parts[:-1]})
+    return auxiliary, len(parts), path
+
+
+def _key(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name.lower())
+
+
+def _declared_name(path: Path) -> str | None:
+    """The package a manifest declares, so that the repository's own packages (the project
+    itself, its examples, the members of a monorepo) are not reported as technologies."""
+    name = None
+    if path.name == "pyproject.toml":
+        data = tomllib.loads(_read(path))
+        name = data.get("project", {}).get("name") or (
+            data.get("tool", {}).get("poetry", {}).get("name")
+        )
+    elif path.name == "package.json":
+        data = json.loads(_read(path))
+        name = data.get("name") if isinstance(data, dict) else None
+    elif path.name == "Cargo.toml":
+        name = tomllib.loads(_read(path)).get("package", {}).get("name")
+    elif path.name == "go.mod":
+        match = re.search(r"^module\s+(\S+)", _read(path), re.MULTILINE)
+        name = match[1] if match else None
+    return name if isinstance(name, str) else None
+
+
 def _lookup(dependency: str) -> tuple[str, str]:
     name = dependency.lower()
     if name.startswith("org.springframework.boot:spring-boot-"):
@@ -341,11 +378,22 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
         if name not in found:  # first source wins
             found[name] = Technology(name=name, category=category, source=source, needle=needle)
 
-    for path in files:
-        p = PurePosixPath(path)
-        if _VENDORED & set(p.parts):
-            continue
+    # The root manifest must win over an example or a test fixture declaring the same package.
+    ordered = [
+        f for f in sorted(files, key=_priority) if not _VENDORED & set(PurePosixPath(f).parts)
+    ]
+    own = set()
+    for path in ordered:
+        if PurePosixPath(path).name in _SELF_DECLARING:
+            try:
+                declared = _declared_name(root / path)
+            except (OSError, ValueError, TypeError, AttributeError):
+                declared = None
+            if declared:
+                own.add(_key(declared))
 
+    for path in ordered:
+        p = PurePosixPath(path)
         parser = MANIFESTS.get(p.name) or (
             _python_deps if _REQUIREMENTS_FILE.match(p.name) else None
         )
@@ -357,7 +405,7 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
             except (OSError, ValueError, TypeError, AttributeError, ET.ParseError):
                 dependencies = []
             for dep in dependencies:
-                if not isinstance(dep, str):
+                if not isinstance(dep, str) or _key(dep) in own:
                     continue
                 name, category = _lookup(dep)
                 needle = f'"{dep}"' if p.name == "package.json" else dep
