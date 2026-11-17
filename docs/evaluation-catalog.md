@@ -36,11 +36,15 @@ uv run python -m evals.run go  # clone complet volumineux, puis appels API payan
 Le projet Go impose au moins 10 000 commits après préparation : un clone tronqué
 ne peut pas servir de mesure du gros historique. Le JSON des résultats contient
 le SHA, le nombre de commits/fichiers, le temps de préparation, de scan et de
-chaque cas, ainsi que le modèle et l'effort. Les coûts et tokens de l'agent sont
-à collecter avec la télémétrie de session (#13). Aucun score réel ni coût de ces
+chaque cas, ainsi que le modèle et l'effort. Les tokens et coûts estimés sont
+conservés avec la télémétrie de chaque cas ; un coût inconnu reste indisponible.
+Aucun score réel ni coût de ces
 nouveaux cas n'est revendiqué avant l'exécution avec identifiants (#10).
 
-La correction automatique de citations reste à implémenter (#11). Les options
-`--repair-citations` et `--compare-citations` sont réservées : elles terminent
-avec le code 2 avant préparation ou appel API, sans produire de rapport.
-L’évaluation sans ces options mesure les réponses initiales.
+`--repair-citations` active une tentative facultative de correction des réponses
+textuelles. `--compare-citations` conserve les scores initiaux et retenus de la
+même analyse, avec les usages et coûts correspondants. Les limites locales sont
+partagées sur toute l'exécution. Voir le [protocole de comparaison](citation-repair.md).
+Si l'intégration de correction est indisponible, ces options échouent avant
+préparation et appel API. Une comparaison sans métadonnées ne compte pas comme
+un cas réussi. L'évaluation sans ces options mesure les réponses initiales.

@@ -11,6 +11,7 @@ import anthropic
 from anthropic import beta_tool
 from anthropic.lib.tools import BetaFunctionTool
 
+from learn_it.agent.limits import AgentError, SessionLimitError, SessionLimits
 from learn_it.agent.usage import UsageSummary
 from learn_it.config import Settings
 
@@ -23,10 +24,6 @@ ToolCallback = Callable[[str, dict[str, Any]], None]
 TextCallback = Callable[[str], None]
 UsageCallback = Callable[[UsageSummary], None]
 Tool = Callable[..., str] | BetaFunctionTool
-
-
-class AgentError(RuntimeError):
-    """The agent stopped without a usable answer."""
 
 
 def _client() -> anthropic.Anthropic:
@@ -90,6 +87,7 @@ def _consume(
     on_usage: UsageCallback | None,
     *,
     compact: bool = False,
+    limits: SessionLimits | None = None,
 ) -> str:
     started = time.monotonic()
     usage = UsageSummary()
@@ -110,6 +108,8 @@ def _consume(
             else:
                 current = item
             usage.add(current, settings.model)
+            if limits is not None:
+                limits.observe_response()
             if current.stop_reason != "compaction":
                 message = current
             if on_tool:
@@ -127,12 +127,26 @@ def _consume(
         if on_text and message.stop_reason == "max_tokens":
             on_text("\n\n> Réponse tronquée : limite de longueur atteinte.")
         return answer
+    except SessionLimitError as exc:
+        if limits is not None and limits.has_unobserved_attempts:
+            usage.missing_usage = True
+            usage.estimated_cost_usd = None
+        if exc.compaction and message is not None and message.stop_reason == "end_turn":
+            answer = _answer(message, settings)
+            note = "\n\n> Compaction ignorée : limite locale de requêtes atteinte."
+            if on_text:
+                on_text(note)
+            return answer + note
+        raise
     except BaseException:
         # A failed or interrupted request may have billed tokens absent from the last usage.
         usage.missing_usage = True
         usage.estimated_cost_usd = None
         raise
     finally:
+        if limits is not None and limits.has_unobserved_attempts:
+            usage.missing_usage = True
+            usage.estimated_cost_usd = None
         usage.elapsed_seconds = time.monotonic() - started
         try:
             if on_usage:
@@ -154,13 +168,27 @@ def run_agent(
     *,
     on_text: TextCallback | None = None,
     on_usage: UsageCallback | None = None,
+    limits: SessionLimits | None = None,
+    single_request: bool = False,
 ) -> str:
     """Run one task; optionally stream text while retaining the final answer as a string."""
+    if limits is None and (
+        settings.max_requests is not None
+        or settings.max_output_tokens != Settings.max_output_tokens
+    ):
+        limits = SessionLimits.from_settings(settings)
+    if limits is not None:
+        limits.ensure_available()
     client = _client()
+    one_request = SessionLimits(1, settings.max_output_tokens) if single_request else None
     try:
+        if one_request is not None:
+            client = client.with_options(max_retries=0).with_middleware(one_request.middleware)
+        if limits is not None:
+            client = client.with_middleware(limits.middleware)
         runner = client.beta.messages.tool_runner(
             model=settings.model,
-            max_tokens=16_000,
+            max_tokens=settings.max_output_tokens,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             cache_control={"type": "ephemeral"},
             messages=[{"role": "user", "content": task}],
@@ -169,7 +197,7 @@ def run_agent(
             **({"stream": True} if on_text is not None else {}),
             **_options(settings),
         )
-        return _consume(runner, settings, on_tool, on_text, on_usage)
+        return _consume(runner, settings, on_tool, on_text, on_usage, limits=limits or one_request)
     finally:
         close = getattr(client, "close", None)
         if close:
@@ -179,12 +207,27 @@ def run_agent(
 class ConversationAgent:
     """One SDK thread across questions, including previous tool results and answers."""
 
-    def __init__(self, system: str, tools: Sequence[Tool], settings: Settings) -> None:
+    def __init__(
+        self,
+        system: str,
+        tools: Sequence[Tool],
+        settings: Settings,
+        *,
+        limits: SessionLimits | None = None,
+    ) -> None:
         self.settings = settings
+        self.limits = limits or (
+            SessionLimits.from_settings(settings)
+            if settings.max_requests is not None
+            or settings.max_output_tokens != Settings.max_output_tokens
+            else None
+        )
         self.client = _client()
+        if self.limits is not None:
+            self.client = self.client.with_middleware(self.limits.middleware)
         self.thread = self.client.beta.messages.thread(
             model=settings.model,
-            max_tokens=16_000,
+            max_tokens=settings.max_output_tokens,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             cache_control={"type": "ephemeral"},
             messages=[],
@@ -202,11 +245,22 @@ class ConversationAgent:
         on_text: TextCallback | None = None,
         on_usage: UsageCallback | None = None,
     ) -> str:
+        if self.limits is not None:
+            self.limits.ensure_available()
         self.thread.append({"role": "user", "content": question})
-        runner = self.thread.tool_runner(
-            max_iterations=self.settings.max_iterations, stream=on_text is not None
-        )
-        answer = _consume(runner, self.settings, on_tool, on_text, on_usage, compact=True)
+        try:
+            runner = self.thread.tool_runner(
+                max_iterations=self.settings.max_iterations, stream=on_text is not None
+            )
+            answer = _consume(
+                runner, self.settings, on_tool, on_text, on_usage, compact=True, limits=self.limits
+            )
+        except SessionLimitError as exc:
+            self.transcript += [
+                ("Vous", question),
+                ("Claude", f"> Réponse interrompue : {exc} Aucun résultat final n'a été produit."),
+            ]
+            raise
         self.transcript += [("Vous", question), ("Claude", answer)]
         return answer
 

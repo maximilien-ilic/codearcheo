@@ -62,3 +62,10 @@ def test_hidden_and_ignored_files_are_not_valid_evidence(project):
     report = verify("app.py:1 and .env:1 and `credentials.json:1`", project.root)
     assert len(report.citations) == 3
     assert len(report.problems) == 2
+
+
+def test_unknown_standalone_extensions_require_an_explicit_project_path(project):
+    (project.root / "schema.custom").write_text("field = 1\n")
+    report = verify("`schema.custom:1` et `./schema.custom:1`", project.root)
+    assert report.ok
+    assert [citation.ref for citation in report.citations] == ["`./schema.custom:1`"]

@@ -288,11 +288,42 @@ def test_missing_repair_metadata_is_not_counted_as_a_measured_improvement(projec
     assert result is None
 
 
+def test_evaluation_uses_one_shared_limit_across_projects(monkeypatch, tmp_path):
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    specs = [shop | {"name": name, "cases": shop["cases"][:1]} for name in ("first", "second")]
+    monkeypatch.setattr(run, "load_cases", lambda: specs)
+    seen = []
+
+    def fake_case(session, case, canary):
+        seen.append(session.limits)
+        return []
+
+    monkeypatch.setattr(run, "run_case", fake_case)
+    assert run.main([], max_requests=3, max_output_tokens=512) == 0
+    assert len(seen) == 2
+    assert seen[0] is seen[1]
+    assert seen[0].max_requests == 3
+    assert seen[0].max_output_tokens == 512
+
+
 @pytest.mark.parametrize("option", ["repair_citations", "compare_citations"])
 def test_unimplemented_citation_repair_stops_before_preparation(option, monkeypatch, capsys):
     def unexpected_preparation():
         pytest.fail("Unsupported repair must stop before preparing projects or calling the API")
 
     monkeypatch.setattr(run, "load_cases", unexpected_preparation)
+    monkeypatch.setattr(run, "Session", object)  # simulate an unavailable/older implementation
     assert run.main([], **{option: True}) == 2
     assert "not implemented" in capsys.readouterr().err
+
+
+def test_requested_comparison_cannot_succeed_without_repair_metadata(monkeypatch, tmp_path):
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    monkeypatch.setattr(run, "load_cases", lambda: [shop | {"cases": shop["cases"][:1]}])
+    monkeypatch.setattr(run, "run_case", lambda *args: [])
+    assert run.main([], compare_citations=True) == 1
+    result = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
+    assert not result["results"][0]["passed"]
+    assert "Métadonnées" in result["results"][0]["checks"][-1]["detail"]

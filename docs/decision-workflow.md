@@ -10,8 +10,10 @@ Une réponse sans source est également signalée. En streaming, la vérificatio
 le bilan arrivent à la fin : le texte reçu avant ce bilan reste provisoire.
 
 Ce contrôle vérifie l'existence des références, pas que chaque phrase découle de
-la source. Il ne valide pas encore les URL des PR. La correction automatique de
-citations avec mesure du gain reste à expérimenter avec l'évaluation réelle (#10).
+la source. Il ne valide pas encore les URL des PR. `--repair-citations` active une
+tentative de correction pour `ask`, `why` et `overview` ; la réponse est alors
+affichée après validation. Le [mécanisme de correction](citation-repair.md) et son
+mode de comparaison sont testés hors ligne ; le gain réel reste à mesurer dans #10.
 
 ## Exporter des ADR
 

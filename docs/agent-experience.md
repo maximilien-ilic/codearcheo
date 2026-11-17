@@ -36,11 +36,61 @@ d'un tour sans décrémenter manuellement les tokens déjà présents dans l'his
 
 Ce budget API est **indicatif** : Claude peut le dépasser. Il ne garantit ni un
 plafond de facture ni une limite exacte sur tous les tokens d'une session de chat.
-Chaque question de chat démarre un nouveau tour. Les limites locales restent
-16 000 tokens de sortie par réponse et `LEARN_IT_MAX_ITERATIONS` requêtes ordinaires
-par question ; la compaction peut ajouter une requête de synthèse. Un modèle ne
-prenant pas en charge ce bêta renvoie une erreur API explicite.
+Chaque question de chat démarre un nouveau tour. Un modèle ne prenant pas en charge
+ce bêta renvoie une erreur API explicite.
 Source : [budgets de tâche](https://platform.claude.com/docs/en/build-with-claude/task-budgets).
+
+Les lectures du cache au deuxième retour API sont distinguées d'une absence de
+lecture mesurée et d'un usage indisponible. Ce diagnostic décrit les compteurs
+reçus ; il ne promet pas un succès du cache. Sa validation sur l'API réelle reste
+dans #10.
+
+Une requête de génération soumise à la limite locale ne suit pas automatiquement
+les redirections HTTP : elles pourraient envoyer plusieurs POST dans une seule
+tentative du SDK. Un serveur renvoyant une redirection doit utiliser son URL finale
+pour ces appels bornés.
+
+## Limites locales appliquées avant l'envoi
+
+`--max-requests N` (ou `LEARN_IT_MAX_REQUESTS`) limite le nombre de tentatives HTTP
+de génération pour la session. La valeur doit être positive ; sans option, aucune
+limite supplémentaire n'est ajoutée. La même instance de limite est réutilisée
+pour une réponse et sa réparation, et pour toutes les questions d'un `chat`.
+
+Le garde-fou utilise le middleware public du SDK avant chaque tentative vers
+`/v1/messages`. Il compte aussi les retries automatiques, les rejouements du thread
+et les demandes de compaction. Quand il n'y a plus de place, la tentative suivante
+est refusée avant l'envoi. Ce nombre n'est pas celui des opérations internes que
+le fournisseur peut effectuer derrière une requête HTTP.
+
+`--max-output-tokens N` (ou `LEARN_IT_MAX_OUTPUT_TOKENS`) fixe le `max_tokens` de
+**chaque requête**, avec 16 000 par défaut. Le réglage vaut aussi pour une synthèse
+de compaction. Il ne plafonne ni les tokens d'entrée ni le total de la session.
+Les valeurs explicites de ces deux options priment sur les variables d'environnement.
+
+```bash
+learn-it ask "Pourquoi Redis ?" --max-requests 5 --max-output-tokens 4000
+learn-it chat --max-requests 20 --max-output-tokens 4000
+```
+
+`LEARN_IT_MAX_ITERATIONS` reste une limite de réponses ordinaires par boucle,
+distincte du nombre de tentatives HTTP. Elle ne remplace pas `--max-requests` :
+une réponse peut être précédée de retries et suivie d'une compaction.
+
+Si la limite refuse seulement une compaction facultative après une réponse
+complète, cette réponse est conservée avec une note. Une nouvelle question ne
+réinitialise pas le compteur du chat ; `/save` et `/exit` restent disponibles.
+Une tentative ayant échoué sans usage retourné demeure comptée et rend le coût
+incomplet, même si un retry fournit ensuite une réponse normale.
+
+Ces contrôles bornent les requêtes émises et leur paramètre de sortie, **pas la
+facture totale**. Les entrées, opérations internes du fournisseur et essais dont
+l'usage n'a pas été retourné empêchent de promettre un montant précis. Aucun
+appel payant n'est utilisé dans les tests : un transport HTTP/SSE local simule le
+serveur, y compris les retries et la récupération du thread.
+Sources : [middleware SDK](https://platform.claude.com/docs/en/cli-sdks-libraries/middleware),
+[tool runner](https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-runner),
+[compaction](https://platform.claude.com/docs/en/build-with-claude/compaction-on-demand).
 
 ## Conversation et streaming
 
