@@ -39,12 +39,13 @@ La cible est un dossier local (par défaut le dossier courant) ou une URL GitHub
 
 ## Démarrage rapide
 
-Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/), et une clé API Anthropic pour les commandes IA.
+Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/), et, pour les commandes IA, soit une clé API Anthropic, soit [Claude Code](https://code.claude.com) connecté à un abonnement Claude.
 
 ```bash
 git clone https://github.com/maximilien-ilic/learn-it && cd learn-it
 uv tool install --editable .          # installe la commande learn-it ('.[mcp]' pour serve)
 export ANTHROPIC_API_KEY=sk-ant-...   # ou : ant auth login
+# ou, sans clé, avec ton abonnement Claude : export LEARN_IT_BACKEND=claude-code
 
 cd ~/code/mon-projet
 learn-it scan                         # gratuit, quelques secondes
@@ -124,6 +125,7 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | clé API (ou un profil `ant auth login`) |
+| `LEARN_IT_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming, sans `chat` ni `--repair-citations` |
 | `LEARN_IT_MODEL` | `claude-opus-5-5` | modèle Claude |
 | `LEARN_IT_EFFORT` | `high` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
 | `LEARN_IT_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
@@ -182,13 +184,18 @@ La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 
 
 ### Évaluation
 
-`pytest` ne couvre que la partie déterministe. Pour mesurer les vraies réponses de Claude, avec une clé API :
+`pytest` ne couvre que la partie déterministe. Pour mesurer les vraies réponses de Claude, avec une clé API ou avec l'abonnement via Claude Code (`--backend claude-code`) :
 
 ```bash
 uv run python -m evals.run           # tous les projets de référence (consomme des tokens)
 uv run python -m evals.run shop      # seulement ceux nommés
+uv run python -m evals.run --backend claude-code   # sur l'abonnement Claude, sans clé
 ```
 
 Chaque cas de `evals/cases.toml` vérifie que les citations `fichier:ligne` et les commits cités existent, que les faits et les sources attendus sont présents, que ce que rien ne documente est signalé comme déduit, et qu'aucun secret ne fuit. Le texte exact n'est jamais comparé.
 
 Les décisions techniques de learn-it sont elles-mêmes documentées dans [`docs/adr/`](docs/adr/), au format ADR que l'outil vise à produire.
+
+## Licence
+
+MIT, voir [LICENSE](LICENSE).
