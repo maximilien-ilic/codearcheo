@@ -23,6 +23,8 @@ class Settings:
     compact_threshold: int = 100_000  # context tokens; 0 disables automatic compaction
     max_requests: int | None = None  # local HTTP attempt limit, shared across the session
     max_output_tokens: int = 16_000  # enforced max_tokens for each generation request
+    # "api": Anthropic API credits. "claude-code": `claude -p`, on the Claude subscription.
+    backend: str = "api"
 
     def __post_init__(self) -> None:
         if not self.model.strip():
@@ -39,6 +41,8 @@ class Settings:
             type(self.max_requests) is not int or self.max_requests < 1
         ):
             raise ValueError("La limite de requêtes doit être un entier positif.")
+        if self.backend not in {"api", "claude-code"}:
+            raise ValueError("LEARN_IT_BACKEND attendu : api ou claude-code.")
         if type(self.max_output_tokens) is not int or self.max_output_tokens < 1:
             raise ValueError("La limite de tokens de sortie doit être un entier positif.")
 
@@ -51,6 +55,7 @@ class Settings:
         budget: int | None = None,
         max_requests: int | None = None,
         max_output_tokens: int | None = None,
+        backend: str | None = None,
     ) -> Settings:
         env = os.environ.get
         return cls(
@@ -69,4 +74,5 @@ class Settings:
             max_output_tokens=max_output_tokens
             if max_output_tokens is not None
             else int(env("LEARN_IT_MAX_OUTPUT_TOKENS", cls.max_output_tokens)),
+            backend=backend if backend is not None else env("LEARN_IT_BACKEND", cls.backend),
         )

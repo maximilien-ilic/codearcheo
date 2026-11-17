@@ -18,6 +18,7 @@ from rich.markup import escape
 
 from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
+from learn_it.agent.claude_code import run_claude_code
 from learn_it.agent.limits import SessionLimits
 from learn_it.agent.runner import (
     AgentError,
@@ -93,8 +94,10 @@ class Session:
         buffer_text: bool = False,
     ) -> str:
         self._last_repair = None
-        tools = ProjectTools(self.project.root).exploration()
         system = prompts.SYSTEM.format(profile=self.profile.model_dump_json(indent=1))
+        if self.settings.backend == "claude-code":
+            return self._run_claude_code(system, task, extra_tools, check=check)
+        tools = ProjectTools(self.project.root).exploration()
         repair = self.repair_citations and check and not extra_tools
         buffered = buffer_text or repair
         options = {"on_text": self.on_text} if self.on_text is not None and not buffered else {}
@@ -110,6 +113,23 @@ class Session:
         checked = self.checked(answer, repair=repair)
         if self.on_text is not None:
             self.on_text(checked if buffered else checked[len(answer.rstrip()):])
+        return checked
+
+    def _run_claude_code(
+        self, system: str, task: str, extra_tools: Sequence[Tool], *, check: bool
+    ) -> str:
+        """Same task on the Claude subscription: no streaming, no local limits, no repair."""
+        if self.repair_citations:
+            raise AgentError("--repair-citations n'est pas disponible avec le moteur claude-code.")
+        options = {"on_usage": self.on_usage} if self.on_usage is not None else {}
+        answer = run_claude_code(
+            system, task, list(extra_tools), self.settings, root=self.project.root, **options
+        )
+        if not check:
+            return answer
+        checked = self.checked(answer)
+        if self.on_text is not None:
+            self.on_text(checked)
         return checked
 
 
