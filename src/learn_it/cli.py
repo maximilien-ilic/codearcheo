@@ -39,6 +39,15 @@ BudgetOption = Annotated[
         "--budget", min=20_000, help="Budget API indicatif en tokens, pas un plafond USD."
     ),
 ]
+RequestLimitOption = Annotated[
+    int | None, typer.Option("--max-requests", min=1, help="Plafond local de tentatives API.")
+]
+OutputLimitOption = Annotated[
+    int | None, typer.Option("--max-output-tokens", min=1, help="Sortie maximale par requête API.")
+]
+RepairOption = Annotated[
+    bool, typer.Option("--repair-citations", help="Une tentative de correction des références.")
+]
 
 
 def _fail(message: str) -> NoReturn:
@@ -63,7 +72,9 @@ def _friendly_errors() -> Iterator[None]:
 
 
 def _session(
-    target: str, *, model: str | None = None, effort: str | None = None, budget: int | None = None
+    target: str, *, model: str | None = None, effort: str | None = None, budget: int | None = None,
+    max_requests: int | None = None, max_output_tokens: int | None = None,
+    repair_citations: bool = False,
 ) -> Session:
     """Resolve the project and profile it afresh.
 
@@ -71,12 +82,18 @@ def _session(
     git. Rescanning costs well under a second even on repositories with thousands of commits,
     against tens of seconds for the agent, so no cached profile can go stale.
     """
-    settings = Settings.from_env(model=model, effort=effort, budget=budget)
+    settings = Settings.from_env(
+        model=model, effort=effort, budget=budget,
+        max_requests=max_requests, max_output_tokens=max_output_tokens,
+    )
     project = sources.resolve(target, settings.cache_dir)
     store = Store(project.root)
     profile = analyzers.scan(project)
     store.save_profile(profile)
-    return Session(project, profile, store, settings, on_tool=render.tool_call)
+    return Session(
+        project, profile, store, settings, on_tool=render.tool_call,
+        repair_citations=repair_citations,
+    )
 
 
 def _run_agent(
@@ -87,11 +104,18 @@ def _run_agent(
     model: str | None = None,
     effort: str | None = None,
     budget: int | None = None,
+    max_requests: int | None = None,
+    max_output_tokens: int | None = None,
+    repair_citations: bool = False,
     stream: bool = False,
 ) -> str:
     with _friendly_errors():
-        session = _session(target, model=model, effort=effort, budget=budget)
-        if stream:
+        session = _session(
+            target, model=model, effort=effort, budget=budget,
+            max_requests=max_requests, max_output_tokens=max_output_tokens,
+            repair_citations=repair_citations,
+        )
+        if stream and not repair_citations:
             from learn_it.chat import stream_text
 
             session.on_text = stream_text
@@ -99,7 +123,12 @@ def _run_agent(
             stream_text("\n")
             return answer
         with render.err.status(f"Claude {work}…"):
-            return feature(session, *args)
+            answer = feature(session, *args)
+        if stream:
+            from learn_it.chat import stream_text
+
+            stream_text(answer + "\n")
+        return answer
 
 
 @app.command()
@@ -141,6 +170,9 @@ def ask(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    max_requests: RequestLimitOption = None,
+    max_output_tokens: OutputLimitOption = None,
+    repair_citations: RepairOption = False,
     stream: Annotated[bool, typer.Option("--stream/--no-stream")] = True,
 ) -> None:
     """Pose une question sur le projet : réponse sourcée (fichier:ligne, commit)."""
@@ -152,6 +184,9 @@ def ask(
         model=model,
         effort=effort,
         budget=budget,
+        max_requests=max_requests,
+        max_output_tokens=max_output_tokens,
+        repair_citations=repair_citations,
         stream=stream,
     )
     if not stream:
@@ -164,6 +199,9 @@ def overview(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    max_requests: RequestLimitOption = None,
+    max_output_tokens: OutputLimitOption = None,
+    repair_citations: RepairOption = False,
 ) -> None:
     """Guide d'onboarding : architecture, flux clés, carte du code, ordre de lecture."""
     render.markdown(
@@ -174,6 +212,9 @@ def overview(
             model=model,
             effort=effort,
             budget=budget,
+            max_requests=max_requests,
+            max_output_tokens=max_output_tokens,
+            repair_citations=repair_citations,
         )
     )
 
@@ -184,6 +225,8 @@ def decisions(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    max_requests: RequestLimitOption = None,
+    max_output_tokens: OutputLimitOption = None,
     export: Annotated[
         Path | None, typer.Option("--export", help="Dossier ADR dans le projet.")
     ] = None,
@@ -193,7 +236,10 @@ def decisions(
     if force and export is None:
         _fail("--force s'utilise avec --export.")
     with _friendly_errors():
-        session = _session(project, model=model, effort=effort, budget=budget)
+        session = _session(
+            project, model=model, effort=effort, budget=budget,
+            max_requests=max_requests, max_output_tokens=max_output_tokens,
+        )
         with render.err.status("Claude reconstitue les décisions…"):
             report = features.decisions(session)
         render.markdown(report)
@@ -212,6 +258,9 @@ def why(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    max_requests: RequestLimitOption = None,
+    max_output_tokens: OutputLimitOption = None,
+    repair_citations: RepairOption = False,
 ) -> None:
     """Explique pourquoi un élément du projet existe et pourquoi il est ainsi."""
     render.markdown(
@@ -223,6 +272,9 @@ def why(
             model=model,
             effort=effort,
             budget=budget,
+            max_requests=max_requests,
+            max_output_tokens=max_output_tokens,
+            repair_citations=repair_citations,
         )
     )
 
@@ -233,13 +285,18 @@ def review(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    max_requests: RequestLimitOption = None,
+    max_output_tokens: OutputLimitOption = None,
     issues: Annotated[
         bool, typer.Option("--issues", help="Proposer la création de tickets.")
     ] = False,
 ) -> None:
     """Évalue les décisions : garder, améliorer ou remplacer, avec effort, impact et plan."""
     with _friendly_errors():
-        session = _session(project, model=model, effort=effort, budget=budget)
+        session = _session(
+            project, model=model, effort=effort, budget=budget,
+            max_requests=max_requests, max_output_tokens=max_output_tokens,
+        )
         with render.err.status("Claude évalue les décisions…"):
             report = features.review(session)
         render.markdown(report)
@@ -280,12 +337,17 @@ def chat(
     model: ModelOption = None,
     effort: EffortOption = None,
     budget: BudgetOption = None,
+    max_requests: RequestLimitOption = None,
+    max_output_tokens: OutputLimitOption = None,
 ) -> None:
     """Conversation avec historique conservé, streaming et /save pour l'enregistrer."""
     from learn_it.chat import interactive
 
     with _friendly_errors():
-        interactive(_session(project, model=model, effort=effort, budget=budget))
+        interactive(_session(
+            project, model=model, effort=effort, budget=budget,
+            max_requests=max_requests, max_output_tokens=max_output_tokens,
+        ))
 
 
 @app.command()

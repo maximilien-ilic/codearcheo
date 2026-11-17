@@ -18,6 +18,7 @@ from rich.markup import escape
 
 from learn_it import evidence, recommendations, render
 from learn_it.agent import prompts
+from learn_it.agent.limits import SessionLimits
 from learn_it.agent.runner import (
     AgentError,
     TextCallback,
@@ -47,7 +48,14 @@ class Session:
     on_text: TextCallback | None = None
     on_usage: UsageCallback | None = None
     repair_citations: bool = False
+    limits: SessionLimits | None = None
     _last_repair: RepairResult | None = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.limits is None and (
+            self.settings.max_requests is not None or self.settings.max_output_tokens != 16_000
+        ):
+            self.limits = SessionLimits.from_settings(self.settings)
 
     @property
     def last_repair(self) -> dict[str, Any] | None:
@@ -92,6 +100,8 @@ class Session:
         options = {"on_text": self.on_text} if self.on_text is not None and not buffered else {}
         if self.on_usage is not None:
             options["on_usage"] = self.on_usage
+        if self.limits is not None:
+            options["limits"] = self.limits
         answer = run_agent(
             system, task, [*tools, *extra_tools], self.settings, self.on_tool, **options
         )
