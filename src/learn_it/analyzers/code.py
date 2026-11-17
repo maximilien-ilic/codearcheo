@@ -7,14 +7,17 @@ in the safe inventory; unresolved external or ambiguous imports are retained as 
 
 from __future__ import annotations
 
+import hashlib
 import html
 import importlib
+import importlib.metadata
 import json
 import re
+from contextlib import suppress
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from learn_it.analyzers import inventory
 from learn_it.code_models import CodeSummary, Import, Module, ModuleRank, Reference, Symbol
@@ -273,7 +276,18 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
                 continue
             if match := re.search(r"(?m)^\s*module\s+([^\s]+)", data):
                 go_roots.append((PurePosixPath(path).parent, match[1]))
+    # Computed once: per import, these lookups used to scan every module of the project
+    # (millions of path operations on golang/go).
+    go_roots.sort(key=lambda entry: -len(entry[0].parts))
+    go_packages: dict[str, list[str]] = {}
+    for path, value in graph.modules.items():
+        if value.language == "go" and not path.endswith("_test.go"):
+            go_packages.setdefault(PurePosixPath(path).parent.as_posix(), []).append(path)
     for source, module in graph.modules.items():
+        go_root = None
+        if module.language == "go":
+            go_root = next((entry for entry in go_roots
+                            if PurePosixPath(source).is_relative_to(entry[0])), None)
         for item in module.imports:
             targets = []
             if module.language == "python":
@@ -309,17 +323,11 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
                     if module.language in {"typescript", "tsx"} and relative.endswith(".js"):
                         variants.append(relative[:-3] + ".ts")
                     targets = next(([path] for path in variants if path in graph.modules), [])
-            elif module.language == "go":
-                for directory, prefix in sorted(go_roots, key=lambda entry: -len(entry[0].parts)):
-                    if not PurePosixPath(source).is_relative_to(directory):
-                        continue
-                    if item.module == prefix or item.module.startswith(prefix + "/"):
-                        package = directory / item.module.removeprefix(prefix).lstrip("/")
-                        targets = [path for path, value in graph.modules.items()
-                                   if value.language == "go"
-                                   and PurePosixPath(path).parent == package
-                                   and not path.endswith("_test.go")]
-                    break
+            elif module.language == "go" and go_root is not None:
+                directory, prefix = go_root
+                if item.module == prefix or item.module.startswith(prefix + "/"):
+                    package = directory / item.module.removeprefix(prefix).lstrip("/")
+                    targets = list(go_packages.get(package.as_posix(), []))
             elif module.language == "rust" and "{" not in item.module:
                 value = item.module.replace(" ", "")
                 if value.startswith(("crate::", "self::", "super::")):
@@ -350,6 +358,44 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
             item.resolved = sorted(set(targets))
 
 
+_CACHE_FILE = "code-cache.json"
+
+
+@lru_cache(maxsize=1)
+def _cache_version() -> str:
+    """Parsing results stay valid only for the same parser and grammar versions."""
+    packages = ["tree-sitter", *(f"tree-sitter-{name}" for name in
+                                 ("python", "javascript", "typescript", "go", "rust"))]
+    versions = []
+    for package in packages:
+        try:
+            versions.append(f"{package}={importlib.metadata.version(package)}")
+        except importlib.metadata.PackageNotFoundError:
+            versions.append(f"{package}=-")
+    return "1;" + ",".join(versions)
+
+
+def _load_cache(root: Path) -> dict[str, dict]:
+    from learn_it.store import Store
+
+    try:
+        data = Store(root).load_json(_CACHE_FILE)
+    except OSError:  # symlinked store: no cache rather than following it
+        return {}
+    if not isinstance(data, dict) or data.get("version") != _cache_version():
+        return {}
+    modules = data.get("modules")
+    return modules if isinstance(modules, dict) else {}
+
+
+def _save_cache(root: Path, modules: dict[str, dict]) -> None:
+    from learn_it.store import Store
+
+    # A read-only checkout or a refused symlink only costs the optimisation.
+    with suppress(OSError):
+        Store(root).save_json(_CACHE_FILE, {"version": _cache_version(), "modules": modules})
+
+
 def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
     """Build a bounded graph from the current safe worktree; None means extra not installed."""
     if not available():
@@ -359,6 +405,10 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
                    if inventory.is_safe_path(root, path))
     graph = CodeGraph()
     total_bytes = 0
+    # Parsing dominates the scan of a large project (57 s on golang/go), so each module is
+    # cached under a hash of its language and content: valid for uncommitted work too.
+    cached = _load_cache(root)
+    fresh: dict[str, dict] = {}
     for path in files:
         language = EXTENSIONS.get(PurePosixPath(path).suffix)
         if not language or not inventory.is_safe_path(root, path):
@@ -375,12 +425,24 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
                 continue
             data = (root / path).read_bytes()
             total_bytes += len(data)
-            module = _parse(path, language, data)
+            key = hashlib.sha256(language.encode() + b"\0" + data).hexdigest()
+            module = None
+            if key in cached:
+                try:
+                    module = Module(path=path, **cached[key])
+                except (TypeError, ValidationError):
+                    module = None
+            if module is None:
+                module = _parse(path, language, data)
+            if module is not None:
+                fresh[key] = module.model_dump(exclude={"path"})
             if module is None:
                 graph.skipped[path] = "language grammar is not installed"
             else:
                 graph.modules[path] = module
         except (OSError, ValueError) as exc:
             graph.skipped[path] = str(exc)
+    if fresh.keys() != cached.keys():
+        _save_cache(root, fresh)
     _resolve(graph, root, files)
     return graph
