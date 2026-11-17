@@ -136,9 +136,9 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 
 *État au 17 novembre 2026.*
 
-**Ce qui marche.** Les neuf commandes sont en place, couvertes par 293 tests qui tournent sous Python 3.11 et 3.14 à chaque PR.
+**Ce qui marche.** Les neuf commandes sont en place, couvertes par 302 tests qui tournent sous Python 3.11 et 3.14 à chaque PR.
 
-- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter, en moins d'une seconde sur un dépôt de 8 000 commits.
+- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter, en moins d'une seconde sur un dépôt de 8 000 commits.
 - **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
 - **Les décisions.** Elles s'exportent en ADR (`decisions --export`), les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
 - **Le moteur.** learn-it tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`LEARN_IT_BACKEND=claude-code`).
@@ -152,19 +152,15 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
 | 1 | Finir les mesures : dépôt Go, variabilité, effort, moteur API | [#10] | — (moteur API : une clé) |
-| 2 | Dater une dépendance à travers les migrations de manifeste (`setup.py` → `pyproject.toml`) | [#32] | — |
-| 3 | Distinguer la stack du projet de celle de ses exemples et tests | [#33] | — |
-| 4 | Corriger aussi les preuves des décisions et recommandations | [#34] | la mesure de #10 |
-| 5 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
-| 6 | Activer la revue côté serveur | [#25] | le secret `CLAUDE_CODE_OAUTH_TOKEN` |
+| 2 | Corriger aussi les preuves des décisions et recommandations | [#34] | la mesure de #10 |
+| 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
+| 4 | Activer la revue côté serveur | [#25] | le secret `CLAUDE_CODE_OAUTH_TOKEN` |
 
 Les jalons, l'historique du projet et le détail de chaque étape sont dans [docs/roadmap.md](docs/roadmap.md).
 
 [#10]: https://github.com/maximilien-ilic/learn-it/issues/10
 [#24]: https://github.com/maximilien-ilic/learn-it/issues/24
 [#25]: https://github.com/maximilien-ilic/learn-it/issues/25
-[#32]: https://github.com/maximilien-ilic/learn-it/issues/32
-[#33]: https://github.com/maximilien-ilic/learn-it/issues/33
 [#34]: https://github.com/maximilien-ilic/learn-it/issues/34
 
 ## Développement

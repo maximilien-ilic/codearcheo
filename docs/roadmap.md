@@ -21,7 +21,7 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 ## Où on en est
 
-Il reste six étapes ouvertes. Une seule est prioritaire : mesurer les vraies réponses ([#10]), car tout le comportement IA n'a été testé qu'avec un faux client. Deux étapes attendent une décision du propriétaire du projet ([#24], [#25]).
+Il reste quatre étapes ouvertes. La priorité est de finir les mesures de [#10] : dépôt Go, variabilité, niveaux d'effort, puis le moteur API. [#34] attend ces mesures. Les décisions du propriétaire sont prises : licence MIT, publication sur PyPI à la fin du projet ([#24]), et revue serveur sur l'abonnement Claude, active dès que son secret existe ([#25]).
 
 ## La suite
 
@@ -54,8 +54,8 @@ La raison d'un choix se trouve souvent dans la PR qui l'a introduit ou dans un A
 | Lire les pull requests et issues GitHub liées aux commits | [#14] | fait |
 | Reconnaître davantage d'écosystèmes : Java, Ruby, PHP, .NET, infrastructure | [#15] | fait |
 | Partir des ADR déjà présents dans le projet analysé | [#16] | fait |
-| Dater une dépendance à travers les migrations de manifeste | [#32] | à faire |
-| Distinguer la stack du projet de celle de ses exemples et tests | [#33] | à faire |
+| Dater une dépendance à travers les migrations de manifeste | [#32] | fait |
+| Distinguer la stack du projet de celle de ses exemples et tests | [#33] | fait |
 
 ### v0.4 — Faire vivre les décisions
 
