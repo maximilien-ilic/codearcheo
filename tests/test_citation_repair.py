@@ -112,10 +112,10 @@ def test_editing_short_reference_never_changes_a_valid_longer_path(project):
     folder = project.root / "nested"
     folder.mkdir()
     (folder / "missing.py").write_text("a = 1\n")
-    answer = "Une source missing.py:1 et une autre nested/missing.py:1."
+    answer = "Une source ./missing.py:1 et une autre nested/missing.py:1."
     result = citation_repair.repair_answer(
         answer, project.root, Settings(),
-        invoke=lambda *a, **kw: plan("missing.py:1", "app.py:1"),
+        invoke=lambda *a, **kw: plan("./missing.py:1", "app.py:1"),
     )
     assert result.accepted
     assert result.selected_answer == "Une source app.py:1 et une autre nested/missing.py:1."
@@ -259,3 +259,125 @@ def test_pathological_line_number_remains_invalid_without_losing_the_answer(proj
         answer, project.root, Settings(), invoke=lambda *args, **kwargs: '{"edits":[]}'
     )
     assert result.selected_answer == answer and not result.accepted
+
+
+@pytest.mark.parametrize("opening,closing", [
+    ("```mermaid", "```"), ("```python", "```"), ("~~~python", "~~~"),
+    ("```mermaid", ""), ("~~~", ""), ("````markdown", "````"),
+    ("> ```mermaid", "> ```"), ("- ```python", "  ```"),
+])
+def test_fenced_examples_and_diagrams_never_become_editable_citations(project, opening, closing):
+    diagram = f'{opening}\nx["lost.py:99"]\n{closing}'
+    answer = f"Source valide `app.py:3`.\n\n{diagram}"
+    result = citation_repair.repair_answer(
+        answer, project.root, Settings(),
+        invoke=lambda *a, **kw: pytest.fail("code examples must not trigger citation repair"),
+    )
+    assert not result.attempted
+    assert result.selected_answer == answer
+    assert result.initial_report.metrics() == {"total": 1, "valid": 1, "invalid": 0}
+
+
+def test_an_edit_cannot_touch_the_same_reference_inside_a_complete_fence(project):
+    diagram = '```mermaid\nx["./lost.py:99"]\n```'
+    answer = f"Source `app.py:3` ; autre source ./lost.py:99.\n\n{diagram}"
+    result = citation_repair.repair_answer(
+        answer, project.root, Settings(), invoke=lambda *a, **kw: plan("./lost.py:99", "app.py:1")
+    )
+    assert result.accepted
+    expected = answer.replace("autre source ./lost.py:99", "autre source app.py:1")
+    assert result.selected_answer == expected
+    assert diagram in result.selected_answer
+
+
+def test_original_valid_evidence_cannot_be_lost_while_the_model_is_waiting(project):
+    root = project.root
+    (root / "good.py").write_text("first = 1\nsecond = 2\n")
+    (root / "a.py").write_text("a = 1\n")
+    (root / "b.py").write_text("b = 1\n")
+    answer = "Source `good.py:2` ; références `a.py:99` et `b.py:99`."
+
+    def changes_during_request(*args, **kwargs):
+        (root / "good.py").write_text("first = 1\n")
+        return json.dumps({"edits": [
+            {"citation": "`a.py:99`", "replacement": "`a.py:1`"},
+            {"citation": "`b.py:99`", "replacement": "`b.py:1`"},
+        ]})
+
+    result = citation_repair.repair_answer(
+        answer, root, Settings(), invoke=changes_during_request
+    )
+    assert result.attempted and not result.accepted
+    assert result.selected_answer == answer
+    assert result.initial_report.metrics() == {"total": 3, "valid": 1, "invalid": 2}
+    assert result.candidate_report.metrics() == {"total": 3, "valid": 2, "invalid": 1}
+
+
+@pytest.mark.parametrize("endpoint", [
+    "127.0.0.1:8000", "api.example.com:443", "server.local:9000", "localhost:8080",
+    "https://api.example.com:443/v1", "http://127.0.0.1:8000/api",
+])
+@pytest.mark.parametrize("quoted", [False, True])
+def test_network_values_are_not_citations_or_edit_targets(project, endpoint, quoted):
+    value = f"`{endpoint}`" if quoted else endpoint
+    answer = f"Server listens on {value}; source `app.py:3`."
+    result = citation_repair.repair_answer(
+        answer, project.root, Settings(),
+        invoke=lambda *a, **kw: pytest.fail("network values must not trigger citation repair"),
+    )
+    assert not result.attempted
+    assert result.selected_answer == answer
+    assert result.initial_report.metrics() == {"total": 1, "valid": 1, "invalid": 0}
+
+
+@pytest.mark.parametrize("endpoint", ["127.0.0.1:8000", "api.example.com:443"])
+@pytest.mark.parametrize("quoted", [False, True])
+def test_real_citation_repair_cannot_change_network_values(project, endpoint, quoted):
+    value = f"`{endpoint}`" if quoted else endpoint
+    answer = f"Server listens on {value}; source `app.py:3`; bad `app.py:999`."
+    repaired = citation_repair.repair_answer(
+        answer, project.root, Settings(), invoke=lambda *a, **kw: plan()
+    )
+    assert repaired.accepted
+    assert repaired.selected_answer == answer.replace("`app.py:999`", "`app.py:1-3`")
+    rejected = citation_repair.repair_answer(
+        answer, project.root, Settings(),
+        invoke=lambda *a, **kw: plan(value, "`app.py:1`"),
+    )
+    assert not rejected.accepted
+    assert rejected.selected_answer == answer
+
+
+@pytest.mark.parametrize("reference", [
+    "server.go:8080", "`server.go:8080`", "missing.py:9", "`missing.py:9`",
+])
+def test_unknown_standalone_source_shaped_names_are_warned_but_never_guessed(project, reference):
+    answer = f"Reference {reference}; valid source `app.py:3`."
+    result = citation_repair.repair_answer(
+        answer, project.root, Settings(),
+        invoke=lambda *a, **kw: pytest.fail("ambiguous names must not trigger an API request"),
+    )
+    assert result.selected_answer == answer
+    assert result.reason == "ambiguous_reference" and not result.attempted
+    assert result.initial_report.metrics() == {"total": 2, "valid": 1, "invalid": 1}
+
+
+def test_an_eligible_edit_does_not_authorize_editing_an_ambiguous_network_value(project):
+    answer = "Server at `server.go:8080`; source `app.py:3`; bad `app.py:999`."
+    captured = []
+
+    def edit_only_sources(system, task, *args, **kwargs):
+        captured.append(json.loads(task)["invalid_references"])
+        return plan()
+
+    accepted = citation_repair.repair_answer(
+        answer, project.root, Settings(), invoke=edit_only_sources
+    )
+    assert accepted.accepted
+    assert "`server.go:8080`" in accepted.selected_answer
+    assert [item["citation"] for item in captured[0]] == ["`app.py:999`"]
+    rejected = citation_repair.repair_answer(
+        answer, project.root, Settings(),
+        invoke=lambda *a, **kw: plan("`server.go:8080`", "`app.py:1`"),
+    )
+    assert not rejected.accepted and rejected.selected_answer == answer

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from learn_it import git
 from learn_it.analyzers import inventory
@@ -22,6 +22,13 @@ _BARE_FILE = re.compile(
 )
 _COMMIT = re.compile(r"\bcommits?\s+`?(?P<sha>[0-9a-f]{7,40})\b`?", re.IGNORECASE)
 _CODE_SPAN = re.compile(r"`([^`\s]+)`")
+_SOURCE_SUFFIXES = set(inventory.LANGUAGES) | {
+    ".md", ".mdx", ".rst", ".adoc", ".txt", ".json", ".toml", ".yaml", ".yml",
+    ".xml", ".ini", ".cfg", ".conf", ".properties", ".lock", ".gradle", ".csproj",
+    ".fsproj", ".vbproj", ".sln", ".proto", ".graphql", ".gql", ".csv", ".tsv",
+    ".less", ".pem", ".key", ".p12", ".pfx",
+}
+_SOURCE_NAMES = {"Dockerfile", "Makefile", "README", "LICENSE", "Jenkinsfile", "Gemfile"}
 
 
 @dataclass(frozen=True)
@@ -62,8 +69,46 @@ def find_citations(text: str) -> list[Citation]:
     return list(dict.fromkeys(match.citation for match in find_matches(text)))
 
 
+def _source_shaped(path: str) -> bool:
+    """A dotted host or IP followed by a port must not become editable factual data.
+
+    Bare filenames are inherently ambiguous. Require a familiar source suffix, a known
+    manifest name, a hidden project file or a project-relative path. Unknown standalone
+    extensions can still be cited with an explicit directory, such as `./schema.custom:1`.
+    """
+    if "/" in path or "\\" in path:
+        return True
+    if path.startswith(".") or path in _SOURCE_NAMES:
+        return True
+    return PurePosixPath(path).suffix.lower() in _SOURCE_SUFFIXES
+
+
+def fenced_spans(text: str) -> list[tuple[int, int]]:
+    """Protect complete and unclosed Markdown fences, including nested list/quote examples.
+
+    A shorter run of backticks inside a longer fence is code, not a closing fence. Treating
+    indented examples conservatively as code also prevents edits to embedded diagrams.
+    """
+    spans = []
+    start, marker, width, offset = None, "", 0, 0
+    for line in text.splitlines(keepends=True):
+        body = line.lstrip(" \t>")
+        if start is None:
+            body = re.sub(r"^(?:[-+*]|\d+[.)])[ \t]+", "", body)
+            opening = re.match(r"(`{3,}|~{3,})([^\r\n]*)(?:\r?\n)?$", body)
+            if opening and not (opening[1][0] == "`" and "`" in opening[2]):
+                start, marker, width = offset, opening[1][0], len(opening[1])
+        elif re.fullmatch(rf"{re.escape(marker)}{{{width},}}[ \t]*(?:\r?\n)?", body):
+            spans.append((start, offset + len(line)))
+            start = None
+        offset += len(line)
+    if start is not None:
+        spans.append((start, len(text)))
+    return spans
+
+
 def find_matches(text: str) -> list[CitationMatch]:
-    """Return original spans without treating a bare path inside a backtick as a new match."""
+    """Return original citation spans outside fenced source examples and diagrams."""
     matches = [
         CitationMatch(
             start=m.start(), end=m.end(),
@@ -73,12 +118,17 @@ def find_matches(text: str) -> list[CitationMatch]:
             ),
         )
         for pattern in (_FILE, _BARE_FILE) for m in pattern.finditer(text)
+        if _source_shaped(m["path"])
     ]
     matches += [
         CitationMatch(m.start(), m.end(), Citation(ref=m[0], sha=m["sha"].lower()))
         for m in _COMMIT.finditer(text)
     ]
-    return matches
+    protected = fenced_spans(text)
+    return [
+        match for match in matches
+        if not any(match.start < end and match.end > start for start, end in protected)
+    ]
 
 
 def mentioned_paths(text: str) -> set[str]:

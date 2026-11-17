@@ -128,6 +128,27 @@ def _context(root: Path, report: evidence.EvidenceReport) -> list[dict[str, str]
     return result
 
 
+def _editable_references(
+    root: Path, report: evidence.EvidenceReport,
+) -> dict[evidence.Citation, str]:
+    """Do not guess whether an unknown standalone name denotes a source or a host.
+
+    The explicit ./ spelling is retained in citation.ref, whereas citation.path is normalised.
+    """
+    allowed = set(inventory.list_files(root))
+    return {
+        citation: problem
+        for citation, problem in report.problems.items()
+        if citation.sha or (
+            citation.path and (
+                citation.path in allowed or "/" in citation.path or "\\" in citation.path
+                or citation.path.startswith(".")
+                or citation.ref.lstrip("`").startswith("./")
+            )
+        )
+    }
+
+
 def _apply(answer: str, root: Path, before: evidence.EvidenceReport, proposal: str) -> str:
     if len(proposal) > MAX_RESPONSE_CHARS:
         raise ValueError("repair response exceeds limit")
@@ -188,11 +209,15 @@ def repair_answer(
         return result
     if len(answer) > MAX_ANSWER_CHARS or len(before.problems) > MAX_PROBLEMS:
         return replace(result, reason="input_limit")
+    editable = _editable_references(root, before)
+    if not editable:
+        return replace(result, reason="ambiguous_reference")
+    edit_report = evidence.EvidenceReport(list(snapshot.citations), editable)
     payload = {
         "answer": answer,
         "invalid_references": [
             {"citation": citation.ref, "problem": problem}
-            for citation, problem in before.problems.items()
+            for citation, problem in editable.items()
         ],
         "source_prefixes": _context(root, before),
         "known_commits": [
@@ -213,16 +238,20 @@ def repair_answer(
         proposal = (invoke or run_agent)(
             SYSTEM, task, [], replace(settings, max_iterations=1), **options
         )
-        candidate = _apply(answer, root, before, proposal)
+        candidate = _apply(answer, root, edit_report, proposal)
         # Recheck both answers after the request in case the worktree changed while waiting.
         current_before = evidence.verify(answer, root)
         after = evidence.verify(candidate, root)
+        initial_valid = set(snapshot.citations) - {
+            citation for citation, _ in snapshot.problems
+        }
         old_valid = set(current_before.citations) - set(current_before.problems)
         new_valid = set(after.citations) - set(after.problems)
         accepted = (
-            bool(candidate.strip()) and bool(new_valid) and old_valid <= new_valid
+            bool(candidate.strip()) and bool(new_valid)
+            and initial_valid <= new_valid and old_valid <= new_valid
             and len(after.problems) < len(current_before.problems)
-            and len(after.problems) < len(before.problems)
+            and len(after.problems) < len(snapshot.problems)
         )
         return replace(
             result, selected_answer=candidate if accepted else answer,
