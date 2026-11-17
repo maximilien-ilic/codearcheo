@@ -1,6 +1,6 @@
 # Feuille de route
 
-Mise à jour le 16 novembre 2026. Chaque étape a son ticket GitHub, et les [jalons][milestones] regroupent ces tickets en montrant leur avancement.
+Mise à jour le 17 novembre 2026. Chaque étape a son ticket GitHub, et les [jalons][milestones] regroupent ces tickets en montrant leur avancement.
 
 ## Ce qui a été fait récemment
 
@@ -14,12 +14,12 @@ En deux jours, learn-it est passé d'une idée à une v0 testée et relue en con
 
 Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et une CI verte.
 
-La PR [#29] propose maintenant les fonctionnalités des tickets #11 à #23 : citations
-contrôlées, cas de référence étendus, usage et conversation, sources GitHub et ADR,
-nouveaux écosystèmes, export et recommandations, historique et graphe des imports.
-Le code est testé sans appel IA réel. Les expérimentations API de #10, la licence et
-la diffusion de #24 et la revue serveur de #25 restent reportées à la demande du
-propriétaire. Les tâches restantes de #11 et #13 sont détaillées dans leurs tickets.
+- **Nuit du 16 au 17 novembre : la roadmap presque entière.** La PR [#29] a livré les étapes #11 à #23 : citations contrôlées, cas de référence étendus, coût et conversation, sources GitHub et ADR, nouveaux écosystèmes, export et recommandations, historique, graphe des imports. La PR [#31] a ajouté la correction des citations et les limites de requêtes, et les revues Codex ont corrigé deux défauts au passage ([#28], [#30]). Le projet compte maintenant 288 tests, tous sans appel IA réel.
+- **17 novembre : la stack lue au bon endroit.** Sur pallets/flask, la stack était datée à partir d'un exemple (`examples/celery/`) plutôt que du `pyproject.toml` racine, et Flask figurait parmi ses propres dépendances. Corrigé ; trois limites trouvées en testant l'outil sur de vrais dépôts sont devenues les tickets [#32], [#33] et [#34].
+
+## Où on en est
+
+Il reste six étapes ouvertes. Une seule est prioritaire : mesurer les vraies réponses ([#10]), car tout le comportement IA n'a été testé qu'avec un faux client. Deux étapes attendent une décision du propriétaire du projet ([#24], [#25]).
 
 ## La suite
 
@@ -35,52 +35,55 @@ Cinq jalons, dans l'ordre où ils apportent le plus :
 
 Avant d'ajouter des fonctionnalités, savoir ce que valent les réponses et ne plus laisser passer une citation inventée.
 
-| Étape | Ticket |
-|---|---|
-| Mesurer les vraies réponses une première fois et régler les prompts (demande une clé API) | [#10] |
-| Vérifier les citations de chaque réponse avant de l'afficher | [#11] |
-| Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] |
-| Afficher coût et durée, régler modèle et effort par commande | [#13] |
+| Étape | Ticket | État |
+|---|---|---|
+| Mesurer les vraies réponses une première fois et régler les prompts (demande une clé API) | [#10] | à faire |
+| Vérifier les citations de chaque réponse avant de l'afficher | [#11] | fait |
+| Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] | fait |
+| Afficher coût et durée, régler modèle et effort par commande | [#13] | fait |
+| Corriger aussi les preuves des décisions et recommandations | [#34] | à faire, après #10 |
 
 ### v0.3 — Retrouver le pourquoi
 
 La raison d'un choix se trouve souvent dans la PR qui l'a introduit ou dans un ADR, pas dans le code.
 
-| Étape | Ticket |
-|---|---|
-| Lire les pull requests et issues GitHub liées aux commits | [#14] |
-| Reconnaître davantage d'écosystèmes : Java, Ruby, PHP, .NET, infrastructure | [#15] |
-| Partir des ADR déjà présents dans le projet analysé | [#16] |
+| Étape | Ticket | État |
+|---|---|---|
+| Lire les pull requests et issues GitHub liées aux commits | [#14] | fait |
+| Reconnaître davantage d'écosystèmes : Java, Ruby, PHP, .NET, infrastructure | [#15] | fait |
+| Partir des ADR déjà présents dans le projet analysé | [#16] | fait |
+| Dater une dépendance à travers les migrations de manifeste | [#32] | à faire |
+| Distinguer la stack du projet de celle de ses exemples et tests | [#33] | à faire |
 
 ### v0.4 — Faire vivre les décisions
 
 Des décisions et des recommandations qu'une équipe peut versionner, trier et suivre.
 
-| Étape | Ticket |
-|---|---|
-| Exporter les décisions en fichiers ADR dans le projet | [#17] |
-| Recommandations structurées et plan d'action exportable en tickets | [#18] |
-| Suivre l'évolution des décisions dans le temps (`learn-it diff`) | [#19] |
+| Étape | Ticket | État |
+|---|---|---|
+| Exporter les décisions en fichiers ADR dans le projet | [#17] | fait |
+| Recommandations structurées et plan d'action exportable en tickets | [#18] | fait |
+| Suivre l'évolution des décisions dans le temps (`learn-it diff`) | [#19] | fait |
 
 ### v0.5 — Comprendre la structure
 
 Lire le code comme un graphe, sans ralentir le scan.
 
-| Étape | Ticket |
-|---|---|
-| Garder le scan sous deux secondes sur un très gros dépôt | [#20] |
-| Symboles et graphe des dépendances avec tree-sitter | [#21] |
-| Carte d'architecture tirée du graphe réel | [#22] |
+| Étape | Ticket | État |
+|---|---|---|
+| Garder le scan sous deux secondes sur un très gros dépôt | [#20] | fait |
+| Symboles et graphe des dépendances avec tree-sitter | [#21] | fait |
+| Carte d'architecture tirée du graphe réel | [#22] | fait |
 
 ### v0.6 — Expérience et diffusion
 
 Un outil agréable au quotidien, installable par d'autres, et relu même machine éteinte.
 
-| Étape | Ticket |
-|---|---|
-| Mode conversation `learn-it chat`, réponses en streaming | [#23] |
-| Licence, versions et publication sur PyPI | [#24] |
-| Lancer la revue automatique côté serveur, sans Orca | [#25] |
+| Étape | Ticket | État |
+|---|---|---|
+| Mode conversation `learn-it chat`, réponses en streaming | [#23] | fait |
+| Licence, versions et publication sur PyPI | [#24] | à faire |
+| Lancer la revue automatique côté serveur, sans Orca | [#25] | à faire |
 
 ## Comment on avance
 
@@ -116,3 +119,9 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 [#24]: https://github.com/maximilien-ilic/learn-it/issues/24
 [#25]: https://github.com/maximilien-ilic/learn-it/issues/25
 [#29]: https://github.com/maximilien-ilic/learn-it/pull/29
+[#28]: https://github.com/maximilien-ilic/learn-it/pull/28
+[#30]: https://github.com/maximilien-ilic/learn-it/pull/30
+[#31]: https://github.com/maximilien-ilic/learn-it/pull/31
+[#32]: https://github.com/maximilien-ilic/learn-it/issues/32
+[#33]: https://github.com/maximilien-ilic/learn-it/issues/33
+[#34]: https://github.com/maximilien-ilic/learn-it/issues/34
