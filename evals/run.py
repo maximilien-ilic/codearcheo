@@ -182,8 +182,15 @@ def main(
     workdir = settings.cache_dir / "evals"
     results = []
     measurements = []
+    skipped = []
     for spec in load_cases():
         if names and spec["name"] not in names:
+            continue
+        if settings.backend == "claude-code" and spec["source"] == "synthetic-github":
+            # The GitHub replay patches this process; Claude Code's tools run in `learn-it serve`.
+            skipped += [case["id"] for case in spec["cases"]]
+            print(f"– {spec['name']} ignoré : son rejeu GitHub ne passe pas par Claude Code",
+                  file=sys.stderr)
             continue
         started = time.perf_counter()
         project = prepare(spec, workdir)
@@ -256,7 +263,7 @@ def main(
     report = {"model": settings.model, "effort": settings.effort, "backend": settings.backend,
               "repair_citations": repair_citations or compare_citations,
               "compare_citations": compare_citations,
-              "projects": measurements, "results": results}
+              "projects": measurements, "results": results, "skipped": skipped}
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Résultats : {output}")
     return 0 if results and passed == len(results) else 1
