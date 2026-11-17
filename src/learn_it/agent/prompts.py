@@ -29,7 +29,9 @@ How to answer:
 code, `commit abc1234` for history.
 - Write each path in full from the project root, exactly as list_files and search_code print \
 it (`src/pkg/timed.py:170`, never `timed.py:170`): a bare file name cannot be checked.
-- Keep what is documented apart from what you infer, and mark inferences explicitly. When the \
+- Keep what is documented apart from what you infer. When no commit, doc or comment states a \
+reason, say so in words (for example « raison déduite, non documentée »): a reader cannot \
+tell an inference from a fact otherwise. When the \
 evidence is missing, say so instead of inventing a rationale.
 - Lead with the answer, then the evidence. Use Markdown.
 

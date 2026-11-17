@@ -79,6 +79,39 @@ express. Le dépôt Go n'a pas été relancé, et le cas GitHub est ignoré avec
 Recalculés avec le barème corrigé sur les rapports enregistrés, les deux cas réussissent :
 **11 cas sur 11** pour ces projets.
 
+## Mesure 3 : effort `medium` (17 novembre 2026)
+
+Les mêmes 11 cas en effort `medium` : **10 cas réussis sur 11**, contre 11 en `high`. C'est
+19 % moins cher (1,99 $ contre 2,47 $) et 22 % plus rapide (463 s contre 594 s).
+
+Le seul cas raté, `shop-database`, est aussi le seul qui varie d'une mesure à l'autre : il a
+échoué deux fois sur trois en tout, toujours parce que la raison déduite n'est pas annoncée.
+
+## Changement 2 : annoncer les déductions en toutes lettres
+
+Le prompt système demande maintenant, quand aucun commit, doc ou commentaire ne donne la
+raison, de l'écrire en toutes lettres (« raison déduite, non documentée »). C'est
+l'exigence de l'[ADR 0003](adr/0003-les-faits-avant-le-llm.md) : le lecteur doit savoir
+quand il lit une déduction.
+
+## Mesure 4 : `shop` trois fois de suite, en `medium`
+
+**3 sur 3 à chaque fois**, `shop-database` compris (une fois sur trois avant le changement).
+
+## Mesure 5 : golang/go, et ce qu'elle a révélé
+
+Lancée avant les corrections de performance : **0 cas réussi sur 3**. Deux défauts sont
+apparus.
+
+- **Côté learn-it.** Le scan prenait environ 60 s, dont 57 s pour le graphe des imports.
+  `learn-it serve` scannant avant de répondre, Claude Code abandonnait le serveur MCP et
+  répondait sans outils. Le scan prend maintenant environ 13 s : un index des paquets Go
+  remplace un parcours de tous les modules pour chaque import, et un cache des modules
+  analysés évite de les reparser. Le serveur MCP dispose aussi de 180 s pour démarrer.
+- **Côté modèle.** Une réponse cite `src/net/http/http2.go:80-96`, alors que le fichier a
+  94 lignes, et un commit `b13342af1c` qui n'existe pas. La vérification des preuves les a
+  repérés ; ce sont exactement les erreurs qu'elle doit attraper.
+
 ## Ce qu'il reste à mesurer
 
 - **Le dépôt Go** (68 707 commits) : réessayer après le changement 1, et voir si le refus de
