@@ -107,3 +107,39 @@ def test_monorepo_members_are_not_technologies(tmp_path):
     names = {t.name for t in stack.detect(tmp_path, files)}
 
     assert "React" in names and "@acme/b" not in names
+
+
+@pytest.mark.parametrize("manifest,content,dependency,expected", [
+    ("pyproject.toml", '[project]\nname = "redis"\n', "redis", "Redis"),
+    ("Cargo.toml", '[package]\nname = "react"\n', "react", "React"),
+    ("package.json", '{"name":"foo_bar"}', "foo-bar", "foo-bar"),
+])
+def test_internal_names_do_not_hide_distinct_npm_packages(
+    tmp_path, manifest, content, dependency, expected,
+):
+    (tmp_path / manifest).write_text(content)
+    app = tmp_path / "app"
+    app.mkdir()
+    (app / "package.json").write_text(
+        '{"dependencies":{"' + dependency + '":"1"}}'
+    )
+    names = {t.name for t in stack.detect(tmp_path, [manifest, "app/package.json"])}
+    assert expected in names
+
+
+def test_python_internal_names_use_python_normalization(tmp_path):
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "My_Package"\n')
+    (tmp_path / "requirements.txt").write_text("my.package\nredis\n")
+    names = {t.name for t in stack.detect(tmp_path, ["pyproject.toml", "requirements.txt"])}
+    assert names == {"Redis"}
+
+
+def test_fixture_package_name_does_not_hide_primary_dependency(tmp_path):
+    (tmp_path / "package.json").write_text('{"dependencies":{"react":"19"}}')
+    fixture = tmp_path / "tests" / "fixtures" / "react"
+    fixture.mkdir(parents=True)
+    (fixture / "package.json").write_text('{"name":"react"}')
+    names = {t.name for t in stack.detect(
+        tmp_path, ["package.json", "tests/fixtures/react/package.json"],
+    )}
+    assert "React" in names

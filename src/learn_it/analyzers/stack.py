@@ -298,8 +298,10 @@ def _priority(path: str) -> tuple[bool, int, str]:
     return auxiliary, len(parts), path
 
 
-def _key(name: str) -> str:
-    return re.sub(r"[-_.]+", "-", name.lower())
+def _key(parser: Callable[[Path], list[str]], name: str) -> tuple[Callable, str]:
+    # PEP 503 equivalence belongs to Python, not to npm or Go module names.
+    normalized = re.sub(r"[-_.]+", "-", name.lower()) if parser is _python_deps else name
+    return parser, normalized
 
 
 def _declared_name(path: Path) -> str | None:
@@ -383,6 +385,7 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
         f for f in sorted(files, key=_priority) if not _VENDORED & set(PurePosixPath(f).parts)
     ]
     own = set()
+    auxiliary_own = set()
     for path in ordered:
         if PurePosixPath(path).name in _SELF_DECLARING:
             try:
@@ -390,7 +393,8 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
             except (OSError, ValueError, TypeError, AttributeError):
                 declared = None
             if declared:
-                own.add(_key(declared))
+                names = auxiliary_own if _priority(path)[0] else own
+                names.add(_key(MANIFESTS[PurePosixPath(path).name], declared))
 
     for path in ordered:
         p = PurePosixPath(path)
@@ -405,7 +409,10 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
             except (OSError, ValueError, TypeError, AttributeError, ET.ParseError):
                 dependencies = []
             for dep in dependencies:
-                if not isinstance(dep, str) or _key(dep) in own:
+                if not isinstance(dep, str):
+                    continue
+                key = _key(parser, dep)
+                if key in own or (_priority(path)[0] and key in auxiliary_own):
                     continue
                 name, category = _lookup(dep)
                 needle = f'"{dep}"' if p.name == "package.json" else dep
