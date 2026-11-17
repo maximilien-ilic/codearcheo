@@ -150,6 +150,13 @@ def compare_citation_repair(
 def main(
     names: list[str], *, repair_citations: bool = False, compare_citations: bool = False
 ) -> int:
+    if repair_citations or compare_citations:
+        print(
+            "Citation repair is not implemented; evaluation cancelled before any API call. "
+            "Run without --repair-citations/--compare-citations for the baseline (issue #11).",
+            file=sys.stderr,
+        )
+        return 2
     settings = Settings.from_env()
     workdir = settings.cache_dir / "evals"
     results = []
@@ -231,10 +238,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("names", nargs="*", help="Reference project names; empty selects all.")
     parser.add_argument("--repair-citations", action="store_true",
-                        help="Opt into at most one correction request for each text answer.")
+                        help="Reserved; currently exits before API calls (repair not implemented).")
     parser.add_argument(
         "--compare-citations", action="store_true",
-        help="Save original/repaired scores from the same task (uses the real API).",
+        help="Reserved; currently exits before API calls (repair not implemented).",
     )
     options = parser.parse_args()
     sys.exit(main(options.names, repair_citations=options.repair_citations,

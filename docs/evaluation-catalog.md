@@ -39,3 +39,8 @@ le SHA, le nombre de commits/fichiers, le temps de préparation, de scan et de
 chaque cas, ainsi que le modèle et l'effort. Les coûts et tokens de l'agent sont
 à collecter avec la télémétrie de session (#13). Aucun score réel ni coût de ces
 nouveaux cas n'est revendiqué avant l'exécution avec identifiants (#10).
+
+La correction automatique de citations reste à implémenter (#11). Les options
+`--repair-citations` et `--compare-citations` sont réservées : elles terminent
+avec le code 2 avant préparation ou appel API, sans produire de rapport.
+L’évaluation sans ces options mesure les réponses initiales.

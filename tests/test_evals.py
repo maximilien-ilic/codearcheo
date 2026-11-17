@@ -286,3 +286,13 @@ def test_citation_repair_comparison_grades_the_same_answer_before_and_after(proj
 def test_missing_repair_metadata_is_not_counted_as_a_measured_improvement(project):
     result = run.compare_citation_repair({}, shop_case("shop-framework"), project.root, CANARY)
     assert result is None
+
+
+@pytest.mark.parametrize("option", ["repair_citations", "compare_citations"])
+def test_unimplemented_citation_repair_stops_before_preparation(option, monkeypatch, capsys):
+    def unexpected_preparation():
+        pytest.fail("Unsupported repair must stop before preparing projects or calling the API")
+
+    monkeypatch.setattr(run, "load_cases", unexpected_preparation)
+    assert run.main([], **{option: True}) == 2
+    assert "not implemented" in capsys.readouterr().err
