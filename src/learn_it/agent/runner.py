@@ -169,6 +169,7 @@ def run_agent(
     on_text: TextCallback | None = None,
     on_usage: UsageCallback | None = None,
     limits: SessionLimits | None = None,
+    single_request: bool = False,
 ) -> str:
     """Run one task; optionally stream text while retaining the final answer as a string."""
     if limits is None and (
@@ -179,7 +180,10 @@ def run_agent(
     if limits is not None:
         limits.ensure_available()
     client = _client()
+    one_request = SessionLimits(1, settings.max_output_tokens) if single_request else None
     try:
+        if one_request is not None:
+            client = client.with_options(max_retries=0).with_middleware(one_request.middleware)
         if limits is not None:
             client = client.with_middleware(limits.middleware)
         runner = client.beta.messages.tool_runner(
@@ -193,7 +197,7 @@ def run_agent(
             **({"stream": True} if on_text is not None else {}),
             **_options(settings),
         )
-        return _consume(runner, settings, on_tool, on_text, on_usage, limits=limits)
+        return _consume(runner, settings, on_tool, on_text, on_usage, limits=limits or one_request)
     finally:
         close = getattr(client, "close", None)
         if close:

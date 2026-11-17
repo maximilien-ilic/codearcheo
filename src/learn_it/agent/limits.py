@@ -92,6 +92,9 @@ class SessionLimits:
                     "max_tokens": min(requested, self.max_output_tokens),
                 }
             )
+            # Redirects can issue extra POSTs inside one SDK attempt, beyond this guard.
+            # Set the per-request option on the copy; never mutate the caller's request.
+            forwarded.options.follow_redirects = False
             # Reserve immediately before call_next; failed/unknown attempts still count.
             self.requests_sent += 1
         return call_next(forwarded)

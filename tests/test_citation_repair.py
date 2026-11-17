@@ -147,6 +147,8 @@ def test_single_sdk_iteration_has_no_tools_and_retains_usage_hook(project, monke
 
     client = SimpleNamespace(api_key="synthetic", auth_token=None, credentials=None,
                              beta=SimpleNamespace(messages=Messages()))
+    client.with_options = lambda **options: client
+    client.with_middleware = lambda *middleware: client
     monkeypatch.setattr(runner.anthropic, "Anthropic", lambda: client)
     result = citation_repair.repair_answer(
         ORIGINAL, project.root, Settings(max_iterations=40),
@@ -170,7 +172,7 @@ def test_shared_limiter_is_forwarded_but_streaming_callbacks_are_not(project):
         ORIGINAL, project.root, Settings(), invoke=call,
         call_options={"limits": marker, "on_text": "do not forward", "on_tool": "no tools"},
     )
-    assert forwarded == [{"limits": marker}]
+    assert forwarded == [{"limits": marker, "single_request": True}]
 
 
 def test_enabled_streaming_emits_only_the_final_verified_answer(project, monkeypatch):

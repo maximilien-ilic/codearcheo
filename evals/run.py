@@ -25,6 +25,7 @@ from typing import Any
 from evals.fixtures import build_fixture
 from evals.scoring import Check, score_answer, score_decisions
 from learn_it import evidence, features, git
+from learn_it.agent.limits import SessionLimits
 from learn_it.agent.runner import AgentError
 from learn_it.agent.usage import UsageSummary
 from learn_it.analyzers import scan
@@ -148,9 +149,14 @@ def compare_citation_repair(
 
 
 def main(
-    names: list[str], *, repair_citations: bool = False, compare_citations: bool = False
+    names: list[str], *, repair_citations: bool = False, compare_citations: bool = False,
+    max_requests: int | None = None, max_output_tokens: int | None = None,
 ) -> int:
-    settings = Settings.from_env()
+    settings = Settings.from_env(max_requests=max_requests, max_output_tokens=max_output_tokens)
+    limits = (
+        SessionLimits.from_settings(settings)
+        if settings.max_requests is not None or settings.max_output_tokens != 16_000 else None
+    )
     workdir = settings.cache_dir / "evals"
     results = []
     measurements = []
@@ -171,7 +177,7 @@ def main(
             "files": profile.files, "preparation_seconds": prepared - started,
             "scan_seconds": scanned - prepared,
         })
-        session = Session(project, profile, Store(project.root), settings)
+        session = Session(project, profile, Store(project.root), settings, limits=limits)
         session.repair_citations = repair_citations or compare_citations
         for case in spec["cases"]:
             usage = []
@@ -236,6 +242,11 @@ if __name__ == "__main__":
         "--compare-citations", action="store_true",
         help="Save original/repaired scores from the same task (uses the real API).",
     )
+    parser.add_argument("--max-requests", type=int,
+                        help="Generation HTTP attempt cap shared across the entire evaluation.")
+    parser.add_argument("--max-output-tokens", type=int,
+                        help="Maximum generated output tokens in each request.")
     options = parser.parse_args()
     sys.exit(main(options.names, repair_citations=options.repair_citations,
-                  compare_citations=options.compare_citations))
+                  compare_citations=options.compare_citations,
+                  max_requests=options.max_requests, max_output_tokens=options.max_output_tokens))

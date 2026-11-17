@@ -1,5 +1,10 @@
 # Correction facultative des citations
 
+```bash
+learn-it ask "Comment fonctionne le stockage ?" --repair-citations --max-requests 4
+learn-it why src/storage.py --repair-citations --max-output-tokens 2048
+```
+
 La vérification des références reste locale et sans appel IA supplémentaire par défaut.
 `Session.repair_citations=True` autorise une seule tentative pour les réponses textuelles
 de `ask`, `why` et `overview` lorsque des références sont invalides. Une réponse sans
@@ -9,8 +14,12 @@ structurées sont vérifiées et signalées, sans correction indépendante de le
 Le modèle reçoit la réponse initiale, les références invalides, quelques extraits bornés de
 fichiers autorisés et des commits récents. Aucun fichier ignoré, lien ou secret connu n'est
 ajouté au contexte. Tous les textes du dépôt sont marqués comme données non fiables. La
-requête n'a aucun outil et n'autorise qu'une itération ; aucune relance de réparation ne suit
-une erreur ou une réponse rejetée. Cette option peut donc consommer un appel API de plus.
+requête n'a aucun outil et n'autorise qu'une itération. Elle possède un garde local d'une
+tentative réseau et désactive les retries automatiques ; aucune relance de réparation ne
+suit une erreur ou une réponse rejetée. Sa sortie est bornée à 4 096 tokens, ou à la limite
+de sortie choisie si elle est inférieure. Cette option peut consommer un appel API de plus.
+La même limite globale de session couvre l'analyse et la correction. Si le quota est épuisé,
+la réponse initiale et ses avertissements sont conservés.
 
 Le modèle propose un plan JSON de remplacement des références, pas une nouvelle réponse.
 Le programme applique uniquement les références invalides reconnues à leurs positions
@@ -51,3 +60,23 @@ Les tests avec client simulé mesurent les références existantes, les refus et
 du contenu. Ils ne prouvent ni l'implication logique d'une source ni la vérité des affirmations.
 Aucun gain sur les vraies réponses de Claude n'est revendiqué : sa mesure reste suivie dans
 le ticket #10 avec les accès et dépenses API correspondants.
+
+## Comparer plus tard avec l'API réelle
+
+```bash
+uv run python -m evals.run shop --compare-citations --max-requests 6 --max-output-tokens 2048
+```
+
+Cette commande consomme des tokens API ; elle n'a pas été exécutée pour ce travail.
+`--compare-citations` conserve les réponses initiale et retenue, les références invalides,
+les contrôles et les scores avant/après issus de la même analyse. Les tokens, le coût estimé
+et la durée sont enregistrés par cas. Il n'y a pas deux analyses de départ indépendantes.
+Les cas structurés `decisions` et `review` sont évalués normalement, sans réparation
+indépendante de leurs enregistrements.
+
+Le plafond de requêtes est partagé par tous les cas et projets de l'exécution, pas
+réinitialisé à chaque cas. Une limite trop courte peut arrêter l'évaluation ; ce résultat
+incomplet ne constitue pas une mesure de qualité du modèle. Ces plafonds ne garantissent
+aucun montant de facture, notamment pour les tokens d'entrée et les traitements internes
+du fournisseur. `--repair-citations` seul active la correction sans enregistrer les scores
+comparatifs ; le mode normal conserve les vérifications et n'ajoute aucun appel de correction.

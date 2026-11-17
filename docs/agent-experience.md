@@ -40,6 +40,16 @@ Chaque question de chat démarre un nouveau tour. Un modèle ne prenant pas en c
 ce bêta renvoie une erreur API explicite.
 Source : [budgets de tâche](https://platform.claude.com/docs/en/build-with-claude/task-budgets).
 
+Les lectures du cache au deuxième retour API sont distinguées d'une absence de
+lecture mesurée et d'un usage indisponible. Ce diagnostic décrit les compteurs
+reçus ; il ne promet pas un succès du cache. Sa validation sur l'API réelle reste
+dans #10.
+
+Une requête de génération soumise à la limite locale ne suit pas automatiquement
+les redirections HTTP : elles pourraient envoyer plusieurs POST dans une seule
+tentative du SDK. Un serveur renvoyant une redirection doit utiliser son URL finale
+pour ces appels bornés.
+
 ## Limites locales appliquées avant l'envoi
 
 `--max-requests N` (ou `LEARN_IT_MAX_REQUESTS`) limite le nombre de tentatives HTTP

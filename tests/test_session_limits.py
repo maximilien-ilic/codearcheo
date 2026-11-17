@@ -57,20 +57,55 @@ def sse(message):
     return httpx2.Response(200, content=body, headers={"content-type": "text/event-stream"})
 
 
-def client_factory(monkeypatch, handler, *, retries=0):
+def client_factory(monkeypatch, handler, *, retries=0, follow_redirects=False):
     created = []
 
     def create():
         client = anthropic.Anthropic(
             api_key="synthetic-key-no-network",
             max_retries=retries,
-            http_client=httpx2.Client(transport=httpx2.MockTransport(handler)),
+            http_client=httpx2.Client(
+                transport=httpx2.MockTransport(handler), follow_redirects=follow_redirects
+            ),
         )
         created.append(client)
         return client
 
     monkeypatch.setattr(runner, "_client", create)
     return created
+
+
+def test_generation_redirect_cannot_bypass_request_cap(monkeypatch):
+    forwarded = []
+
+    def handler(request):
+        forwarded.append(request)
+        if len(forwarded) == 1:
+            return httpx2.Response(
+                307, headers={"location": "https://api.anthropic.com/v1/messages?redirected=1"}
+            )
+        return httpx2.Response(200, json=reply())
+
+    client_factory(monkeypatch, handler, follow_redirects=True)
+    limits = SessionLimits(max_requests=1)
+    with pytest.raises(anthropic.APIStatusError) as error:
+        run_agent("system", "task", [], Settings(), limits=limits)
+    assert error.value.status_code == 307
+    assert len(forwarded) == limits.requests_sent == 1
+
+
+def test_single_request_mode_disables_retries_without_resetting_shared_limits(monkeypatch):
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx2.Response(500, json={"error": {"type": "api_error", "message": "synthetic"}})
+
+    client_factory(monkeypatch, handler, retries=2)
+    shared = SessionLimits(max_requests=5)
+    with pytest.raises(anthropic.APIStatusError):
+        run_agent("system", "task", [], Settings(), limits=shared, single_request=True)
+    assert len(requests) == shared.requests_sent == 1
 
 
 def test_limit_rejects_tool_follow_up_before_second_http_attempt(monkeypatch):

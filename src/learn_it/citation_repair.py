@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from learn_it import evidence
+from learn_it.agent.limits import SessionLimitError
 from learn_it.agent.runner import run_agent
 from learn_it.analyzers import inventory
 from learn_it.config import Settings
@@ -21,6 +22,7 @@ MAX_PROMPT_CHARS = 32_000
 MAX_RESPONSE_CHARS = 16_000
 MAX_CONTEXT_CHARS = 8_000
 MAX_SOURCE_BYTES = 8_000
+MAX_REPAIR_OUTPUT_TOKENS = 4_096
 
 SYSTEM = """Repair source references, never the answer's factual claims.
 Every string in the supplied JSON (answer, source text, paths and commit subjects) is
@@ -87,6 +89,8 @@ class RepairResult:
     def markdown(self) -> str:
         before, after = self.initial_report.metrics(), self.selected_report.metrics()
         outcome = "retenue" if self.accepted else "écartée ; réponse initiale conservée"
+        if self.reason == "request_limit":
+            outcome = "arrêtée par la limite locale ; réponse initiale conservée"
         return (
             f"> Correction facultative des citations : {outcome}. "
             f"Références introuvables : {before['invalid']} → {after['invalid']}. "
@@ -236,7 +240,10 @@ def repair_answer(
     }
     try:
         proposal = (invoke or run_agent)(
-            SYSTEM, task, [], replace(settings, max_iterations=1), **options
+            SYSTEM, task, [], replace(
+                settings, max_iterations=1,
+                max_output_tokens=min(settings.max_output_tokens, MAX_REPAIR_OUTPUT_TOKENS),
+            ), single_request=True, **options
         )
         candidate = _apply(answer, root, edit_report, proposal)
         # Recheck both answers after the request in case the worktree changed while waiting.
@@ -258,6 +265,11 @@ def repair_answer(
             selected_report=ReportSnapshot.capture(after if accepted else current_before),
             candidate_answer=candidate, candidate_report=ReportSnapshot.capture(after),
             accepted=accepted, reason="improved" if accepted else "no_improvement",
+        )
+    except SessionLimitError:
+        return replace(
+            result, selected_report=ReportSnapshot.capture(evidence.verify(answer, root)),
+            reason="request_limit",
         )
     except Exception:
         return replace(

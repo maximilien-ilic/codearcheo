@@ -286,3 +286,22 @@ def test_citation_repair_comparison_grades_the_same_answer_before_and_after(proj
 def test_missing_repair_metadata_is_not_counted_as_a_measured_improvement(project):
     result = run.compare_citation_repair({}, shop_case("shop-framework"), project.root, CANARY)
     assert result is None
+
+
+def test_evaluation_uses_one_shared_limit_across_projects(monkeypatch, tmp_path):
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    specs = [shop | {"name": name, "cases": shop["cases"][:1]} for name in ("first", "second")]
+    monkeypatch.setattr(run, "load_cases", lambda: specs)
+    seen = []
+
+    def fake_case(session, case, canary):
+        seen.append(session.limits)
+        return []
+
+    monkeypatch.setattr(run, "run_case", fake_case)
+    assert run.main([], max_requests=3, max_output_tokens=512) == 0
+    assert len(seen) == 2
+    assert seen[0] is seen[1]
+    assert seen[0].max_requests == 3
+    assert seen[0].max_output_tokens == 512
