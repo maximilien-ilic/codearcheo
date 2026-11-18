@@ -231,18 +231,18 @@ def decisions(session: Session) -> str:
 
 
 def review(session: Session, *, path: str | None = None) -> str:
+    root = session.project.root
     relative = PurePosixPath(path).as_posix() if path is not None else "."
     scope_label = json.dumps(relative, ensure_ascii=False) if relative != "." else None
     scope = ""
+    scoped_files: set[str] = set()
     if scope_label is not None:
-        root = session.project.root
-        if (
-            not inventory.is_safe_path(root, relative)
-            or not any(
-                name == relative or name.startswith(relative + "/")
-                for name in inventory.list_files(root)
-            )
-        ):
+        if inventory.is_safe_path(root, relative):
+            scoped_files = {
+                name for name in inventory.list_files(root)
+                if name == relative or name.startswith(relative + "/")
+            }
+        if not scoped_files:
             raise AgentError(
                 f"Périmètre de revue inaccessible : {path!r}. "
                 "Choisis un fichier ou dossier visible depuis la racine du projet."
@@ -262,9 +262,21 @@ def review(session: Session, *, path: str | None = None) -> str:
     def record_recommendation(**fields: Any) -> str:
         """Record one evidence-based recommendation about a technical decision."""
         try:
-            recorded.append(Recommendation.model_validate(_complete_evidence(fields, session)))
+            recommendation = Recommendation.model_validate(_complete_evidence(fields, session))
         except ValidationError as exc:
             raise ToolError(f"Invalid recommendation, fix it and call again:\n{exc}") from exc
+        if scoped_files:
+            citations = [
+                citation for item in recommendation.evidence
+                for citation in evidence.find_citations(item)
+                if citation.path in scoped_files
+            ]
+            verified = evidence.verify_citations(citations, root)
+            if not any(citation not in verified.problems for citation in citations):
+                raise ToolError(
+                    f"Include at least one verifiable citation (file:line) within {scope_label}."
+                )
+        recorded.append(recommendation)
         return f"Recorded recommendation {len(recorded)}: {recorded[-1].title}"
 
     tool = beta_tool(record_recommendation, input_schema=Recommendation)
