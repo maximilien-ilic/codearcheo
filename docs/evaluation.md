@@ -14,7 +14,9 @@ les outils de learn-it via `learn-it serve`. Le moteur API garde quelques diffé
 streaming, cache de prompt réglé par learn-it, limites de requêtes locales. Ces scores
 approchent donc ceux du moteur API sans les remplacer.
 
-Le coût affiché est un équivalent API calculé par Claude Code. L'abonnement ne le facture pas.
+Le coût affiché est un équivalent API calculé par Claude Code. Il ne constitue pas un relevé
+de facturation du compte : la consommation peut être incluse dans l'abonnement ou utiliser
+des crédits d'usage activés par le propriétaire. Voir les [règles de coût](claude-review.md#charge-et-coût).
 
 ```bash
 uv run --extra mcp python -m evals.run --backend claude-code

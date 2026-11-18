@@ -1,8 +1,8 @@
 # Revue côté serveur avec Claude
 
 Le workflow `.github/workflows/claude-review.yml` relit chaque push sur `master` dans
-GitHub Actions, avec Claude Code. Il tourne sur l'abonnement Claude du propriétaire : il
-n'y a pas de clé API à payer, et la machine n'a pas besoin d'être allumée (#25).
+GitHub Actions, avec Claude Code et le jeton d'abonnement du propriétaire. Aucune clé API
+Anthropic n'est nécessaire, et la machine n'a pas besoin d'être allumée (#25).
 
 ## Activer la revue
 
@@ -25,10 +25,61 @@ par une conversation. Sans ce secret, le workflow s'arrête sur un simple averti
 4. Elle ouvre un ticket pour chaque défaut qu'elle ne corrige pas, et écrit son compte
    rendu dans #4.
 5. Elle publie enfin le statut `claude/review` sur le commit relu.
+6. Elle conserve pendant sept jours un relevé numérique : coût en équivalent API, durée,
+   tours et compteurs de tokens. Les prompts, réponses et résultats d'outils ne sont pas
+   inclus dans cet artefact. Le script de relevé est copié avant l'analyse pour que le
+   changement de branche du relecteur ne modifie pas la collecte.
+
+Les commits utilisent l'identité GitHub du propriétaire du dépôt, conformément au choix
+initial du projet. L'attribution automatique de coauteur IA est désactivée dans les
+réglages de l'action. Les comptes rendus restent identifiés comme revues serveur Claude.
 
 GitHub exécute une revue à la fois et peut remplacer une revue en attente par un push
 plus récent. La base revue permet à l'exécution suivante de couvrir aussi les
 changements des exécutions annulées ou échouées.
+
+## Charge et coût
+
+```bash
+python scripts/review_usage.py report --days 7 --output /tmp/revue-serveur.json
+```
+
+Cette commande lit l'historique GitHub et les relevés disponibles sans lancer Claude.
+Elle compte les déclenchements sur `master`, toutes les tentatives de ces déclenchements,
+les appels effectivement démarrés et les exécutions ignorées. Un relevé absent reste
+inconnu ; il n'est pas compté comme gratuit.
+Les artefacts sont vérifiés contre le dépôt, le SHA, le numéro d'exécution et sa tentative.
+
+La projection à 30 jours conserve la cadence observée et suppose une revue du modèle par
+déclenchement après activation, avec le nombre moyen de tentatives mesuré. La file GitHub
+et la déduplication peuvent réduire ce
+nombre. Une fenêtre de moins de sept jours est signalée : la cadence du démarrage du projet
+ne permet pas d'établir un budget mensuel représentatif. L'équivalent API moyen n'est
+calculé que si tous les appels démarrés ont un relevé de coût.
+
+Pour étudier une hypothèse explicite, par exemple 1 $ d'équivalent API par revue :
+
+```bash
+python scripts/review_usage.py report --days 7 --per-review-usd 1 --output /tmp/scenario.json
+```
+
+Le rapport marque alors la projection comme scénario fourni par l'utilisateur, avec une
+tentative par déclenchement. Ce montant est une hypothèse de calcul ; la commande ne
+dépense rien et ne fixe aucun plafond.
+
+Le dépôt est public et utilise `ubuntu-latest`. Le calcul sur les runners standard publics
+est [gratuit selon GitHub](https://docs.github.com/en/actions/concepts/billing-and-usage).
+Ce poste ne représente pas la facture entière du compte GitHub.
+
+La consommation Claude partage les limites de l'abonnement avec les autres usages. Si les
+[crédits d'usage sont activés](https://support.claude.com/en/articles/12429409-manage-usage-credits-for-paid-claude-plans),
+le dépassement de quota peut être facturé séparément. Le relevé lit un équivalent API,
+pas les réglages ni la facture du compte Claude ; le champ `claude_invoice_usd` reste inconnu.
+L'abonnement existant, les crédits éventuels et les taxes ne sont donc pas reconstitués par
+ce rapport.
+
+Le premier relevé daté est conservé dans
+[`benchmarks/review-budget-20261118.json`](benchmarks/review-budget-20261118.json).
 
 ## Avec la revue Codex locale
 
@@ -40,6 +91,6 @@ qu'une, mets l'automatisation Orca en pause (`orca automations edit <id> --disab
 
 - Les PR ouvertes avec le jeton du workflow ne déclenchent pas la CI : c'est une règle de
   GitHub. Relance la CI depuis la PR, ou pousse un commit, avant de fusionner.
-- La revue consomme le quota de l'abonnement, une revue par push sur `master`.
+- La revue consomme l'abonnement ou les crédits d'usage configurés sur le compte Claude.
 - Le relecteur peut lancer `git`, `gh` et `uv` (donc les tests) sur le code déjà fusionné ;
   rien d'autre ne s'exécute.
