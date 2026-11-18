@@ -181,3 +181,36 @@ def test_rescoring_keeps_missing_repair_guard_even_if_original_answer_failed(
     result = rescore.rescore(report, workdir)["results"][0]
     assert not result["passed"]
     assert any(check["name"] == "correction/comparaison disponible" for check in result["checks"])
+
+
+@pytest.mark.parametrize("mode", ["repair_citations", "compare_citations"])
+def test_legacy_report_cannot_promote_an_unverified_repair(evaluation, monkeypatch, mode):
+    workdir, _ = evaluation
+    monkeypatch.setattr(run.features, "ask", lambda *a: "Voir `app.py:3`.")
+    assert run.main([], case_ids=["first"], **{mode: True}) == 1
+    _, report = load_report(workdir)
+    archived = report["results"][0]
+    archived.pop("citation_repair_verified", None)
+    archived["checks"] = [check for check in archived["checks"]
+                          if check["name"] != "correction/comparaison disponible"]
+    monkeypatch.setattr(rescore, "score_answer", lambda *a: [run.Check("nouveau critère", True)])
+
+    result = rescore.rescore(report, workdir)["results"][0]
+    assert not result["passed"]
+    assert any(check["name"] == "correction/comparaison disponible" for check in result["checks"])
+
+
+@pytest.mark.parametrize("mode", ["repair_citations", "compare_citations"])
+def test_rescoring_can_promote_a_verified_repair(evaluation, monkeypatch, mode):
+    workdir, _ = evaluation
+    answer = "Voir `app.py:3`."
+    monkeypatch.setattr(run.features, "ask", lambda *a: answer)
+    monkeypatch.setattr(run.Session, "last_repair", property(lambda self: {
+        "original_answer": answer, "final_answer": answer,
+    }))
+    assert run.main([], case_ids=["first"], **{mode: True}) == 1
+    _, report = load_report(workdir)
+    assert report["results"][0]["citation_repair_verified"] is True
+    monkeypatch.setattr(rescore, "score_answer", lambda *a: [run.Check("nouveau critère", True)])
+
+    assert rescore.rescore(report, workdir)["results"][0]["passed"]

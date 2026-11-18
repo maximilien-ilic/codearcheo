@@ -297,7 +297,10 @@ def main(
                     comparison = compare_citation_repair(
                         metadata, case, project.root, spec.get("canary")
                     )
-                if not metadata or (compare_citations and comparison is None):
+                captured["citation_repair_verified"] = bool(metadata) and (
+                    not compare_citations or comparison is not None
+                )
+                if not captured["citation_repair_verified"]:
                     checks.append(Check(
                         "correction/comparaison disponible", False,
                         "Métadonnées de correction absentes ; le mode demandé n'a pas été vérifié.",
