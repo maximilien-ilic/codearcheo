@@ -92,6 +92,9 @@ def test_publish_credentials_are_not_available_to_build_or_manual_preparation():
     assert set(workflow["on"]) == {"workflow_dispatch", "release"}
     assert workflow["permissions"] == {"contents": "read"}
     publish = workflow["jobs"]["publish"]
+    assert publish["needs"] == "verify-artifacts"
+    assert workflow["jobs"]["verify-artifacts"]["needs"] == "build"
+    assert "permissions" not in workflow["jobs"]["verify-artifacts"]
     assert "github.event_name == 'release'" in publish["if"]
     assert "!github.event.release.prerelease" in publish["if"]
     assert publish["environment"]["name"] == "pypi"
