@@ -118,6 +118,7 @@ def run_claude_code(
             "--tools", "", "--strict-mcp-config", "--mcp-config", str(config),
             "--allowedTools", f"mcp__{SERVER}", "--setting-sources", "",
             "--no-session-persistence", "--model", settings.model,
+            "--max-turns", str(settings.max_iterations),
         ]
         if settings.effort:
             command += ["--effort", settings.effort]
@@ -146,6 +147,11 @@ def run_claude_code(
         on_usage(usage)
     else:
         print(usage.format(), file=sys.stderr)
+    if result.get("subtype") == "error_max_turns":
+        raise AgentError(
+            f"Claude Code arrêté après {settings.max_iterations} tours sans réponse finale : "
+            "augmente LEARN_IT_MAX_ITERATIONS ou précise la demande."
+        )
     if proc.returncode != 0 or result.get("is_error"):
         raise AgentError(f"Claude Code a échoué : {str(result.get('result', ''))[:500]}")
 

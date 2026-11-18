@@ -27,6 +27,7 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 - Refus des ADR sans preuve vérifiable et avertissements pour les références invalides.
 - Commandes sans génération indépendantes de la configuration du modèle.
 - Conservation des erreurs de moteur et des vérifications de correction dans les évaluations.
+- Application de la limite de tours configurée au moteur Claude Code.
 
 ### Performance
 

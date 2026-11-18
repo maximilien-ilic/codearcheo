@@ -61,10 +61,39 @@ def test_ask_runs_on_the_subscription_with_learn_it_tools_only(project, fake_cla
     assert not logged["api_key"]  # the subscription, not API credits
     assert argv[argv.index("--tools") + 1] == ""  # no built-in tools
     assert "--strict-mcp-config" in argv
+    assert argv[argv.index("--max-turns") + 1] == str(Settings.max_iterations)
     assert argv[argv.index("--allowedTools") + 1] == "mcp__learn-it"
     server = logged["mcp"]["mcpServers"]["learn-it"]
     assert server["args"] == ["-m", "learn_it", "serve", "-p", str(project.root)]
     assert "<project_profile>" in argv[argv.index("--system-prompt") + 1]
+
+
+@pytest.mark.parametrize("max_iterations", [1, 7])
+def test_custom_iteration_limit_reaches_claude(project, fake_claude, monkeypatch, max_iterations):
+    call = fake_claude(result="FastAPI depuis `app.py:3`.")
+    monkeypatch.setenv("LEARN_IT_MAX_ITERATIONS", str(max_iterations))
+    current = session(project)
+    current.settings = Settings.from_env(backend="claude-code")
+
+    features.ask(current, "Quel framework ?")
+
+    argv = call()["argv"]
+    assert argv[argv.index("--max-turns") + 1] == str(max_iterations)
+
+
+def test_turn_limit_reports_usage_and_stops_without_final_records(project, fake_claude):
+    fake_claude(is_error=True, subtype="error_max_turns", num_turns=3)
+    current = session(project, max_iterations=3)
+    usages = []
+    current.on_usage = usages.append
+
+    with pytest.raises(AgentError, match="3 tours.*LEARN_IT_MAX_ITERATIONS"):
+        features.decisions(current)
+
+    assert len(usages) == 1
+    assert usages[0].requests == 3
+    assert usages[0].estimated_cost_usd == 0.12
+    assert current.store.load_decisions() == []
 
 
 def test_decisions_come_back_as_structured_output_and_are_validated(project, fake_claude):

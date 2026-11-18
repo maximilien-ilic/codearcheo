@@ -36,6 +36,12 @@ inconnu, ou une sélection sans correspondance, arrête l'exécution avant tout 
 Pour comparer `medium` au réglage `high`, conserver la même sélection et définir
 `LEARN_IT_EFFORT=medium`. Chaque lancement produit un fichier de résultats distinct.
 
+`LEARN_IT_MAX_ITERATIONS` borne aussi les tours Claude Code via `--max-turns`,
+avec 40 par défaut. Les mesures 1 à 8 précèdent ce correctif : leur moteur ignorait
+ce réglage malgré sa présence dans la configuration. Ne pas attribuer un changement
+de score au seul prompt ou à l'effort si la limite effective a changé. Un arrêt à
+la limite est une erreur de moteur, distincte d'une réponse évaluée.
+
 Les nouveaux rapports au format 2 archivent la réponse exacte, les décisions et
 recommandations structurées, les attentes du cas, les usages, les réglages et la révision
 du code de learn-it. Ils sont enregistrés après chaque cas, par remplacement atomique.
