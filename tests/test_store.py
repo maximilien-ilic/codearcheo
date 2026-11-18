@@ -100,3 +100,19 @@ def test_legacy_json_reads_can_be_bounded_too(tmp_path):
     store.save_json("cache.json", {"data": "x" * 100})
     assert store.load_json("cache.json", max_bytes=10) is None
     assert store.load_json("cache.json", max_bytes=1000) == {"data": "x" * 100}
+
+
+def test_failed_compressed_cache_publish_keeps_previous_cache(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    path = store.save_compressed_json("cache.json.gz", {"previous": True})
+    original = path.read_bytes()
+
+    def fail_replace(self, target):
+        raise OSError("replacement failed")
+
+    monkeypatch.setattr(type(path), "replace", fail_replace)
+
+    with pytest.raises(OSError, match="replacement failed"):
+        store.save_compressed_json("cache.json.gz", {"previous": False})
+    assert path.read_bytes() == original
+    assert {item.name for item in store.dir.iterdir()} == {".gitignore", path.name}

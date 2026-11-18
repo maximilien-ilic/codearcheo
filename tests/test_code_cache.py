@@ -141,3 +141,25 @@ def test_a_failed_migration_keeps_the_legacy_cache(project, monkeypatch):
 
     assert code.analyze(project.root).model_dump() == first.model_dump()
     assert legacy.read_bytes() == original
+
+
+def test_oversized_replacement_keeps_usable_legacy_cache(project, parses, monkeypatch):
+    from learn_it.store import Store
+
+    code.analyze(project.root)
+    store = Store(project.root)
+    compressed = store.dir / "code-cache.json.gz"
+    legacy = store.dir / "code-cache.json"
+    original = gzip.decompress(compressed.read_bytes())
+    legacy.write_bytes(original)
+    compressed.unlink()
+    monkeypatch.setattr(code, "MAX_CACHE_BYTES", len(original))
+    (project.root / "new.py").write_text("def extra():\n    return 42\n", encoding="utf-8")
+    parses.clear()
+
+    graph = code.analyze(project.root)
+
+    assert "new.py" in graph.modules
+    assert "new.py" in parses and "app.py" not in parses
+    assert legacy.read_bytes() == original
+    assert not compressed.exists()
