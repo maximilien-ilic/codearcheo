@@ -64,11 +64,21 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         if: env.HAS_TOKEN == 'true' && steps.gate.outputs.skip != 'true'
 
-      - uses: anthropics/claude-code-action@cc98b3ae241b0fcfb6a42a2690751afffecb4452 # v1
+      - name: Préparer le relevé de consommation
+        if: env.HAS_TOKEN == 'true' && steps.gate.outputs.skip != 'true'
+        run: cp scripts/review_usage.py "$RUNNER_TEMP/review_usage.py"
+
+      - name: Revue Claude
+        id: claude
+        uses: anthropics/claude-code-action@cc98b3ae241b0fcfb6a42a2690751afffecb4452 # v1
         if: env.HAS_TOKEN == 'true' && steps.gate.outputs.skip != 'true'
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
+          bot_name: ${{ github.repository_owner }}
+          bot_id: ${{ github.repository_owner_id }}
+          settings: |
+            {"attribution":{"commit":"","pr":"","sessionUrl":false}}
           claude_args: >-
             --allowedTools "Read,Grep,Glob,Edit,Write,Bash(git:*),Bash(gh:*),Bash(uv:*)"
           prompt: |
@@ -88,8 +98,31 @@ jobs:
                non-régression, sur une branche `claude/review-<12 premiers caractères du sha>`.
                Lance `uv run ruff check .` et `uv run pytest`, puis ouvre une PR vers master.
                Ne pousse jamais sur master, ne fusionne aucune PR, ne force aucun push.
+               Les commits restent au nom du propriétaire configuré par le workflow,
+               sans signature Co-Authored-By ni attribution de coauteur à une IA.
             4. Ouvre un ticket pour chaque défaut non corrigé. Aucun constat : ne crée rien.
             5. Ajoute à l'issue #4 un compte rendu : plage relue, constats, PR et tickets,
                tests lancés, limites. Commence-le par « Revue serveur (Claude) ».
             6. À la toute fin seulement, publie le statut :
                `gh api repos/${{ github.repository }}/statuses/${{ env.SHA }} -f state=success -f context=claude/review -f description="Revue effectuée"`
+
+      - name: Relever les compteurs sans contenu de conversation
+        if: always() && env.HAS_TOKEN == 'true' && steps.claude.outcome != 'skipped'
+        id: usage
+        env:
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
+          CONCLUSION: ${{ steps.claude.outputs.conclusion || 'unknown' }}
+        run: |
+          python3 "$RUNNER_TEMP/review_usage.py" record \
+            --execution-file "${EXECUTION_FILE:-$RUNNER_TEMP/claude-execution-output.json}" \
+            --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" \
+            --attempt "$GITHUB_RUN_ATTEMPT" --sha "$SHA" --conclusion "$CONCLUSION" \
+            --output "$RUNNER_TEMP/review-usage/usage.json"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always() && steps.usage.outcome == 'success'
+        with:
+          name: claude-review-usage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/review-usage/usage.json
+          retention-days: 7
+          if-no-files-found: error
