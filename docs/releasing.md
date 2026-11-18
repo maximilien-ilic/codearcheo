@@ -31,6 +31,11 @@ gh workflow run release.yml --ref master --repo maximilien-ilic/learn-it
 Ce lancement manuel exécute uniquement la préparation. Le job de publication exige une
 release GitHub stable publiée dans le dépôt d'origine et un tag correspondant à la version.
 
+Après la construction, un second job télécharge l'artefact GitHub et revérifie les archives
+dans un nouveau runner. Il installe les deux paquets depuis cet artefact et refait leur scan
+local. La publication dépend de cette vérification, qui teste aussi le transfert des fichiers
+entre les jobs. Seul le job final `publish` possède la permission OIDC.
+
 ## Configurer Trusted Publishing
 
 Depuis le compte PyPI du propriétaire, ajouter un éditeur GitHub avec ces valeurs :
