@@ -63,10 +63,12 @@ class Session:
         """A fresh view of immutable initial/final evidence metadata for offline comparisons."""
         return self._last_repair.as_dict() if self._last_repair is not None else None
 
-    def checked(self, answer: str, *, repair: bool = False) -> str:
+    def checked(self, answer: str, *, repair: bool = False, normalize_paths: bool = True) -> str:
         """Warn without hiding the answer; retain the same warning in saved reports."""
         # Answers still abbreviate some paths (`legacy.yml:33`): complete the unambiguous ones.
-        answer = evidence.complete_paths(answer, inventory.list_files(self.project.root))
+        # A live stream has already displayed its body; only append checks in that case.
+        if normalize_paths:
+            answer = evidence.complete_paths(answer, inventory.list_files(self.project.root))
         report = evidence.verify(answer, self.project.root)
         repair_note = ""
         if repair and self.repair_citations:
@@ -112,7 +114,9 @@ class Session:
         )
         if not check:
             return answer
-        checked = self.checked(answer, repair=repair)
+        checked = self.checked(
+            answer, repair=repair, normalize_paths=buffered or self.on_text is None
+        )
         if self.on_text is not None:
             self.on_text(checked if buffered else checked[len(answer.rstrip()):])
         return checked

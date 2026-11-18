@@ -138,12 +138,20 @@ def complete_paths(text: str, files: list[str]) -> str:
     by_name: dict[str, list[str]] = {}
     for path in files:
         by_name.setdefault(PurePosixPath(path).name, []).append(path)
+    allowed = set(files)
     named = {c.path for c in find_citations(text) if c.path and "/" in c.path}
-    named |= {span for span in mentioned_paths(text) if "/" in span}
+    protected = fenced_spans(text)
+    named |= {
+        match[1].split(":", 1)[0].removeprefix("./")
+        for match in _CODE_SPAN.finditer(text)
+        if not any(match.start() < end and match.end() > start for start, end in protected)
+    }
     parts, last = [], 0
     for match in sorted(find_matches(text), key=lambda m: m.start):
         path = match.citation.path
-        if not path or "/" in path or match.start < last:
+        if not path or path in allowed or "/" in path or match.start < last:
+            continue
+        if match.citation.ref.lstrip("`").startswith("./"):
             continue
         candidates = by_name.get(path, [])
         if len(candidates) > 1:
