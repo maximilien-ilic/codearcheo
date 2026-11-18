@@ -98,6 +98,10 @@ REVIEW = """\
 Review this project's technical decisions as a senior architect would, against its actual \
 context: its size, maturity, activity and domain, as you observe them.
 {known_decisions}
+Start with the decisions that shape the architecture and the main execution flow (core \
+abstractions, data model, request or data pipeline), then cover infrastructure and tooling. \
+A review that skips the project's central design choice is incomplete.
+
 For each significant decision, give:
 - Verdict: keep, improve or replace.
 - Why: concrete strengths or problems observed in the code, with evidence.
