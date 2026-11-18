@@ -77,6 +77,13 @@ learn-it chat --max-requests 20 --max-output-tokens 4000
 distincte du nombre de tentatives HTTP. Elle ne remplace pas `--max-requests` :
 une réponse peut être précédée de retries et suivie d'une compaction.
 
+Avec le moteur Claude Code, ce réglage est transmis à
+[`claude -p --max-turns`](https://code.claude.com/docs/en/cli-reference).
+Le comptage inclut les tours d'outils et la réponse finale. Si Claude atteint la
+limite avant de conclure, la commande signale l'arrêt et conserve les compteurs
+d'usage retournés, sans enregistrer une synthèse inachevée. Cette limite ne fixe
+ni le nombre de tentatives HTTP internes ni un montant facturé.
+
 Si la limite refuse seulement une compaction facultative après une réponse
 complète, cette réponse est conservée avec une note. Une nouvelle question ne
 réinitialise pas le compteur du chat ; `/save` et `/exit` restent disponibles.

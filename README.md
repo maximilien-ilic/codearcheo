@@ -129,7 +129,7 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | `LEARN_IT_MODEL` | `claude-opus-5-5` | modèle Claude |
 | `LEARN_IT_EFFORT` | `high` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
 | `LEARN_IT_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
-| `LEARN_IT_MAX_ITERATIONS` | `40` | nombre maximal d'allers-retours de l'agent |
+| `LEARN_IT_MAX_ITERATIONS` | `40` | nombre maximal de tours de l'agent ; transmis à `--max-turns` avec Claude Code |
 | `LEARN_IT_CACHE_DIR` | `~/.cache/learn-it` | où sont clonés les dépôts GitHub |
 
 `scan`, `diff` et `serve` chargent le projet sans valider les réglages de génération.
