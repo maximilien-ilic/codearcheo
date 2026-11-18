@@ -231,10 +231,13 @@ def decisions(
         Path | None, typer.Option("--export", help="Dossier ADR dans le projet.")
     ] = None,
     force: Annotated[bool, typer.Option("--force", help="Remplacer un ADR du même titre.")] = False,
+    allow_unproven: Annotated[bool, typer.Option(
+        "--allow-unproven", help="Exporter aussi les décisions sans aucune preuve vérifiable."
+    )] = False,
 ) -> None:
     """Reconstitue les décisions techniques du projet (format ADR) : quoi, quand, pourquoi."""
-    if force and export is None:
-        _fail("--force s'utilise avec --export.")
+    if (force or allow_unproven) and export is None:
+        _fail("--force et --allow-unproven s'utilisent avec --export.")
     with _friendly_errors():
         session = _session(
             project, model=model, effort=effort, budget=budget,
@@ -245,7 +248,8 @@ def decisions(
         render.markdown(report)
         if export is not None:
             paths = export_decisions(
-                session.project.root, session.store.load_decisions(), export, force=force
+                session.project.root, session.store.load_decisions(), export, force=force,
+                allow_unproven=allow_unproven,
             )
             for path in paths:
                 render.err.print(f"ADR enregistré : {path}", markup=False)

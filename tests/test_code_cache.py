@@ -51,3 +51,16 @@ def test_a_corrupt_cache_is_ignored(project, parses):
     graph = code.analyze(project.root)
 
     assert "app.py" in parses and "app.py" in graph.modules
+
+
+def test_a_refused_file_is_not_parsed_again(project, parses, monkeypatch):
+    """Generated tables over the node budget were reparsed on every scan of golang/go."""
+    monkeypatch.setattr(code, "MAX_NODES", 5)
+    first = code.analyze(project.root)
+    assert "app.py" in first.skipped
+    parses.clear()
+
+    second = code.analyze(project.root)
+
+    assert parses == []
+    assert second.skipped["app.py"] == first.skipped["app.py"]

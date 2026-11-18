@@ -122,11 +122,58 @@ et des recommandations, que le modèle remplit via le schéma structuré, exigen
 aussi le chemin complet. Le contre-essai a réussi `go-http-default-handler` puis s'est arrêté
 sur la limite de session de l'abonnement ; l'effet sur `go-review-http` reste à mesurer.
 
+## Mesure 7 : évaluation complète, 18 novembre 2026
+
+Tous les projets, effort `high`, avec les changements 1 et 2 et les corrections de
+performance. **12 cas réussis sur 14**, contre 6 sur 15 à la mesure 1 ; le cas GitHub est
+ignoré avec ce moteur. Coût : 5,62 $ d'équivalent API, 19 minutes.
+
+Les deux échecs (`express-review`, `go-review-http`) ont la même cause : des chemins encore
+abrégés dans les raisons et la synthèse des rapports `review` (`legacy.yml:33`,
+`table.go:87-113`), malgré le prompt et la description des champs.
+
+## Changement 3 : compléter les chemins sans ambiguïté
+
+Avant de vérifier une réponse non diffusée ou un enregistrement, learn-it réécrit un nom de fichier seul
+en chemin complet quand un seul fichier du projet porte ce nom, ou quand la réponse cite déjà
+en entier un seul des fichiers candidats. Dans tous les autres cas, rien n'est deviné et la
+citation reste signalée. Un chemin déjà présent dans l'inventaire, un chemin explicite
+`./fichier.py` et les exemples dans les blocs de code ne sont pas réécrits. Les blocs de code
+ne servent pas non plus à départager les candidats. La plage de lignes est ensuite vérifiée
+comme avant. En streaming API et dans `chat`, le texte déjà affiché reste intact et le bilan
+contrôle ses références originales ; utiliser `ask --no-stream` pour bénéficier de la complétion.
+
+Recalculés hors ligne sur les rapports enregistrés de la mesure 7 pendant la session du
+18 novembre, les deux cas réussissent. Ce rejeu ne constitue pas une nouvelle mesure du modèle.
+
+## Mesure 8 : confirmation sur Express et Go, 18 novembre 2026
+
+Mêmes réglages, avec le changement 3 : **4 cas réussis sur 6 lancés**. Cinq réponses sont
+évaluables ; la sixième est bloquée par le quota de l'abonnement. Coût : 2,43 $ d'équivalent
+API, environ 9 minutes.
+
+| Cas | Résultat | Observation |
+|---|---|---|
+| express-middleware | réussi | 18 citations vérifiées |
+| express-why-listen | réussi | 14 citations vérifiées |
+| express-review | échec | 41 citations vérifiées, mais le mot attendu « middleware » est absent |
+| go-http-default-handler | réussi | 18 citations vérifiées |
+| go-why-handlerfunc | réussi | 16 citations vérifiées |
+| go-review-http | indisponible | limite de session Claude, réinitialisation annoncée à 14 h 10 (Paris) |
+
+Les citations de la nouvelle revue Express passent, mais cela ne suffit pas à faire réussir
+le cas entier. La nouvelle revue Go n'a pas pu être évaluée. On ne peut donc annoncer ni
+14/14, ni une confirmation complète du changement 3. Les résultats bruts sont conservés
+localement dans `~/.cache/learn-it/evals/results-20261118-095401.json` (mesure 7) et
+`results-20261118-100523.json` (mesure 8).
+
 ## Ce qu'il reste à mesurer
 
-- **`go-review-http`** après la consigne des champs `evidence`.
+- **`go-review-http`** après la complétion des chemins : la confirmation a atteint le quota.
+- **`express-review`** : vérifier la variabilité du contenu après son échec sur « middleware ».
 - **La variabilité** sur tous les cas, pas seulement `shop` : deux ou trois mesures chacun.
 - **L'effort** : `medium` coûte 19 % de moins pour un cas raté sur 11 avant le changement 2 ;
   à remesurer avec lui pour choisir le réglage par défaut.
-- **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur le vrai
-  moteur de learn-it et mesurer la correction des citations (#34).
+- **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores et comparer
+  la correction facultative par le modèle. La complétion locale des chemins est déjà
+  disponible sans clé ; la correction IA des preuves structurées reste à faire (#34).

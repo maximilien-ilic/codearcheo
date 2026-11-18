@@ -11,7 +11,7 @@ learn-it decisions                              # les décisions techniques, au 
 learn-it review                                 # garder, améliorer ou remplacer, et par où commencer
 ```
 
-> **Statut :** les neuf commandes fonctionnent et sont testées. Une première mesure des vraies réponses donne 11 cas réussis sur 11 hors dépôt Go, via Claude Code ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
+> **Statut :** les neuf commandes fonctionnent et sont testées. La dernière mesure complète via Claude Code donne 12 cas réussis sur 14, dépôt Go compris ; la confirmation des dernières corrections reste partielle ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
 
 ## Le problème
 
@@ -140,19 +140,19 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 
 - **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter, en moins d'une seconde sur un dépôt de 8 000 commits et en 13 s sur golang/go (68 707 commits).
 - **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
-- **Les décisions.** Elles s'exportent en ADR (`decisions --export`), les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
+- **Les décisions.** Elles s'exportent en ADR (`decisions --export`), avec refus si aucune preuve n'est vérifiable et avertissement pour chaque référence invalide. Les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
 - **Le moteur.** learn-it tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`LEARN_IT_BACKEND=claude-code`).
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`, et une revue Claude côté serveur est prête ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**Ce qui reste à prouver.** La première mesure réelle est passée de 6 à 11 cas réussis sur 11 après deux corrections : des chemins complets dans les citations, et le barème. Il manque encore le dépôt Go (68 707 commits), la variabilité d'une mesure à l'autre, la comparaison des niveaux d'effort, et une mesure sur le moteur API.
+**Ce qui reste à prouver.** La dernière mesure complète donne 12/14, dépôt Go compris. La complétion locale des chemins abrégés fait passer les deux rapports ratés en rejeu hors ligne. La confirmation avec de nouvelles réponses reste partielle : 4/6, dont une revue Express sans le mot attendu « middleware » et une revue Go bloquée par le quota Claude. Il reste à confirmer ces corrections, mesurer la variabilité et comparer les efforts avec le prompt actuel, puis mesurer le moteur API.
 
 **Ce qu'il reste à faire.**
 
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
-| 1 | Finir les mesures : dépôt Go, variabilité, effort, moteur API | [#10] | — (moteur API : une clé) |
-| 2 | Corriger aussi les preuves des décisions et recommandations | [#34] | la mesure de #10 |
+| 1 | Confirmer les corrections, mesurer variabilité, effort et moteur API | [#10] | quota Claude ; une clé pour le moteur API |
+| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | mesure du gain de la correction API (#10) |
 | 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
 | 4 | Activer la revue côté serveur | [#25] | le secret `CLAUDE_CODE_OAUTH_TOKEN` |
 

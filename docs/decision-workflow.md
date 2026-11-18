@@ -9,6 +9,13 @@ ou hors du projet sont signalées sur stderr et dans les rapports enregistrés.
 Une réponse sans source est également signalée. En streaming, la vérification et
 le bilan arrivent à la fin : le texte reçu avant ce bilan reste provisoire.
 
+Les réponses non diffusées et les preuves structurées complètent localement les noms
+abrégés quand l'inventaire ou les chemins cités dans le texte permettent de les résoudre
+sans ambiguïté. Un chemin existant à la racine ou explicitement préfixé par `./` reste
+inchangé. Cette complétion n'ajoute aucun appel IA et ne valide pas le contenu de la source.
+Les réponses API en streaming et `chat` conservent leur texte original ; utiliser
+`ask --no-stream` pour appliquer la complétion avant affichage.
+
 Ce contrôle vérifie l'existence des références, pas que chaque phrase découle de
 la source. Il ne valide pas encore les URL des PR. `--repair-citations` active une
 tentative de correction pour `ask`, `why` et `overview` ; la réponse est alors
@@ -20,6 +27,7 @@ mode de comparaison sont testés hors ligne ; le gain réel reste à mesurer dan
 ```bash
 learn-it decisions -p ./projet --export docs/adr
 learn-it decisions -p ./projet --export docs/adr --force
+learn-it decisions -p ./projet --export docs/adr --allow-unproven
 ```
 
 Les fichiers MADR portent une mention de reconstruction, le statut proposé, la
@@ -28,6 +36,11 @@ existants. Un titre déjà exporté exige `--force` ; un titre qui n'est qu'un s
 d'un autre ne lui correspond pas. Les destinations restent dans le projet et les
 liens symboliques sont refusés. Le lot est validé avant écriture, mais les écritures
 de plusieurs fichiers ne forment pas une transaction en cas de panne disque.
+
+L'export vérifie les preuves et le commit d'introduction. Si aucune citation n'est
+vérifiable, il refuse le lot avant toute écriture. `--allow-unproven` autorise explicitement
+ces décisions ; `--force` ne sert qu'au remplacement des fichiers. Chaque référence invalide
+figure dans une section « Preuves non vérifiées », même lorsqu'une autre preuve est valide.
 
 Les ADR déjà présents figurent dans le profil. Les titres reconnus ancrent les
 décisions comme documentées ; citer un ancien ADR ne suffit pas à documenter un
