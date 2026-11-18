@@ -33,15 +33,16 @@ class Store:
             raise OSError(f"Refusing a symlink in the report store: {path}")
         return path
 
-    def _write(self, name: str, content: str | bytes) -> Path:
+    def _prepare_write(self, name: str) -> Path:
         path = self._path(name)
         self.dir.mkdir(exist_ok=True)
         # An existing output directory also needs the ignore rule.
         self._path(".gitignore").write_text("# Created by learn-it\n*\n", encoding="utf-8")
-        if isinstance(content, bytes):
-            path.write_bytes(content)
-        else:
-            path.write_text(content, encoding="utf-8")
+        return path
+
+    def _write(self, name: str, content: str) -> Path:
+        path = self._prepare_write(name)
+        path.write_text(content, encoding="utf-8")
         return path
 
     def save_profile(self, profile: ProjectProfile) -> Path:
@@ -165,9 +166,23 @@ class Store:
         ):
             return None
 
-    def save_compressed_json(self, name: str, data: Any) -> Path:
-        text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-        return self._write(name, gzip.compress(text.encode("utf-8"), compresslevel=1, mtime=0))
+    def save_compressed_json(
+        self, name: str, data: Any, *, max_bytes: int | None = None,
+    ) -> Path:
+        encoded = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if max_bytes is not None and len(encoded) > max_bytes:
+            raise OSError("Compressed JSON exceeds the decompressed byte limit.")
+        compressed = gzip.compress(encoded, compresslevel=1, mtime=0)
+        path = self._prepare_write(name)
+        descriptor, filename = tempfile.mkstemp(dir=path.parent)
+        temporary = Path(filename)
+        try:
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(compressed)
+            temporary.replace(self._path(name))
+        finally:
+            temporary.unlink(missing_ok=True)
+        return path
 
     def remove(self, name: str) -> None:
         self._path(name).unlink(missing_ok=True)

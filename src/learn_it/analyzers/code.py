@@ -397,10 +397,13 @@ def _load_cache(root: Path) -> tuple[dict[str, dict], bool]:
 def _save_cache(root: Path, modules: dict[str, dict]) -> None:
     from learn_it.store import Store
 
-    # A read-only checkout or a refused symlink only costs the optimisation.
+    # An oversized cache or an unavailable store only costs the optimisation.
     with suppress(OSError):
         store = Store(root)
-        store.save_compressed_json(_CACHE_FILE, {"version": _cache_version(), "modules": modules})
+        store.save_compressed_json(
+            _CACHE_FILE, {"version": _cache_version(), "modules": modules},
+            max_bytes=MAX_CACHE_BYTES,
+        )
         store.remove(_LEGACY_CACHE_FILE)
 
 
