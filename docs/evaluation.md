@@ -242,8 +242,8 @@ cas et les prochaines mesures enregistreront le périmètre demandé. La mesure 
 
 ## Ce qu'il reste à mesurer
 
-- **`go-review-http`** : aligner le périmètre évalué et les citations attendues, puis rejouer
-  le cas après son échec à la mesure 9.
+- **`go-review-http`** : rejouer le cas désormais ciblé sur `src/net/http` pour établir
+  son premier score avec ce périmètre.
 - **`express-review`** : vérifier si la revue traite régulièrement des middlewares après
   le succès de la mesure 9.
 - **La variabilité** sur tous les cas, pas seulement `shop` : deux ou trois mesures chacun.

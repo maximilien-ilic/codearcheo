@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from anthropic.lib.tools import ToolError
 from typer.testing import CliRunner
 
 from learn_it import cli, features, recommendations
@@ -54,6 +55,26 @@ def test_review_cli_focuses_on_the_selected_directory(project, monkeypatch):
     report = (project.root / ".learn-it/review.md").read_text()
     assert '    "src"' in report
     assert "src/app.py:1" in report
+
+
+@pytest.mark.parametrize("path", ["src", "src/module.py"])
+def test_scoped_review_requires_verifiable_evidence_in_scope(project, monkeypatch, path):
+    for directory in ("src", "src_other"):
+        (project.root / directory).mkdir()
+        (project.root / directory / "module.py").write_text("value = 1\n")
+
+    def fake(system, task, tools, settings, on_tool=None):
+        record = next(t for t in tools if getattr(t, "name", "") == "record_recommendation")
+        for reference in ("src_other/module.py:1", "src/module.py:2"):
+            with pytest.raises(ToolError, match="verifiable citation"):
+                record.call(recommendation(evidence=[reference]).model_dump())
+        record.call(recommendation(evidence=["src/module.py:1", "app.py:1"]).model_dump())
+        return "Revue ciblée."
+
+    monkeypatch.setattr(features, "run_agent", fake)
+    session = Session(project, scan(project), Store(project.root), Settings())
+    features.review(session, path=path)
+    assert len(session.store.load_recommendations()) == 1
 
 
 @pytest.mark.parametrize("path", ["app", ".env", "../shop", "/tmp", "alias"])
