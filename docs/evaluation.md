@@ -235,8 +235,10 @@ l'architecture et le flux principal, puis l'infrastructure et l'outillage.
 
 ## Ce qu'il reste à mesurer
 
-- **`go-review-http`** après la complétion des chemins : la confirmation a atteint le quota.
-- **`express-review`** : vérifier la variabilité du contenu après son échec sur « middleware ».
+- **`go-review-http`** : aligner le périmètre évalué et les citations attendues, puis rejouer
+  le cas après son échec à la mesure 9.
+- **`express-review`** : vérifier si la revue traite régulièrement des middlewares après
+  le succès de la mesure 9.
 - **La variabilité** sur tous les cas, pas seulement `shop` : deux ou trois mesures chacun.
 - **L'effort** : `medium` coûte 19 % de moins pour un cas raté sur 11 avant le changement 2 ;
   à remesurer avec lui pour choisir le réglage par défaut.
