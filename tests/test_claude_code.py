@@ -26,6 +26,7 @@ print(os.environ["FAKE_CLAUDE_OUTPUT"])
 
 @pytest.fixture
 def fake_claude(tmp_path, monkeypatch):
+    monkeypatch.setattr("learn_it.agent.claude_code.find_spec", lambda _: object())
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     executable = bin_dir / "claude"
@@ -92,6 +93,8 @@ def test_failures_and_unsupported_options_are_explicit(project, fake_claude):
         features.ask(session(project), "?")
     with pytest.raises(AgentError, match="max-requests"):
         features.ask(session(project, max_requests=3), "?")
+    with pytest.raises(AgentError, match="max-output-tokens"):
+        features.ask(session(project, max_output_tokens=20), "?")
     repaired = session(project)
     repaired.repair_citations = True
     with pytest.raises(AgentError, match="repair-citations"):
@@ -101,3 +104,17 @@ def test_failures_and_unsupported_options_are_explicit(project, fake_claude):
 def test_unknown_backend_is_rejected():
     with pytest.raises(ValueError, match="LEARN_IT_BACKEND"):
         Settings(backend="gemini")
+
+
+def test_output_limit_is_rejected_even_when_it_matches_the_default(monkeypatch):
+    with pytest.raises(ValueError, match="max-output-tokens"):
+        Settings.from_env(backend="claude-code", max_output_tokens=Settings.max_output_tokens)
+    monkeypatch.setenv("LEARN_IT_MAX_OUTPUT_TOKENS", "20")
+    with pytest.raises(ValueError, match="max-output-tokens"):
+        Settings.from_env(backend="claude-code")
+
+
+def test_missing_mcp_extra_is_reported_before_running_claude(project, fake_claude, monkeypatch):
+    monkeypatch.setattr("learn_it.agent.claude_code.find_spec", lambda _: None)
+    with pytest.raises(AgentError, match="extra mcp"):
+        features.ask(session(project), "?")

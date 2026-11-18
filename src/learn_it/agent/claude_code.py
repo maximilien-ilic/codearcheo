@@ -22,6 +22,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Sequence
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +89,12 @@ def run_claude_code(
         )
     if settings.max_requests is not None:
         raise AgentError("--max-requests ne s'applique pas au moteur claude-code.")
+    if settings.max_output_tokens != Settings.max_output_tokens:
+        raise AgentError("--max-output-tokens ne s'applique pas au moteur claude-code.")
+    if find_spec("mcp") is None:
+        raise AgentError(
+            "Le moteur claude-code exige l'extra mcp : uv tool install --editable '.[mcp]'"
+        )
 
     prompt, schema = task, None
     if tools:

@@ -168,9 +168,13 @@ def main(
             file=sys.stderr,
         )
         return 2
-    settings = Settings.from_env(
-        max_requests=max_requests, max_output_tokens=max_output_tokens, backend=backend
-    )
+    try:
+        settings = Settings.from_env(
+            max_requests=max_requests, max_output_tokens=max_output_tokens, backend=backend
+        )
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     if settings.backend == "claude-code" and (repair_citations or compare_citations):
         print("La correction des citations n'existe pas avec --backend claude-code.",
               file=sys.stderr)
