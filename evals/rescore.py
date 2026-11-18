@@ -61,6 +61,17 @@ def rescore(report: dict[str, Any], projects_dir: Path) -> dict[str, Any]:
         # Regrading the content cannot validate missing runtime instrumentation.
         guards = [check for check in result["checks"]
                   if check["name"] == "correction/comparaison disponible"]
+        if (
+            not guards and report.get("repair_citations") and case["command"] in {"ask", "why"}
+            and "citation_repair_verified" not in result
+            and not result["passed"] and result.get("citation_repair") is None
+        ):
+            # Old failed cases could omit the guard, even when repair metadata was absent.
+            guards.append({
+                "name": "correction/comparaison disponible",
+                "ok": False,
+                "detail": "Ce rapport ne permet pas de vérifier le mode de correction demandé.",
+            })
         serialized = [asdict(check) for check in checks] + guards
         passed = all(check["ok"] for check in serialized)
         results.append({
