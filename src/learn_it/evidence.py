@@ -165,6 +165,10 @@ def complete_paths(text: str, files: list[str]) -> str:
         if len(candidates) != 1 or candidates[0] == path:
             continue
         cited = text[match.start:match.end].replace(path, candidates[0], 1)
+        if not cited.startswith("`") and not _BARE_FILE.fullmatch(cited):
+            cited = f"`{cited}`"
+        if cited.startswith("`") and not _FILE.fullmatch(cited):
+            continue
         parts += [text[last:match.start], cited]
         last = match.end
     return "".join(parts) + text[last:]

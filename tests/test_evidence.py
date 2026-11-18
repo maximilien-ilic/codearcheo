@@ -127,3 +127,18 @@ def test_path_completion_does_not_make_invalid_line_ranges_pass(project):
     text = complete_paths("ci.yml:999", [".github/workflows/ci.yml"])
     assert text == ".github/workflows/ci.yml:999"
     assert not verify(text, project.root).ok
+
+
+def test_completed_path_with_spaces_still_verifies(project):
+    from learn_it.analyzers import inventory
+    from learn_it.evidence import complete_paths
+
+    folder = project.root / "docs/getting started"
+    folder.mkdir(parents=True)
+    (folder / "guide.md").write_text("Start here.\n", encoding="utf-8")
+    text = complete_paths("Voir guide.md:1.", inventory.list_files(project.root))
+
+    assert text == "Voir `docs/getting started/guide.md:1`."
+    report = verify(text, project.root)
+    assert report.ok
+    assert [citation.path for citation in report.citations] == ["docs/getting started/guide.md"]
