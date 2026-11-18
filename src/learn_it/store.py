@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import re
 import tempfile
+import zlib
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -31,12 +33,15 @@ class Store:
             raise OSError(f"Refusing a symlink in the report store: {path}")
         return path
 
-    def _write(self, name: str, content: str) -> Path:
+    def _write(self, name: str, content: str | bytes) -> Path:
         path = self._path(name)
         self.dir.mkdir(exist_ok=True)
         # An existing output directory also needs the ignore rule.
         self._path(".gitignore").write_text("# Created by learn-it\n*\n", encoding="utf-8")
-        path.write_text(content, encoding="utf-8")
+        if isinstance(content, bytes):
+            path.write_bytes(content)
+        else:
+            path.write_text(content, encoding="utf-8")
         return path
 
     def save_profile(self, profile: ProjectProfile) -> Path:
@@ -126,15 +131,46 @@ class Store:
         except (FileNotFoundError, ValidationError):
             return []
 
-    def load_json(self, name: str) -> Any:
+    def load_json(self, name: str, *, max_bytes: int | None = None) -> Any:
         """A cache file, or None when it is missing or unreadable."""
         try:
-            return json.loads(self._path(name).read_text(encoding="utf-8"))
-        except (FileNotFoundError, ValueError):
+            path = self._path(name)
+            if max_bytes is None:
+                return json.loads(path.read_text(encoding="utf-8"))
+            with path.open("rb") as stream:
+                data = stream.read(max_bytes + 1)
+            if len(data) > max_bytes:
+                return None
+            text = data.decode("utf-8")
+            del data
+            return json.loads(text)
+        except (FileNotFoundError, ValueError, RecursionError):
             return None
 
     def save_json(self, name: str, data: Any) -> Path:
         return self._write(name, json.dumps(data, ensure_ascii=False))
+
+    def load_compressed_json(self, name: str, *, max_bytes: int) -> Any:
+        """Read derived gzip data within a decompressed byte limit; corrupt data is a miss."""
+        try:
+            with gzip.open(self._path(name), "rb") as stream:
+                data = stream.read(max_bytes + 1)
+            if len(data) > max_bytes:
+                return None
+            text = data.decode("utf-8")
+            del data
+            return json.loads(text)
+        except (
+            FileNotFoundError, ValueError, EOFError, RecursionError, gzip.BadGzipFile, zlib.error,
+        ):
+            return None
+
+    def save_compressed_json(self, name: str, data: Any) -> Path:
+        text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+        return self._write(name, gzip.compress(text.encode("utf-8"), compresslevel=1, mtime=0))
+
+    def remove(self, name: str) -> None:
+        self._path(name).unlink(missing_ok=True)
 
     def save_report(self, name: str, markdown: str) -> Path:
         return self._write(f"{name}.md", markdown)

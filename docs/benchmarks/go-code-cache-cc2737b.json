@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-18",
+  "platform": "Linux",
+  "python": "3.12.14",
+  "project": "https://github.com/golang/go",
+  "sha": "cc2737b0ca9c8a1a0d1fcc26142277e27152a1f2",
+  "procedure": "One fresh process per sample. code.analyze wall time, excluding checksum computation. rss_MiB includes the checksum export. Source files are never executed.",
+  "parser_versions": "1;tree-sitter=0.26.1,tree-sitter-python=0.25.0,tree-sitter-javascript=0.25.0,tree-sitter-typescript=0.23.2,tree-sitter-go=0.25.0,tree-sitter-rust=0.24.2",
+  "legacy_cache_MiB": 224.89084911346436,
+  "compressed_cache_MiB": 14.007567405700684,
+  "baseline_legacy": [
+    {
+      "seconds": 7.74750110199966,
+      "sha256": "5baaaef7658bd997c0cb1bda09f17632e203e9f592b24f397fd513badc173532",
+      "modules": 3749,
+      "references": 2537099,
+      "rss_MiB": 2888.4296875
+    }
+  ],
+  "migration_legacy_to_gzip": [
+    {
+      "seconds": 9.182554866001738,
+      "sha256": "5baaaef7658bd997c0cb1bda09f17632e203e9f592b24f397fd513badc173532",
+      "modules": 3749,
+      "references": 2537099,
+      "rss_MiB": 2909.7890625
+    }
+  ],
+  "cold_empty_cache": [
+    {
+      "seconds": 26.052483211000435,
+      "sha256": "5baaaef7658bd997c0cb1bda09f17632e203e9f592b24f397fd513badc173532",
+      "modules": 3749,
+      "references": 2537099,
+      "rss_MiB": 2674.3515625
+    }
+  ],
+  "warm_gzip": [
+    {
+      "seconds": 7.445323219000784,
+      "sha256": "5baaaef7658bd997c0cb1bda09f17632e203e9f592b24f397fd513badc173532",
+      "modules": 3749,
+      "references": 2537099,
+      "rss_MiB": 2888.4765625
+    },
+    {
+      "seconds": 7.450315928999771,
+      "sha256": "5baaaef7658bd997c0cb1bda09f17632e203e9f592b24f397fd513badc173532",
+      "modules": 3749,
+      "references": 2537099,
+      "rss_MiB": 2889.125
+    },
+    {
+      "seconds": 7.409751066999888,
+      "sha256": "5baaaef7658bd997c0cb1bda09f17632e203e9f592b24f397fd513badc173532",
+      "modules": 3749,
+      "references": 2537099,
+      "rss_MiB": 2889.0546875
+    }
+  ],
+  "warm_gzip_median_seconds": 7.445323219000784
+}

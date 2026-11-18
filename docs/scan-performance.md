@@ -95,5 +95,47 @@ Les refus déterministes de parsing, notamment le dépassement du budget de nœu
 neuf gros fichiers générés, sont désormais mis en cache avec leur motif. Les modules
 déjà sérialisés ne sont plus sérialisés une seconde fois, et la sélection de la racine
 Go utilise un préfixe de chemin plutôt qu'un parcours des parents. Le cache dépend
-toujours du contenu et des versions des parseurs. Il occupe encore environ 235 Mo :
-sa réduction reste une optimisation possible.
+toujours du contenu et des versions des parseurs. Cette mesure utilisait encore un cache
+JSON d'environ 235 Mo ; la mesure suivante réduit son stockage.
+
+## Cache Go compressé, 18 novembre 2026
+
+Sur le même SHA Go, le cache passe de **224,9 Mio à 14,0 Mio**, soit environ **94 % de
+moins**, avec gzip au niveau 1. Les 3 749 modules et 2 537 099 occurrences lexicales sont
+conservés. L'empreinte SHA-256 du graphe complet reste identique avant la migration,
+pendant celle-ci, sans cache et sur les trois passages suivants.
+
+| État | Durée de `code.analyze` | Nombre de mesures |
+|---|---:|---:|
+| Ancien cache JSON chaud | 7,75 s | 1 |
+| Migration du JSON vers gzip | 9,18 s | 1 |
+| Cache vide : parsing et écriture gzip | 26,05 s | 1 |
+| Cache gzip chaud | médiane 7,45 s (7,41–7,45 s) | 3 |
+
+Chaque mesure utilise un nouveau processus Python 3.12 sous Linux et exclut le calcul
+de l'empreinte finale. Il s'agit de l'analyse syntaxique, sans le reste du scan. Le gain
+principal est l'espace disque ; ces quelques passages ne prouvent pas un gain de vitesse
+général. Les données sont dans
+[`benchmarks/go-code-cache-cc2737b.json`](benchmarks/go-code-cache-cc2737b.json).
+
+Le premier passage réutilise les modules de l'ancien JSON, écrit le cache gzip puis retire
+le fichier ancien seulement après une écriture réussie. Un cache absent, invalide ou
+trop volumineux entraîne un nouveau parsing ; il n'empêche pas le scan. La lecture est
+bornée à 512 Mio de données décompressées. Les tests couvrent aussi l'échec d'écriture,
+les liens symboliques et une entrée de module corrompue qui doit être réparée durablement.
+
+Pour mesurer un passage chaud sur le clone local de l'évaluation :
+
+```bash
+uv run --all-extras python - <<'PY'
+import hashlib
+import time
+from pathlib import Path
+from learn_it.analyzers import code
+root = Path.home() / ".cache/learn-it/evals/go"
+started = time.perf_counter()
+graph = code.analyze(root)
+print("secondes", time.perf_counter() - started)
+print("graphe SHA-256", hashlib.sha256(graph.model_dump_json().encode()).hexdigest())
+PY
+```
