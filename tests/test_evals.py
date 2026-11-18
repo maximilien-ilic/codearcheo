@@ -159,7 +159,7 @@ def test_evaluation_saves_per_case_usage_without_fabricating_an_api_bill(monkeyp
     spec = next(spec for spec in run.load_cases() if spec["name"] == "shop")
     monkeypatch.setattr(run, "load_cases", lambda: [spec | {"cases": spec["cases"][:1]}])
 
-    def fake_case(session, case, canary):
+    def fake_case(session, case, canary, **kwargs):
         session.on_usage(UsageSummary(input_tokens=100, output_tokens=10, requests=1,
                                       estimated_cost_usd=0.0006))
         return []
@@ -186,6 +186,14 @@ def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
     monkeypatch.setattr(run.features, "decisions", fake_decisions)
     checks = run.run_case(session, shop_case("shop-decisions"), CANARY)
     assert "ne divulgue pas le secret" in failures(checks)
+
+
+def test_valid_decision_records_cannot_hide_invalid_citations_in_the_synthesis(project):
+    checks = score_decisions(
+        decisions_for(project.root), shop_case("shop-decisions"), project.root,
+        answer="Voir aussi `invented.py:99`.",
+    )
+    assert "citations de la réponse" in failures(checks)
 
 
 def test_catalog_covers_three_languages_and_every_supported_command():
@@ -295,7 +303,7 @@ def test_evaluation_uses_one_shared_limit_across_projects(monkeypatch, tmp_path)
     monkeypatch.setattr(run, "load_cases", lambda: specs)
     seen = []
 
-    def fake_case(session, case, canary):
+    def fake_case(session, case, canary, **kwargs):
         seen.append(session.limits)
         return []
 
@@ -322,7 +330,7 @@ def test_requested_comparison_cannot_succeed_without_repair_metadata(monkeypatch
     monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
     shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
     monkeypatch.setattr(run, "load_cases", lambda: [shop | {"cases": shop["cases"][:1]}])
-    monkeypatch.setattr(run, "run_case", lambda *args: [])
+    monkeypatch.setattr(run, "run_case", lambda *args, **kwargs: [])
     assert run.main([], compare_citations=True) == 1
     result = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
     assert not result["results"][0]["passed"]

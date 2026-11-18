@@ -20,6 +20,46 @@ Le coût affiché est un équivalent API calculé par Claude Code. L'abonnement 
 uv run --extra mcp python -m evals.run --backend claude-code
 ```
 
+### Préparer les prochaines mesures de #10
+
+Pour relancer uniquement la revue Go bloquée par le quota, puis la revue Express :
+
+```bash
+uv run --all-extras python -m evals.run --backend claude-code --case go-review-http
+uv run --all-extras python -m evals.run --backend claude-code --case express-review
+```
+
+L'option `--case` se répète pour sélectionner plusieurs cas. Un nom de projet ou de cas
+inconnu, ou une sélection sans correspondance, arrête l'exécution avant tout appel IA.
+Pour comparer `medium` au réglage `high`, conserver la même sélection et définir
+`LEARN_IT_EFFORT=medium`. Chaque lancement produit un fichier de résultats distinct.
+
+Les nouveaux rapports au format 2 archivent la réponse exacte, les décisions et
+recommandations structurées, les attentes du cas, les usages, les réglages et la révision
+du code de learn-it. Ils sont enregistrés après chaque cas, par remplacement atomique.
+Une interruption laisse `complete: false` et conserve les cas déjà finis. Un quota ou
+une autre erreur du moteur porte le statut `error` : il reste visible dans le bilan des
+tentatives, mais ne compte pas comme une réponse évaluée dans le score de qualité.
+
+Le rapport conserve aussi le SHA et une empreinte du contenu des fichiers autorisés de
+chaque projet, travail non commité compris. Avec ces checkouts inchangés, un nouveau
+barème peut être appliqué aux réponses archivées sans rappeler le modèle :
+
+```bash
+uv run python -m evals.rescore "$HOME/.cache/learn-it/evals/results-<date>-<identifiant>.json"
+```
+
+Le recalcul écrit un autre fichier et garde les contrôles précédents. Il refuse un
+checkout absent, un SHA différent ou un changement des fichiers sources. Les anciens
+rapports sans réponses archivées ne sont pas recalculables par cette commande ; utiliser
+le rapport courant de `.learn-it/` à leur place attribuerait une autre réponse à la mesure.
+Le contrôle du SHA et des fichiers n'isole pas le projet des modifications concurrentes
+pendant une analyse. Un recalcul mesure le barème, pas la variabilité du modèle.
+
+Ces changements sont vérifiés avec des agents simulés. Ils n'ajoutent aucune mesure réelle
+aux résultats ci-dessous. Le barème des décisions contrôle désormais aussi les citations
+de leur réponse rédigée, en plus des preuves structurées.
+
 ## Mesure 1 : point de départ (17 novembre 2026)
 
 Claude Opus 5.5, effort `high`, 15 cas sur 7 projets. **6 cas réussis sur 15**, 5,51 $

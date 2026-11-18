@@ -87,6 +87,9 @@ def score_decisions(
     refs = [e for d in decisions for e in d.evidence]
     refs += [f"commit {d.introduced_in}" for d in decisions if d.introduced_in]
     checks = [_evidence("\n".join(refs), root)]
+    if evidence.find_citations(answer):
+        rendered = _evidence(answer, root)
+        checks.append(Check("citations de la réponse", rendered.ok, rendered.detail))
     for expected in case.get("decisions", []):
         word = expected["match"]
         found = [d for d in decisions if word.casefold() in f"{d.title} {d.decision}".casefold()]

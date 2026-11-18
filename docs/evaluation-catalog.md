@@ -38,8 +38,27 @@ ne peut pas servir de mesure du gros historique. Le JSON des résultats contient
 le SHA, le nombre de commits/fichiers, le temps de préparation, de scan et de
 chaque cas, ainsi que le modèle et l'effort. Les tokens et coûts estimés sont
 conservés avec la télémétrie de chaque cas ; un coût inconnu reste indisponible.
-Aucun score réel ni coût de ces
-nouveaux cas n'est revendiqué avant l'exécution avec identifiants (#10).
+Les scores réellement mesurés et leurs limites sont dans
+[`evaluation.md`](evaluation.md), notamment les mesures 7 et 8 sur Express et Go.
+
+Pour relancer un cas précis avec l'abonnement Claude :
+
+```bash
+uv run --all-extras python -m evals.run --backend claude-code --case go-review-http
+```
+
+`--case` est répétable et se combine aux noms de projets par intersection. Toute sélection
+inconnue ou vide est refusée avant préparation. Les rapports au format 2 conservent les
+réponses et les enregistrements exacts, avec un checkpoint après chaque cas. Ils distinguent
+les échecs de qualité (`failed`) des erreurs d'exécution (`error`), dont les quotas.
+Les tentatives indisponibles ne comptent pas dans le dénominateur du score de qualité.
+
+`python -m evals.rescore CHEMIN_DU_RAPPORT` recalcule les réponses enregistrées avec le barème
+actuel, sans requête IA, et écrit un autre rapport. Les checkouts doivent être identiques
+au SHA et à l'empreinte des fichiers enregistrés ; `--projects-dir` précise leur dossier si
+le rapport a été déplacé. Les définitions des cas archivées sont réutilisées. Les décisions
+sont relues dans le rapport, jamais dans le `decisions.json` courant. Les rapports anciens,
+qui ne contiennent pas les réponses, ne sont pas compatibles avec ce recalcul.
 
 `--repair-citations` active une tentative facultative de correction des réponses
 textuelles. `--compare-citations` conserve les scores initiaux et retenus de la
