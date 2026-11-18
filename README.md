@@ -185,6 +185,11 @@ uv run ruff check .
 
 La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 et 3.14, sur chaque PR et chaque push sur `master`.
 
+Le [CHANGELOG](CHANGELOG.md) suit les changements non publiés. Le
+[guide de publication](docs/releasing.md) décrit la vérification du wheel et de l'archive
+source, leur installation isolée et le workflow Trusted Publishing prévu pour la première
+version PyPI, à la fin du projet.
+
 ### Évaluation
 
 `pytest` ne couvre que la partie déterministe. Pour mesurer les vraies réponses de Claude, avec une clé API ou avec l'abonnement via Claude Code (`--backend claude-code`) :

@@ -86,7 +86,7 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 | Étape | Ticket | État |
 |---|---|---|
 | Mode conversation `learn-it chat`, réponses en streaming | [#23] | fait |
-| Licence, versions et publication sur PyPI | [#24] | licence faite, PyPI à la fin |
+| Licence, versions et publication sur PyPI | [#24] | licence faite ; préparation et contrôles du paquet, PyPI à la fin |
 | Lancer la revue automatique côté serveur, sans Orca | [#25] | prête, secret à créer |
 
 ## Comment on avance

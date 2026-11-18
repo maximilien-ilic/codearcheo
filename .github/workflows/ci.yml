@@ -34,3 +34,5 @@ jobs:
       - run: uv run ruff check .
       # deterministic only: the evaluation with the real API (evals/run.py) never runs here
       - run: uv run pytest
+      - run: uv build --no-sources
+      - run: uv run python -m scripts.check_dist --smoke
