@@ -162,6 +162,22 @@ def test_an_unavailable_job_keeps_the_other_attempts():
     assert measured["standard_public_runner_compute_usd"] is None
 
 
+@pytest.mark.parametrize("endpoint_part", ["/runs/2/artifacts?", "/runs/2/attempts/1/jobs"])
+def test_unreadable_github_response_preserves_other_attempts(endpoint_part):
+    base = GitHub(costs=(0.25, 0.75), skipped=False)
+
+    def request(endpoint, **options):
+        if endpoint_part in endpoint:
+            return json.loads(b"<invalid response>")
+        return base(endpoint, **options)
+
+    measured = usage.report(usage.REPO, days=7, now=NOW, request=request)
+    assert measured["known_api_equivalent_subtotal_usd"] == 0.25
+    assert measured["usage_missing"] == 1
+    assert measured["runs"][1]["api_equivalent_usd"] is None
+    assert measured["projected_30d_api_equivalent_usd"] is None
+
+
 def test_a_pending_model_step_is_not_counted_as_a_free_attempt():
     base = GitHub(costs=(0.25,), skipped=False)
 
