@@ -19,7 +19,7 @@ from learn_it.store import Store
 def test_every_ai_command_forwards_local_limits(project, monkeypatch, command, args):
     seen = []
 
-    def fake(session, *arguments):
+    def fake(session, *arguments, **options):
         seen.append(session)
         assert session.settings.max_requests == 2
         assert session.settings.max_output_tokens == 512

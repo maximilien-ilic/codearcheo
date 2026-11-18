@@ -51,8 +51,13 @@ demandent de vérifier si le code suit encore ces documents.
 
 ```bash
 learn-it review -p ./projet
+learn-it review -p ./projet --path src/api
 learn-it review -p ./projet --issues
 ```
+
+`--path` cible un fichier ou un dossier visible dans le projet. Le chemin est relatif à
+la racine. La consigne demande des preuves dans ce périmètre et laisse l'agent consulter
+le reste du projet pour le contexte. Le périmètre est indiqué dans le rapport.
 
 Le rapport est écrit dans `.learn-it/review.md` et les recommandations dans
 `review.json`, triées par impact décroissant puis effort croissant. Elles portent

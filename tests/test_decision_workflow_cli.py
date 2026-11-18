@@ -34,7 +34,8 @@ def test_cli_exports_decisions_without_touching_existing_adrs(project, monkeypat
 
 @pytest.mark.parametrize("answer,expected", [("n\n", 0), ("y\n", 1)])
 def test_cli_issue_creation_requires_a_positive_answer(project, monkeypatch, answer, expected):
-    def fake(session):
+    def fake(session, *, path):
+        assert path is None
         session.store.save_recommendations([recommendation()])
         return "Review preview"
 

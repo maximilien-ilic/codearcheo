@@ -230,8 +230,15 @@ l'architecture et le flux principal, puis l'infrastructure et l'outillage.
 - `shop-review-decisions` réussit.
 - `go-review-http` échoue toujours sur « cite `src/net/http/…` ». Ce cas demande une revue
   de tout golang/go (68 707 commits) et exige qu'elle cite `net/http` : rien n'oblige une
-  revue globale à choisir ce paquet parmi des milliers. L'attente est à revoir, ou `review`
-  doit accepter un périmètre (`--path src/net/http`). Le cas n'a pas été modifié pour passer.
+  revue globale à choisir ce paquet parmi des milliers.
+
+### Prochaine mesure ciblée de Go
+
+Le cas cible désormais `src/net/http` grâce au périmètre de `review`, accessible aussi
+en CLI avec `review --path src/net/http`. Le score exige toujours une preuve vérifiable
+dans l'un des fichiers attendus. Les rapports archivés conservent la définition initiale du
+cas et les prochaines mesures enregistreront le périmètre demandé. La mesure ciblée
+établira un nouveau point de référence pour ce périmètre.
 
 ## Ce qu'il reste à mesurer
 
