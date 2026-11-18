@@ -166,3 +166,18 @@ def test_old_reports_cannot_be_rescored_without_original_answers(tmp_path):
     source.write_text('{"results": []}')
     assert rescore.main(source) == 2
     assert not list(tmp_path.glob("rescore-*.json"))
+
+
+@pytest.mark.parametrize("mode", ["repair_citations", "compare_citations"])
+def test_rescoring_keeps_missing_repair_guard_even_if_original_answer_failed(
+    evaluation, monkeypatch, mode,
+):
+    workdir, _ = evaluation
+    monkeypatch.setattr(run.features, "ask", lambda *a: "Voir `app.py:3`.")
+    assert run.main([], case_ids=["first"], **{mode: True}) == 1
+    _, report = load_report(workdir)
+    monkeypatch.setattr(rescore, "score_answer", lambda *a: [run.Check("nouveau critère", True)])
+
+    result = rescore.rescore(report, workdir)["results"][0]
+    assert not result["passed"]
+    assert any(check["name"] == "correction/comparaison disponible" for check in result["checks"])
