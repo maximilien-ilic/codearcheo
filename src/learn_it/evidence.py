@@ -14,7 +14,7 @@ from pathlib import Path, PurePosixPath
 from learn_it import git
 from learn_it.analyzers import inventory
 
-_FILE = re.compile(r"`(?P<path>[^`\s:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
+_FILE = re.compile(r"`(?P<path>[^`\r\n:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
@@ -109,6 +109,12 @@ def fenced_spans(text: str) -> list[tuple[int, int]]:
 
 def find_matches(text: str) -> list[CitationMatch]:
     """Return original citation spans outside fenced source examples and diagrams."""
+    explicit = list(_FILE.finditer(text))
+    # A space inside a quoted path can otherwise make its suffix look like a bare citation.
+    bare = [
+        match for match in _BARE_FILE.finditer(text)
+        if not any(span.start() <= match.start() < span.end() for span in explicit)
+    ]
     matches = [
         CitationMatch(
             start=m.start(), end=m.end(),
@@ -117,7 +123,7 @@ def find_matches(text: str) -> list[CitationMatch]:
                 start=_line_number(m["start"]), end=_line_number(m["end"] or m["start"]),
             ),
         )
-        for pattern in (_FILE, _BARE_FILE) for m in pattern.finditer(text)
+        for m in [*explicit, *bare]
         if _source_shaped(m["path"])
     ]
     matches += [
@@ -159,6 +165,10 @@ def complete_paths(text: str, files: list[str]) -> str:
         if len(candidates) != 1 or candidates[0] == path:
             continue
         cited = text[match.start:match.end].replace(path, candidates[0], 1)
+        if not cited.startswith("`") and not _BARE_FILE.fullmatch(cited):
+            cited = f"`{cited}`"
+        if cited.startswith("`") and not _FILE.fullmatch(cited):
+            continue
         parts += [text[last:match.start], cited]
         last = match.end
     return "".join(parts) + text[last:]

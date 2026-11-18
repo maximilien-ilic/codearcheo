@@ -58,6 +58,8 @@ learn-it review -p ./projet --issues
 `--path` cible un fichier ou un dossier visible dans le projet. Le chemin est relatif à
 la racine. Chaque recommandation enregistrée doit contenir au moins une citation vérifiable
 dans ce périmètre. L'agent peut consulter et citer le reste du projet pour le contexte.
+Une citation dont le chemin contient des espaces s'écrit entre accents graves,
+par exemple `docs/guide de démarrage.md:12`.
 Le périmètre est indiqué dans le rapport.
 
 Le rapport est écrit dans `.learn-it/review.md` et les recommandations dans
