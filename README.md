@@ -132,6 +132,11 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | `LEARN_IT_MAX_ITERATIONS` | `40` | nombre maximal d'allers-retours de l'agent |
 | `LEARN_IT_CACHE_DIR` | `~/.cache/learn-it` | où sont clonés les dépôts GitHub |
 
+`scan`, `diff` et `serve` chargent le projet sans valider les réglages de génération.
+Une limite réservée au moteur API ne bloque donc pas ces commandes lorsque le moteur
+Claude Code est configuré. Les commandes IA continuent de refuser les limites qu'elles
+ne peuvent pas appliquer.
+
 ## Où en est le projet
 
 *État au 18 novembre 2026.*

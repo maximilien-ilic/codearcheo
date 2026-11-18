@@ -289,20 +289,20 @@ def main(
             with context:
                 captured: dict[str, Any] = {}
                 checks = run_case(session, case, spec.get("canary"), capture=captured)
-            passed = all(check.ok for check in checks)
             comparison = None
-            if (repair_citations or compare_citations) and case["command"] in {"ask", "why"}:
+            if ("error" not in captured and session.repair_citations
+                    and case["command"] in {"ask", "why"}):
                 metadata = getattr(session, "last_repair", None)
                 if compare_citations and metadata:
                     comparison = compare_citation_repair(
                         metadata, case, project.root, spec.get("canary")
                     )
-                if passed and (not metadata or (compare_citations and comparison is None)):
+                if not metadata or (compare_citations and comparison is None):
                     checks.append(Check(
                         "correction/comparaison disponible", False,
                         "Métadonnées de correction absentes ; le mode demandé n'a pas été vérifié.",
                     ))
-                    passed = False
+            passed = all(check.ok for check in checks)
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,
                  "status": "error" if "error" in captured else ("passed" if passed else "failed"),

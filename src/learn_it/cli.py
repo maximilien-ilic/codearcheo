@@ -86,6 +86,13 @@ def _session(
         model=model, effort=effort, budget=budget,
         max_requests=max_requests, max_output_tokens=max_output_tokens,
     )
+    return _project_session(target, settings, repair_citations=repair_citations)
+
+
+def _project_session(
+    target: str, settings: Settings, *, repair_citations: bool = False,
+) -> Session:
+    """Load a fresh project context with already chosen settings, without parsing generation env."""
     project = sources.resolve(target, settings.cache_dir)
     store = Store(project.root)
     profile = analyzers.scan(project)
@@ -363,5 +370,5 @@ def serve(project: ProjectOption = ".") -> None:
     from learn_it import mcp_server
 
     with _friendly_errors():
-        session = _session(project)
+        session = _project_session(project, Settings(cache_dir=cache_dir_from_env()))
     mcp_server.serve(session)
