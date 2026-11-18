@@ -58,6 +58,12 @@ class Settings:
         backend: str | None = None,
     ) -> Settings:
         env = os.environ.get
+        selected_backend = backend if backend is not None else env("LEARN_IT_BACKEND", cls.backend)
+        output_limit = env("LEARN_IT_MAX_OUTPUT_TOKENS")
+        if selected_backend == "claude-code" and (
+            max_output_tokens is not None or output_limit is not None
+        ):
+            raise ValueError("--max-output-tokens ne s'applique pas au moteur claude-code.")
         return cls(
             model=model if model is not None else env("LEARN_IT_MODEL", cls.model),
             effort=effort if effort is not None else env("LEARN_IT_EFFORT", cls.effort),
@@ -74,5 +80,5 @@ class Settings:
             max_output_tokens=max_output_tokens
             if max_output_tokens is not None
             else int(env("LEARN_IT_MAX_OUTPUT_TOKENS", cls.max_output_tokens)),
-            backend=backend if backend is not None else env("LEARN_IT_BACKEND", cls.backend),
+            backend=selected_backend,
         )

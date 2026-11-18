@@ -43,7 +43,7 @@ Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/), et, pour les
 
 ```bash
 git clone https://github.com/maximilien-ilic/learn-it && cd learn-it
-uv tool install --editable .          # installe la commande learn-it ('.[mcp]' pour serve)
+uv tool install --editable .          # utilise '.[mcp]' pour serve ou le moteur claude-code
 export ANTHROPIC_API_KEY=sk-ant-...   # ou : ant auth login
 # ou, sans clé, avec ton abonnement Claude : export LEARN_IT_BACKEND=claude-code
 
@@ -191,7 +191,7 @@ La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 
 ```bash
 uv run python -m evals.run           # tous les projets de référence (consomme des tokens)
 uv run python -m evals.run shop      # seulement ceux nommés
-uv run python -m evals.run --backend claude-code   # sur l'abonnement Claude, sans clé
+uv run --extra mcp python -m evals.run --backend claude-code   # sur l'abonnement Claude
 ```
 
 Chaque cas de `evals/cases.toml` vérifie que les citations `fichier:ligne` et les commits cités existent, que les faits et les sources attendus sont présents, que ce que rien ne documente est signalé comme déduit, et qu'aucun secret ne fuit. Le texte exact n'est jamais comparé.

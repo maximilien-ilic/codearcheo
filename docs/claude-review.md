@@ -17,14 +17,18 @@ par une conversation. Sans ce secret, le workflow s'arrête sur un simple averti
 ## Ce que fait la revue
 
 1. Elle saute un commit qui porte déjà le statut `claude/review` réussi.
-2. Elle relit la plage poussée, du précédent HEAD de `master` au nouveau.
+2. Elle relit la plage depuis le dernier ancêtre marqué `claude/review` réussi parmi
+   les 30 premiers parents précédents de `master`. Sans base dans cette fenêtre,
+   elle relit l'arbre complet au SHA cible.
 3. Elle corrige les défauts clairs sur une branche `claude/review-<sha>`, avec un test,
    puis ouvre une PR. Elle ne pousse jamais sur `master` et ne fusionne rien.
 4. Elle ouvre un ticket pour chaque défaut qu'elle ne corrige pas, et écrit son compte
    rendu dans #4.
 5. Elle publie enfin le statut `claude/review` sur le commit relu.
 
-Les revues passent une par une : un push qui arrive pendant une revue attend son tour.
+GitHub exécute une revue à la fois et peut remplacer une revue en attente par un push
+plus récent. La base revue permet à l'exécution suivante de couvrir aussi les
+changements des exécutions annulées ou échouées.
 
 ## Avec la revue Codex locale
 

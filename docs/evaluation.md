@@ -17,7 +17,7 @@ approchent donc ceux du moteur API sans les remplacer.
 Le coût affiché est un équivalent API calculé par Claude Code. L'abonnement ne le facture pas.
 
 ```bash
-uv run python -m evals.run --backend claude-code
+uv run --extra mcp python -m evals.run --backend claude-code
 ```
 
 ## Mesure 1 : point de départ (17 novembre 2026)
