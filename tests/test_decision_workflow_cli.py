@@ -55,16 +55,28 @@ def test_diff_cli_outputs_json_without_model_calls(project):
     assert "FastAPI" in json.loads(result.stdout)["technologies_added"]
 
 
-@pytest.mark.parametrize("command", ["scan", "diff"])
+@pytest.mark.parametrize("command", ["scan", "diff", "serve"])
 def test_offline_commands_work_with_a_claude_code_output_limit(project, monkeypatch, command):
     monkeypatch.setenv("LEARN_IT_BACKEND", "claude-code")
     monkeypatch.setenv("LEARN_IT_MAX_OUTPUT_TOKENS", "20")
     if command == "scan":
         args = ["scan", str(project.root), "--json"]
-    else:
+    elif command == "diff":
         args = ["diff", "HEAD", "-p", str(project.root), "--json"]
+    else:
+        from learn_it import mcp_server
+
+        served = []
+        monkeypatch.setattr(mcp_server, "serve", served.append)
+        monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(project.root / "cache"))
+        args = ["serve", "-p", str(project.root)]
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 0, result.output
+    if command == "serve":
+        assert len(served) == 1
+        assert served[0].project.root == project.root
+        assert served[0].profile.head == git.head(project.root)
+        assert served[0].settings.cache_dir == project.root / "cache"
 
 
 def test_existing_adr_overrides_an_inferred_label_in_agent_record(project, monkeypatch):
