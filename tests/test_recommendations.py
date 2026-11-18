@@ -77,6 +77,37 @@ def test_scoped_review_requires_verifiable_evidence_in_scope(project, monkeypatc
     assert len(session.store.load_recommendations()) == 1
 
 
+def test_scoped_review_accepts_a_quoted_path_with_spaces(project, monkeypatch):
+    (project.root / "service client.py").write_text("value = 1\n")
+    (project.root / "client.py").write_text("value = 2\n")
+
+    def fake(system, task, tools, settings, on_tool=None):
+        record = next(t for t in tools if getattr(t, "name", "") == "record_recommendation")
+        record.call(recommendation(evidence=["`service client.py:1`"]).model_dump())
+        return "Revue ciblée."
+
+    monkeypatch.setattr(features, "run_agent", fake)
+    session = Session(project, scan(project), Store(project.root), Settings())
+    report = features.review(session, path="service client.py")
+    assert "1 citation(s) vérifiée(s), 0 introuvable(s)" in report
+
+
+def test_scoped_review_does_not_use_the_suffix_of_a_quoted_path(project, monkeypatch):
+    (project.root / "service app.py").write_text("value = 1\n")
+
+    def fake(system, task, tools, settings, on_tool=None):
+        record = next(t for t in tools if getattr(t, "name", "") == "record_recommendation")
+        with pytest.raises(ToolError, match="verifiable citation"):
+            record.call(recommendation(evidence=["`service app.py:1`"]).model_dump())
+        record.call(recommendation(evidence=["`app.py:1`"]).model_dump())
+        return "Revue ciblée."
+
+    monkeypatch.setattr(features, "run_agent", fake)
+    session = Session(project, scan(project), Store(project.root), Settings())
+    features.review(session, path="app.py")
+    assert len(session.store.load_recommendations()) == 1
+
+
 @pytest.mark.parametrize("path", ["app", ".env", "../shop", "/tmp", "alias"])
 def test_inaccessible_review_path_stops_before_generation(project, monkeypatch, path):
     (project.root / "alias").symlink_to(project.root / "app.py")
