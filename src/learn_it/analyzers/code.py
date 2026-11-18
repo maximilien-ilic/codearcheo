@@ -287,7 +287,7 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
         go_root = None
         if module.language == "go":
             go_root = next((entry for entry in go_roots
-                            if PurePosixPath(source).is_relative_to(entry[0])), None)
+                            if entry[0].parts == () or source.startswith(f"{entry[0]}/")), None)
         for item in module.imports:
             targets = []
             if module.language == "python":
@@ -411,7 +411,7 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
     fresh: dict[str, dict] = {}
     for path in files:
         language = EXTENSIONS.get(PurePosixPath(path).suffix)
-        if not language or not inventory.is_safe_path(root, path):
+        if not language:  # `files` was filtered through is_safe_path just above
             continue
         try:
             if not (root / path).is_file():
@@ -427,15 +427,26 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
             total_bytes += len(data)
             key = hashlib.sha256(language.encode() + b"\0" + data).hexdigest()
             module = None
-            if key in cached:
+            entry = cached.get(key)
+            if isinstance(entry, dict) and isinstance(entry.get("skipped"), str):
+                # A refusal (node budget…) is as deterministic as a parse: don't redo it.
+                fresh[key] = entry
+                graph.skipped[path] = entry["skipped"]
+                continue
+            if entry is not None:
                 try:
-                    module = Module(path=path, **cached[key])
+                    module = Module(path=path, **entry)
+                    fresh[key] = entry  # already serialized: no need to dump it again
                 except (TypeError, ValidationError):
                     module = None
             if module is None:
-                module = _parse(path, language, data)
-            if module is not None:
-                fresh[key] = module.model_dump(exclude={"path"})
+                try:
+                    module = _parse(path, language, data)
+                except ValueError as exc:
+                    fresh[key] = {"skipped": str(exc)}
+                    raise
+                if module is not None:
+                    fresh[key] = module.model_dump(exclude={"path"})
             if module is None:
                 graph.skipped[path] = "language grammar is not installed"
             else:
