@@ -13,7 +13,7 @@ from rich.markup import escape
 
 from learn_it import analyzers, features, git, recommendations, render, sources, timeline
 from learn_it.agent.runner import AgentError
-from learn_it.config import Settings
+from learn_it.config import Settings, cache_dir_from_env
 from learn_it.export import export_decisions
 from learn_it.features import Session
 from learn_it.store import Store
@@ -143,9 +143,8 @@ def scan(
     with _friendly_errors():
         if as_json and graph_json:
             _fail("Choisir --json ou --graph-json.")
-        settings = Settings.from_env()
         with render.err.status("Analyse du projet…"):
-            project = sources.resolve(target, settings.cache_dir, update=True)
+            project = sources.resolve(target, cache_dir_from_env(), update=True)
             profile = analyzers.scan(project)
         path = Store(project.root).save_profile(profile)
         if graph_json:
@@ -325,8 +324,7 @@ def diff(
     import json
 
     with _friendly_errors():
-        settings = Settings.from_env()
-        target = sources.resolve(project, settings.cache_dir)
+        target = sources.resolve(project, cache_dir_from_env())
         changes = timeline.compare(target, Store(target.root), ref)
     output = (
         json.dumps(changes.as_dict(), ensure_ascii=False, indent=2)
