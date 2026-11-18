@@ -11,7 +11,11 @@ WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/claude-revie
 @pytest.mark.parametrize("has_reviewed_ancestor", [True, False])
 def test_review_range_covers_skipped_push(project, tmp_path, has_reviewed_ancestor):
     def git(*args):
-        return subprocess.check_output(["git", *args], cwd=project.root, text=True).strip()
+        return subprocess.check_output(
+            ["git", "-c", "user.name=Review test", "-c", "user.email=review@example.invalid",
+             "-c", "commit.gpgsign=false", *args],
+            cwd=project.root, text=True,
+        ).strip()
 
     reviewed = git("rev-parse", "HEAD")
     git("commit", "--allow-empty", "-m", "push whose review was cancelled")
