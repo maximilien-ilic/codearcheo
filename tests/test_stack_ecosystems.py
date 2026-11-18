@@ -195,3 +195,23 @@ def test_a_dependency_new_with_its_manifest_keeps_that_date(tmp_path):
 
     assert fastapi.adopted.subject == "switch to pyproject.toml and add FastAPI"
     assert fastapi.adopted_from is None
+
+
+def test_a_removed_dependency_is_not_a_manifest_migration(tmp_path):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("fastapi\n")
+    _commit(tmp_path, "Old prototype", "2020-01-01T10:00:00+00:00")
+    requirements.write_text("click\n")
+    _commit(tmp_path, "Remove prototype", "2021-01-01T10:00:00+00:00")
+    requirements.unlink()
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "app"\ndependencies = ["fastapi", "click"]\n'
+    )
+    _commit(tmp_path, "Migrate click and adopt FastAPI", "2023-01-18T10:00:00+00:00")
+
+    techs = {t.name: t for t in scan(Project(tmp_path, "app")).technologies}
+
+    assert techs["FastAPI"].adopted.subject == "Migrate click and adopt FastAPI"
+    assert techs["FastAPI"].adopted_from is None
+    assert techs["Click"].adopted.subject == "Remove prototype"

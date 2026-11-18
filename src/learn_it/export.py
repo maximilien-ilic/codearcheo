@@ -20,10 +20,17 @@ def _slug(title: str) -> str:
 
 def check_evidence(root: Path, decision: Decision) -> evidence.EvidenceReport:
     """The record's evidence, plus the commit said to introduce it, checked in the project."""
-    refs = [*decision.evidence]
+    citations = []
+    for item in decision.evidence:
+        citations.extend(evidence.find_citations(item) or [evidence.Citation(ref=item)])
     if decision.introduced_in:
-        refs.append(f"commit {decision.introduced_in}")
-    return evidence.verify("\n".join(refs), root)
+        sha = decision.introduced_in
+        ref = f"commit {sha}"
+        if re.fullmatch(r"[0-9a-fA-F]{7,40}", sha):
+            citations.append(evidence.Citation(ref=ref, sha=sha.lower()))
+        else:
+            citations.append(evidence.Citation(ref=ref))
+    return evidence.verify_citations(citations, root)
 
 
 def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None = None) -> str:
@@ -45,6 +52,8 @@ def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None
         problems = report.problems.items()
         lines += ["## Preuves non vérifiées", "",
                   *(f"- {citation.ref} : {problem}" for citation, problem in problems), ""]
+    elif report is not None and not report.citations:
+        lines += ["## Preuves non vérifiées", "", evidence.summary(report), ""]
     return "\n".join(lines)
 
 

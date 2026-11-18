@@ -436,6 +436,10 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
             if entry is not None:
                 try:
                     module = Module(path=path, **entry)
+                    # Byte-identical files and renames share a cache entry.
+                    for location in (*module.symbols, *module.references):
+                        if location.path != path:
+                            location.path = path
                     fresh[key] = entry  # already serialized: no need to dump it again
                 except (TypeError, ValidationError):
                     module = None

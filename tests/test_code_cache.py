@@ -64,3 +64,17 @@ def test_a_refused_file_is_not_parsed_again(project, parses, monkeypatch):
 
     assert parses == []
     assert second.skipped["app.py"] == first.skipped["app.py"]
+
+
+def test_cache_keeps_symbol_and_reference_paths_after_a_rename(project, parses):
+    source = project.root / "worker.py"
+    source.write_text("def greet(): return greeting\n")
+    code.analyze(project.root)
+    source.rename(project.root / "renamed.py")
+    parses.clear()
+
+    module = code.analyze(project.root).modules["renamed.py"]
+
+    assert parses == []
+    assert [symbol.path for symbol in module.symbols] == ["renamed.py"]
+    assert [reference.path for reference in module.references] == ["renamed.py"]
