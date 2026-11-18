@@ -102,7 +102,7 @@ def archived_usage(repo: str, run: dict, request=github) -> dict[str, Any] | Non
         payload = request(
             f"repos/{repo}/actions/runs/{run['id']}/artifacts?" + urlencode({"name": name})
         )
-    except subprocess.SubprocessError:
+    except (subprocess.SubprocessError, ValueError):
         return None
     artifacts = [
         item for item in payload["artifacts"] if item["name"] == name and not item["expired"]
@@ -184,7 +184,7 @@ def report(
                 jobs = request(
                     f"repos/{repo}/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs"
                 )
-            except subprocess.SubprocessError:
+            except (subprocess.SubprocessError, ValueError):
                 standard_runners = False
                 continue
             steps = [step for job in jobs["jobs"] for step in job.get("steps", [])]
