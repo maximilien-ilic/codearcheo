@@ -69,3 +69,30 @@ def test_unknown_standalone_extensions_require_an_explicit_project_path(project)
     report = verify("`schema.custom:1` et `./schema.custom:1`", project.root)
     assert report.ok
     assert [citation.ref for citation in report.citations] == ["`./schema.custom:1`"]
+
+
+def test_unique_bare_file_names_are_completed_and_ambiguous_ones_left(project):
+    from learn_it.analyzers import inventory
+    from learn_it.evidence import complete_paths
+
+    (project.root / "pkg").mkdir()
+    (project.root / "pkg" / "app.py").write_text("x = 1\n")  # now two app.py
+    files = inventory.list_files(project.root)
+
+    assert complete_paths("- ci.yml:1 et Dockerfile:1", files) == (
+        "- .github/workflows/ci.yml:1 et Dockerfile:1"
+    )
+    assert complete_paths("app.py:1", files) == "app.py:1"  # ambiguous: not guessed
+    assert complete_paths("`.github/workflows/ci.yml:1`", files) == "`.github/workflows/ci.yml:1`"
+
+
+def test_an_ambiguous_name_is_completed_from_a_path_the_text_cites_in_full(project):
+    from learn_it.analyzers import inventory
+    from learn_it.evidence import complete_paths
+
+    (project.root / "pkg").mkdir()
+    (project.root / "pkg" / "app.py").write_text("x = 1\n")
+    files = inventory.list_files(project.root)
+    text = "Voir pkg/app.py:1. Plus loin : app.py:1."
+
+    assert complete_paths(text, files) == "Voir pkg/app.py:1. Plus loin : pkg/app.py:1."

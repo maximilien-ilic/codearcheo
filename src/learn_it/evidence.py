@@ -131,6 +131,31 @@ def find_matches(text: str) -> list[CitationMatch]:
     ]
 
 
+def complete_paths(text: str, files: list[str]) -> str:
+    """Rewrite `timed.py:170` as `src/pkg/timed.py:170` when exactly one project file has
+    that name, or when the text itself cites exactly one of the files of that name in full.
+    Other ambiguous names are left alone: guessing would make a false citation pass."""
+    by_name: dict[str, list[str]] = {}
+    for path in files:
+        by_name.setdefault(PurePosixPath(path).name, []).append(path)
+    named = {c.path for c in find_citations(text) if c.path and "/" in c.path}
+    named |= {span for span in mentioned_paths(text) if "/" in span}
+    parts, last = [], 0
+    for match in sorted(find_matches(text), key=lambda m: m.start):
+        path = match.citation.path
+        if not path or "/" in path or match.start < last:
+            continue
+        candidates = by_name.get(path, [])
+        if len(candidates) > 1:
+            candidates = [candidate for candidate in candidates if candidate in named]
+        if len(candidates) != 1 or candidates[0] == path:
+            continue
+        cited = text[match.start:match.end].replace(path, candidates[0], 1)
+        parts += [text[last:match.start], cited]
+        last = match.end
+    return "".join(parts) + text[last:]
+
+
 def mentioned_paths(text: str) -> set[str]:
     """Paths written as code spans, with or without lines: `app.py`, `app.py:3`."""
     return {span.split(":", 1)[0].removeprefix("./") for span in _CODE_SPAN.findall(text)}

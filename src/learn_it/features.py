@@ -29,7 +29,7 @@ from learn_it.agent.runner import (
     run_agent,
 )
 from learn_it.agent.tools import ProjectTools
-from learn_it.analyzers import adrs, code
+from learn_it.analyzers import adrs, code, inventory
 from learn_it.citation_repair import RepairResult, repair_answer
 from learn_it.config import Settings
 from learn_it.domain import Decision, ProjectProfile, Recommendation
@@ -65,6 +65,8 @@ class Session:
 
     def checked(self, answer: str, *, repair: bool = False) -> str:
         """Warn without hiding the answer; retain the same warning in saved reports."""
+        # Answers still abbreviate some paths (`legacy.yml:33`): complete the unambiguous ones.
+        answer = evidence.complete_paths(answer, inventory.list_files(self.project.root))
         report = evidence.verify(answer, self.project.root)
         repair_note = ""
         if repair and self.repair_citations:
@@ -133,6 +135,15 @@ class Session:
         return checked
 
 
+def _complete_evidence(fields: dict[str, Any], session: Session) -> dict[str, Any]:
+    """Structured records still abbreviate paths (`legacy.yml:33`); complete unique ones."""
+    items = fields.get("evidence")
+    if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
+        return fields  # let validation report the malformed record
+    files = inventory.list_files(session.project.root)
+    return {**fields, "evidence": [evidence.complete_paths(item, files) for item in items]}
+
+
 def ask(session: Session, question: str) -> str:
     return session.run(prompts.ASK.format(question=question))
 
@@ -182,7 +193,8 @@ def decisions(session: Session) -> str:
         """Record one technical decision of the project as an architecture decision record."""
         try:
             record = adrs.anchor_decision(
-                Decision.model_validate(fields), session.profile.existing_adrs
+                Decision.model_validate(_complete_evidence(fields, session)),
+                session.profile.existing_adrs,
             )
         except ValidationError as exc:
             raise ToolError(f"Invalid record, fix it and call again:\n{exc}") from exc
@@ -227,7 +239,7 @@ def review(session: Session) -> str:
     def record_recommendation(**fields: Any) -> str:
         """Record one evidence-based recommendation about a technical decision."""
         try:
-            recorded.append(Recommendation.model_validate(fields))
+            recorded.append(Recommendation.model_validate(_complete_evidence(fields, session)))
         except ValidationError as exc:
             raise ToolError(f"Invalid recommendation, fix it and call again:\n{exc}") from exc
         return f"Recorded recommendation {len(recorded)}: {recorded[-1].title}"
