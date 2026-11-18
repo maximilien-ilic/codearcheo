@@ -106,7 +106,8 @@ class Decision(BaseModel):
         default=None, description="Sha of the commit that introduced it, when found."
     )
     evidence: list[str] = Field(
-        description="References backing this record, `path:lines` or `commit <sha>`, each "
+        description="References backing this record: `path:lines` with the full path from the "
+        "project root (`src/pkg/timed.py:170`, never `timed.py:170`) or `commit <sha>`, each "
         "followed by what it shows."
     )
 
@@ -123,7 +124,12 @@ class Recommendation(BaseModel):
     effort: Literal["S", "M", "L"]
     impact: Literal["low", "medium", "high"]
     first_steps: list[str] = Field(default_factory=list)
-    evidence: list[str] = Field(min_length=1)
+    evidence: list[str] = Field(
+        min_length=1,
+        description="References backing this record: `path:lines` with the full path from the "
+        "project root (`src/pkg/timed.py:170`, never `timed.py:170`) or `commit <sha>`, each "
+        "followed by what it shows.",
+    )
 
     @model_validator(mode="after")
     def actionable(self) -> Recommendation:

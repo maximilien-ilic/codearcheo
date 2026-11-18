@@ -112,12 +112,21 @@ apparus.
   94 lignes, et un commit `b13342af1c` qui n'existe pas. La vérification des preuves les a
   repérés ; ce sont exactement les erreurs qu'elle doit attraper.
 
+## Mesure 6 : golang/go après les corrections
+
+Scan en 13,7 s au lieu de 60, et l'agent dispose de ses outils (18 à 22 tours par cas).
+**2 cas réussis sur 3** au premier essai (`go-http-default-handler`, `go-why-handlerfunc`).
+`go-review-http` échouait encore sur des chemins raccourcis dans les preuves des
+recommandations (`build_test.go:39`, `buildtool.go:368`) : les champs `evidence` des décisions
+et des recommandations, que le modèle remplit via le schéma structuré, exigent maintenant eux
+aussi le chemin complet. Le contre-essai a réussi `go-http-default-handler` puis s'est arrêté
+sur la limite de session de l'abonnement ; l'effet sur `go-review-http` reste à mesurer.
+
 ## Ce qu'il reste à mesurer
 
-- **Le dépôt Go** (68 707 commits) : réessayer après le changement 1, et voir si le refus de
-  sécurité sur `net/http` se reproduit. Si oui, tester `claude-sonnet-5-5` sur ce projet.
-- **La variabilité** : relancer chaque cas deux ou trois fois avant de conclure qu'un
-  changement de prompt aide.
-- **L'effort** : comparer `medium` et `high` (`LEARN_IT_EFFORT`) en score et en coût.
+- **`go-review-http`** après la consigne des champs `evidence`.
+- **La variabilité** sur tous les cas, pas seulement `shop` : deux ou trois mesures chacun.
+- **L'effort** : `medium` coûte 19 % de moins pour un cas raté sur 11 avant le changement 2 ;
+  à remesurer avec lui pour choisir le réglage par défaut.
 - **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur le vrai
-  moteur de learn-it.
+  moteur de learn-it et mesurer la correction des citations (#34).
