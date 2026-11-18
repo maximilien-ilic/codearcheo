@@ -54,6 +54,13 @@ projet à 50 Mo / 10 000 fichiers analysés. Les dépassements et grammaires man
 sont signalés, jamais présentés comme une analyse exhaustive. Les fichiers malformés
 restent marqués `syntax_errors` dans l'export.
 
+Les modules analysés sont conservés dans `.learn-it/code-cache.json.gz`, par empreinte
+du contenu et version des grammaires. Le cache suit donc aussi les modifications non
+commitées. Les refus déterministes sont conservés avec leur motif. L'ancien
+`code-cache.json` est réutilisé puis remplacé après une écriture gzip réussie. Un cache
+corrompu ou une lecture décompressée dépassant 512 Mio provoque un nouveau parsing.
+Un dossier de rapports en lecture seule ou lié ne rend pas l'analyse indisponible.
+
 Le budget de scan a été recontrôlé avec **toutes les grammaires installées, le
 graphe, les nouvelles sources et les ADR activés** sur Git (83 007 commits) :
 médiane **1,852 s**, contre 2,584 s pour les parcours d'historique de référence ;

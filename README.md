@@ -139,11 +139,11 @@ ne peuvent pas appliquer.
 
 ## Où en est le projet
 
-*État au 17 novembre 2026.*
+*État au 18 novembre 2026.*
 
-**Ce qui marche.** Les neuf commandes sont en place, couvertes par 305 tests qui tournent sous Python 3.11 et 3.14 à chaque PR.
+**Ce qui marche.** Les neuf commandes sont en place, couvertes par des tests déterministes sous Python 3.11 et 3.14 à chaque PR.
 
-- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter, en moins d'une seconde sur un dépôt de 8 000 commits et en 13 s sur golang/go (68 707 commits).
+- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter. Sur Go, le cache syntaxique passe de 225 à 14 Mio, avec le même graphe ; les [mesures](docs/scan-performance.md) séparent les passages avec cache chaud et vide.
 - **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
 - **Les décisions.** Elles s'exportent en ADR (`decisions --export`), avec refus si aucune preuve n'est vérifiable et avertissement pour chaque référence invalide. Les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
 - **Le moteur.** learn-it tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`LEARN_IT_BACKEND=claude-code`).

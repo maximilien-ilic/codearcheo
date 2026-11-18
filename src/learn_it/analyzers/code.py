@@ -358,7 +358,9 @@ def _resolve(graph: CodeGraph, root: Path, files: list[str]) -> None:
             item.resolved = sorted(set(targets))
 
 
-_CACHE_FILE = "code-cache.json"
+_CACHE_FILE = "code-cache.json.gz"
+_LEGACY_CACHE_FILE = "code-cache.json"
+MAX_CACHE_BYTES = 512 * 1024 * 1024
 
 
 @lru_cache(maxsize=1)
@@ -375,17 +377,21 @@ def _cache_version() -> str:
     return "1;" + ",".join(versions)
 
 
-def _load_cache(root: Path) -> dict[str, dict]:
+def _load_cache(root: Path) -> tuple[dict[str, dict], bool]:
     from learn_it.store import Store
 
     try:
-        data = Store(root).load_json(_CACHE_FILE)
+        store = Store(root)
+        data = store.load_compressed_json(_CACHE_FILE, max_bytes=MAX_CACHE_BYTES)
+        migrate = data is None
+        if migrate:
+            data = store.load_json(_LEGACY_CACHE_FILE, max_bytes=MAX_CACHE_BYTES)
     except OSError:  # symlinked store: no cache rather than following it
-        return {}
+        return {}, True
     if not isinstance(data, dict) or data.get("version") != _cache_version():
-        return {}
+        return {}, True
     modules = data.get("modules")
-    return modules if isinstance(modules, dict) else {}
+    return (modules, migrate) if isinstance(modules, dict) else ({}, True)
 
 
 def _save_cache(root: Path, modules: dict[str, dict]) -> None:
@@ -393,7 +399,9 @@ def _save_cache(root: Path, modules: dict[str, dict]) -> None:
 
     # A read-only checkout or a refused symlink only costs the optimisation.
     with suppress(OSError):
-        Store(root).save_json(_CACHE_FILE, {"version": _cache_version(), "modules": modules})
+        store = Store(root)
+        store.save_compressed_json(_CACHE_FILE, {"version": _cache_version(), "modules": modules})
+        store.remove(_LEGACY_CACHE_FILE)
 
 
 def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
@@ -407,7 +415,7 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
     total_bytes = 0
     # Parsing dominates the scan of a large project (57 s on golang/go), so each module is
     # cached under a hash of its language and content: valid for uncommitted work too.
-    cached = _load_cache(root)
+    cached, rewrite_cache = _load_cache(root)
     fresh: dict[str, dict] = {}
     for path in files:
         language = EXTENSIONS.get(PurePosixPath(path).suffix)
@@ -443,6 +451,7 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
                     fresh[key] = entry  # already serialized: no need to dump it again
                 except (TypeError, ValidationError):
                     module = None
+                    rewrite_cache = True
             if module is None:
                 try:
                     module = _parse(path, language, data)
@@ -457,7 +466,7 @@ def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
                 graph.modules[path] = module
         except (OSError, ValueError) as exc:
             graph.skipped[path] = str(exc)
-    if fresh.keys() != cached.keys():
+    if rewrite_cache or fresh.keys() != cached.keys():
         _save_cache(root, fresh)
     _resolve(graph, root, files)
     return graph
