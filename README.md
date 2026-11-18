@@ -188,9 +188,15 @@ La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 
 uv run python -m evals.run           # tous les projets de référence (consomme des tokens)
 uv run python -m evals.run shop      # seulement ceux nommés
 uv run --extra mcp python -m evals.run --backend claude-code   # sur l'abonnement Claude
+uv run --all-extras python -m evals.run --backend claude-code --case go-review-http
 ```
 
 Chaque cas de `evals/cases.toml` vérifie que les citations `fichier:ligne` et les commits cités existent, que les faits et les sources attendus sont présents, que ce que rien ne documente est signalé comme déduit, et qu'aucun secret ne fuit. Le texte exact n'est jamais comparé.
+
+Les réponses et les enregistrements sont archivés après chaque cas, avec les réglages et
+les attentes, pour conserver les résultats même en cas d'interruption. `--case` cible une
+mesure précise ; `python -m evals.rescore RAPPORT.json` permet ensuite de renoter les mêmes
+réponses hors ligne. Voir le [protocole et les limites](docs/evaluation.md).
 
 Les décisions techniques de learn-it sont elles-mêmes documentées dans [`docs/adr/`](docs/adr/), au format ADR que l'outil vise à produire.
 

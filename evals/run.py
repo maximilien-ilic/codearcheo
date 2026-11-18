@@ -1,27 +1,29 @@
-"""Run learn-it on the reference cases with the real Claude API, then score the results.
+"""Generate and score reference answers through the API or the Claude Code subscription.
 
     uv run python -m evals.run           # every reference project
     uv run python -m evals.run shop      # only the named ones
 
-Every run spends API tokens, so neither pytest nor the CI runs it. Results are printed,
-and saved as JSON in `<LEARN_IT_CACHE_DIR>/evals/`.
+Each generation consumes API credits or subscription quota; pytest and CI use fake agents.
+Answers, records and scores are checkpointed in `<LEARN_IT_CACHE_DIR>/evals/`.
+Use `python -m evals.rescore REPORT.json` to regrade saved answers without generation.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import shutil
 import sys
 import time
 import tomllib
+import uuid
 from contextlib import nullcontext
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from evals.artifacts import fingerprint, save_report
 from evals.fixtures import build_fixture
 from evals.scoring import Check, score_answer, score_decisions
 from learn_it import evidence, features, git
@@ -99,24 +101,56 @@ def prepare(spec: dict[str, Any], workdir: Path) -> Project:
     return Project(root=root, name=spec["name"], origin=spec["source"])
 
 
-def run_case(session: Session, case: dict[str, Any], canary: str | None) -> list[Check]:
+def run_case(
+    session: Session, case: dict[str, Any], canary: str | None,
+    *, capture: dict[str, Any] | None = None,
+) -> list[Check]:
+    """Score a generation and optionally retain its exact output for offline regrading."""
+    capture = capture if capture is not None else {}
     root = session.project.root
     try:
         if case["command"] == "decisions":
             answer = features.decisions(session)
-            return score_decisions(session.store.load_decisions(), case, root, canary,
-                                   answer=answer)
-        if case["command"] == "ask":
+            records = session.store.load_decisions()
+            capture.update(answer=answer, decisions=[record.model_dump() for record in records])
+            return score_decisions(records, case, root, canary, answer=answer)
+        elif case["command"] == "ask":
             answer = features.ask(session, case["question"])
         elif case["command"] == "why":
             answer = features.why(session, case["target"])
         elif case["command"] == "review":
             answer = features.review(session)
+            capture["recommendations"] = [
+                record.model_dump() for record in session.store.load_recommendations()
+            ]
         else:
             raise ValueError(f"Unknown evaluation command: {case['command']}")
+        capture["answer"] = answer
         return score_answer(answer, case, root, canary)
     except AgentError as exc:
+        capture["error"] = str(exc)
         return [Check("réponse obtenue", False, str(exc))]
+
+
+def select_cases(
+    specs: list[dict[str, Any]], names: list[str], case_ids: list[str],
+) -> list[dict[str, Any]]:
+    """Resolve selectors before preparing a checkout or spending tokens."""
+    unknown_names = set(names) - {spec["name"] for spec in specs}
+    unknown_cases = set(case_ids) - {case["id"] for spec in specs for case in spec["cases"]}
+    if unknown_names or unknown_cases:
+        unknown = ", ".join(sorted(unknown_names | unknown_cases))
+        raise ValueError("Projets ou cas inconnus : " + unknown)
+    selected = []
+    for spec in specs:
+        if names and spec["name"] not in names:
+            continue
+        cases = [case for case in spec["cases"] if not case_ids or case["id"] in case_ids]
+        if cases:
+            selected.append({**spec, "cases": cases})
+    if not selected:
+        raise ValueError("Aucun cas ne correspond à la sélection de projets et de cas.")
+    return selected
 
 
 def compare_citation_repair(
@@ -159,7 +193,7 @@ def citation_repair_available() -> bool:
 def main(
     names: list[str], *, repair_citations: bool = False, compare_citations: bool = False,
     max_requests: int | None = None, max_output_tokens: int | None = None,
-    backend: str | None = None,
+    backend: str | None = None, case_ids: list[str] | None = None,
 ) -> int:
     if (repair_citations or compare_citations) and not citation_repair_available():
         print(
@@ -179,6 +213,11 @@ def main(
         print("La correction des citations n'existe pas avec --backend claude-code.",
               file=sys.stderr)
         return 2
+    try:
+        specs = select_cases(load_cases(), names, case_ids or [])
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     limits = (
         SessionLimits.from_settings(settings)
         if settings.max_requests is not None or settings.max_output_tokens != 16_000 else None
@@ -187,14 +226,33 @@ def main(
     results = []
     measurements = []
     skipped = []
-    for spec in load_cases():
-        if names and spec["name"] not in names:
-            continue
+    workdir.mkdir(parents=True, exist_ok=True)
+    output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}.json"
+    code_root = Path(__file__).resolve().parents[1]
+    code_revision = git.head(code_root)
+    report = {
+        "schema_version": 2, "created_at": datetime.now(UTC).isoformat(), "complete": False,
+        "code_revision": code_revision,
+        "code_dirty": bool(git.run(code_root, "status", "--porcelain")) if code_revision else None,
+        "settings": {
+            key: str(value) if isinstance(value, Path) else value
+            for key, value in asdict(settings).items()
+        },
+        "model": settings.model, "effort": settings.effort, "backend": settings.backend,
+        "repair_citations": repair_citations or compare_citations,
+        "compare_citations": compare_citations,
+        "selected_cases": [case["id"] for spec in specs for case in spec["cases"]],
+        "projects": measurements, "results": results, "skipped": skipped,
+    }
+    save_report(output, report)
+    print(f"Résultats : {output}", flush=True)
+    for spec in specs:
         if settings.backend == "claude-code" and spec["source"] == "synthetic-github":
             # The GitHub replay patches this process; Claude Code's tools run in `learn-it serve`.
             skipped += [case["id"] for case in spec["cases"]]
             print(f"– {spec['name']} ignoré : son rejeu GitHub ne passe pas par Claude Code",
                   file=sys.stderr)
+            save_report(output, report)
             continue
         started = time.perf_counter()
         project = prepare(spec, workdir)
@@ -207,9 +265,11 @@ def main(
                              f"got {profile.commits} (full history is required)")
         measurements.append({
             "project": spec["name"], "sha": profile.head, "commits": profile.commits,
+            "worktree_fingerprint": fingerprint(project.root),
             "files": profile.files, "preparation_seconds": prepared - started,
             "scan_seconds": scanned - prepared,
         })
+        save_report(output, report)
         session = Session(project, profile, Store(project.root), settings, limits=limits)
         session.repair_citations = repair_citations or compare_citations
         for case in spec["cases"]:
@@ -227,7 +287,8 @@ def main(
 
                 context = replay_github()
             with context:
-                checks = run_case(session, case, spec.get("canary"))
+                captured: dict[str, Any] = {}
+                checks = run_case(session, case, spec.get("canary"), capture=captured)
             passed = all(check.ok for check in checks)
             comparison = None
             if (repair_citations or compare_citations) and case["command"] in {"ask", "why"}:
@@ -244,6 +305,8 @@ def main(
                     passed = False
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,
+                 "status": "error" if "error" in captured else ("passed" if passed else "failed"),
+                 "case_definition": case, "canary": spec.get("canary"), **captured,
                  "elapsed_seconds": time.perf_counter() - started,
                  "usage": usage,
                  **({"citation_repair": comparison} if compare_citations else {}),
@@ -254,6 +317,7 @@ def main(
                  ),
                  "checks": [asdict(c) for c in checks]}
             )
+            save_report(output, report)
             print(f"{'✓' if passed else '✗'} {case['id']}")
             for check in checks:
                 if not check.ok:
@@ -262,20 +326,20 @@ def main(
     passed = sum(result["passed"] for result in results)
     print(f"\n{passed}/{len(results)} cas réussis · {settings.model}, effort {settings.effort}, "
           f"moteur {settings.backend}")
-    workdir.mkdir(parents=True, exist_ok=True)
-    output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}.json"
-    report = {"model": settings.model, "effort": settings.effort, "backend": settings.backend,
-              "repair_citations": repair_citations or compare_citations,
-              "compare_citations": compare_citations,
-              "projects": measurements, "results": results, "skipped": skipped}
-    output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Résultats : {output}")
+    errors = sum(result["status"] == "error" for result in results)
+    if errors:
+        print(f"Qualité : {passed}/{len(results) - errors} réponses évaluables ; "
+              f"{errors} réponse(s) indisponible(s).")
+    report["complete"] = True
+    save_report(output, report)
     return 0 if results and passed == len(results) else 1
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("names", nargs="*", help="Reference project names; empty selects all.")
+    parser.add_argument("--case", dest="case_ids", action="append", default=[],
+                        help="Run only this case ID; repeat the option to select several.")
     parser.add_argument("--repair-citations", action="store_true",
                         help="Opt into one bounded correction request for each text answer.")
     parser.add_argument(
@@ -294,4 +358,4 @@ if __name__ == "__main__":
     sys.exit(main(options.names, repair_citations=options.repair_citations,
                   compare_citations=options.compare_citations,
                   max_requests=options.max_requests, max_output_tokens=options.max_output_tokens,
-                  backend=options.backend))
+                  backend=options.backend, case_ids=options.case_ids))
