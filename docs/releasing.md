@@ -1,0 +1,85 @@
+# Préparer et publier une version
+
+Le ticket #24 prévoit une première publication `v0.2.0` à la fin du projet. La version
+de développement reste actuellement `0.1.0`. Les changements préparés sont décrits dans
+[`CHANGELOG.md`](../CHANGELOG.md), section `Unreleased`.
+
+## Vérifier le paquet avant la publication
+
+```bash
+uv sync --locked --all-extras
+uv run ruff check .
+uv run pytest
+uv build --no-sources
+uv run python -m scripts.check_dist --smoke
+```
+
+La construction produit un wheel à partir de l'archive source. Le contrôle vérifie les
+versions du projet, du module et des métadonnées, les noms des archives et la licence MIT.
+Le test d'installation installe chaque archive dans un environnement isolé, importe le
+module installé puis lance un scan local sans génération. Il n'utilise pas le checkout
+comme paquet installé. `uv build --no-sources` évite de dépendre d'éventuels chemins locaux
+de construction. Voir le [guide de construction uv](https://docs.astral.sh/uv/guides/package/).
+
+Ces contrôles tournent aussi en CI sous Python 3.11 et 3.14. Le workflow `release.yml`
+peut être lancé manuellement pour reconstruire et conserver les archives pendant sept jours :
+
+```bash
+gh workflow run release.yml --ref master --repo maximilien-ilic/learn-it
+```
+
+Ce lancement manuel exécute uniquement la préparation. Le job de publication exige une
+release GitHub stable publiée dans le dépôt d'origine et un tag correspondant à la version.
+
+## Configurer Trusted Publishing
+
+Depuis le compte PyPI du propriétaire, ajouter un éditeur GitHub avec ces valeurs :
+
+| Champ | Valeur |
+|---|---|
+| Projet PyPI demandé | `learn-it` |
+| Propriétaire GitHub | `maximilien-ilic` |
+| Dépôt | `learn-it` |
+| Fichier du workflow | `release.yml` |
+| Environnement GitHub | `pypi` |
+
+Pour un premier envoi, utiliser un [éditeur en attente](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
+dans les réglages du compte PyPI. Il crée le projet lors de la première publication et
+ne réserve pas son nom à l'avance. Pour un projet existant, configurer son
+[éditeur autorisé](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
+
+Dans GitHub, créer l'environnement `pypi` et définir les personnes autorisées à approuver
+une publication. L'identité OIDC est limitée au job `publish` ; la construction et les tests
+n'ont pas cette permission. Ce job télécharge les archives vérifiées, puis l'action PyPA
+publie sans jeton PyPI stocké et produit les attestations. Le
+[guide PyPI](https://docs.pypi.org/trusted-publishers/using-a-publisher/) décrit cette identité.
+
+## Préparer la première version
+
+Dans une PR dédiée, au moment choisi pour publier :
+
+1. Passer la version à `0.2.0` avec `uv version 0.2.0`, puis mettre `__version__` dans
+   `src/learn_it/__init__.py` à la même valeur. Inclure le verrou actualisé dans la PR.
+2. Déplacer les changements retenus sous `## [0.2.0] - AAAA-MM-JJ` dans le CHANGELOG,
+   avec la date réelle, et conserver une section `Unreleased` pour la suite.
+3. Refaire la construction et lancer
+   `uv run python -m scripts.check_dist --tag v0.2.0 --smoke`.
+4. Fusionner cette PR avec une CI verte. Créer ensuite le tag `v0.2.0` sur ce commit de
+   `master`, puis publier la release GitHub stable avec les notes correspondantes.
+
+Le workflow reconstruit, teste les archives et vérifie que le commit appartient à
+l'historique de `master`. Une version différente du tag, des notes datées manquantes ou une
+installation défectueuse arrêtent le processus avant le job PyPI. Une préversion GitHub
+ne lance pas cette publication stable.
+
+Après publication, vérifier depuis un autre dossier :
+
+```bash
+uv tool install 'learn-it[mcp,code]==0.2.0'
+learn-it --help
+learn-it scan /chemin/vers/un/projet
+```
+
+Pour une installation minimale, utiliser `uv tool install learn-it`. Ces commandes depuis
+PyPI ne deviennent utilisables qu'après la publication effective. Les commandes IA exigent
+toujours leur authentification propre.
