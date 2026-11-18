@@ -159,6 +159,7 @@ def citation_repair_available() -> bool:
 def main(
     names: list[str], *, repair_citations: bool = False, compare_citations: bool = False,
     max_requests: int | None = None, max_output_tokens: int | None = None,
+    backend: str | None = None,
 ) -> int:
     if (repair_citations or compare_citations) and not citation_repair_available():
         print(
@@ -167,7 +168,13 @@ def main(
             file=sys.stderr,
         )
         return 2
-    settings = Settings.from_env(max_requests=max_requests, max_output_tokens=max_output_tokens)
+    settings = Settings.from_env(
+        max_requests=max_requests, max_output_tokens=max_output_tokens, backend=backend
+    )
+    if settings.backend == "claude-code" and (repair_citations or compare_citations):
+        print("La correction des citations n'existe pas avec --backend claude-code.",
+              file=sys.stderr)
+        return 2
     limits = (
         SessionLimits.from_settings(settings)
         if settings.max_requests is not None or settings.max_output_tokens != 16_000 else None
@@ -175,8 +182,15 @@ def main(
     workdir = settings.cache_dir / "evals"
     results = []
     measurements = []
+    skipped = []
     for spec in load_cases():
         if names and spec["name"] not in names:
+            continue
+        if settings.backend == "claude-code" and spec["source"] == "synthetic-github":
+            # The GitHub replay patches this process; Claude Code's tools run in `learn-it serve`.
+            skipped += [case["id"] for case in spec["cases"]]
+            print(f"– {spec['name']} ignoré : son rejeu GitHub ne passe pas par Claude Code",
+                  file=sys.stderr)
             continue
         started = time.perf_counter()
         project = prepare(spec, workdir)
@@ -242,13 +256,14 @@ def main(
                     print(f"    ✗ {check.name}" + (f" : {check.detail}" if check.detail else ""))
 
     passed = sum(result["passed"] for result in results)
-    print(f"\n{passed}/{len(results)} cas réussis · {settings.model}, effort {settings.effort}")
+    print(f"\n{passed}/{len(results)} cas réussis · {settings.model}, effort {settings.effort}, "
+          f"moteur {settings.backend}")
     workdir.mkdir(parents=True, exist_ok=True)
     output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}.json"
-    report = {"model": settings.model, "effort": settings.effort,
+    report = {"model": settings.model, "effort": settings.effort, "backend": settings.backend,
               "repair_citations": repair_citations or compare_citations,
               "compare_citations": compare_citations,
-              "projects": measurements, "results": results}
+              "projects": measurements, "results": results, "skipped": skipped}
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Résultats : {output}")
     return 0 if results and passed == len(results) else 1
@@ -265,9 +280,14 @@ if __name__ == "__main__":
     )
     parser.add_argument("--max-requests", type=int,
                         help="Generation HTTP attempt cap shared across the entire evaluation.")
+    parser.add_argument(
+        "--backend", choices=["api", "claude-code"],
+        help="claude-code runs on the Claude subscription through `claude -p` (no API key).",
+    )
     parser.add_argument("--max-output-tokens", type=int,
                         help="Maximum generated output tokens in each request.")
     options = parser.parse_args()
     sys.exit(main(options.names, repair_citations=options.repair_citations,
                   compare_citations=options.compare_citations,
-                  max_requests=options.max_requests, max_output_tokens=options.max_output_tokens))
+                  max_requests=options.max_requests, max_output_tokens=options.max_output_tokens,
+                  backend=options.backend))

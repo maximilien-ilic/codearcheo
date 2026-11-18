@@ -344,10 +344,15 @@ def chat(
     from learn_it.chat import interactive
 
     with _friendly_errors():
-        interactive(_session(
+        session = _session(
             project, model=model, effort=effort, budget=budget,
             max_requests=max_requests, max_output_tokens=max_output_tokens,
-        ))
+        )
+        if session.settings.backend == "claude-code":
+            raise AgentError(
+                "`chat` demande le moteur api ; avec ton abonnement, utilise `claude`."
+            )
+        interactive(session)
 
 
 @app.command()

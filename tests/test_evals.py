@@ -327,3 +327,14 @@ def test_requested_comparison_cannot_succeed_without_repair_metadata(monkeypatch
     result = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
     assert not result["results"][0]["passed"]
     assert "Métadonnées" in result["results"][0]["checks"][-1]["detail"]
+
+
+def test_a_bare_path_line_citation_counts_as_citing_the_file(project):
+    """Review reports list their evidence as `- app.py:1-3`, without backticks."""
+    answer = "FastAPI tient l'API.\n\n### Preuves\n\n- app.py:1-3\n- docker-compose.yml:3\n"
+
+    case = {"cite_any_file": ["app.py", "docker-compose.yml"]}
+
+    checks = score_answer(answer, case, project.root)
+
+    assert "cite app.py ou docker-compose.yml" not in failures(checks)

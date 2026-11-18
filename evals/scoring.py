@@ -60,7 +60,10 @@ def score_answer(
     for word in case.get("mention", []):
         checks.append(Check(f"mentionne {word}", word.casefold() in text))
     if files := case.get("cite_any_file"):
-        cited = evidence.mentioned_paths(answer)
+        # Same forms as the evidence check: code spans, and bare `path:line` citations.
+        cited = evidence.mentioned_paths(answer) | {
+            c.path for c in evidence.find_citations(answer) if c.path
+        }
         checks.append(Check(f"cite {' ou '.join(files)}", any(f in cited for f in files)))
     if subject := case.get("cite_commit"):
         cited = [c.sha for c in evidence.find_citations(answer) if c.sha]

@@ -17,6 +17,8 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 - **Nuit du 16 au 17 novembre : la roadmap presque entière.** La PR [#29] a livré les étapes #11 à #23 : citations contrôlées, cas de référence étendus, coût et conversation, sources GitHub et ADR, nouveaux écosystèmes, export et recommandations, historique, graphe des imports. La PR [#31] a ajouté la correction des citations et les limites de requêtes, et les revues Codex ont corrigé deux défauts au passage ([#28], [#30]). Le projet compte maintenant 288 tests, tous sans appel IA réel.
 - **17 novembre : la stack lue au bon endroit.** Sur pallets/flask, la stack était datée à partir d'un exemple (`examples/celery/`) plutôt que du `pyproject.toml` racine, et Flask figurait parmi ses propres dépendances. Corrigé ; trois limites trouvées en testant l'outil sur de vrais dépôts sont devenues les tickets [#32], [#33] et [#34].
 
+- **17 novembre, après-midi : les décisions du propriétaire et une première mesure réelle.** Licence MIT (#24, la publication sur PyPI attendra la fin du projet), revue côté serveur sur l'abonnement Claude (#25, prête dès que le secret existe), et un moteur `claude-code` qui fait tourner learn-it sur l'abonnement. La première évaluation réelle est passée de 6 à 11 cas réussis sur 11 hors dépôt Go, après deux corrections : des chemins complets dans les citations et le barème ([docs/evaluation.md](evaluation.md)).
+
 ## Où on en est
 
 Il reste six étapes ouvertes. Une seule est prioritaire : mesurer les vraies réponses ([#10]), car tout le comportement IA n'a été testé qu'avec un faux client. Deux étapes attendent une décision du propriétaire du projet ([#24], [#25]).
@@ -37,7 +39,7 @@ Avant d'ajouter des fonctionnalités, savoir ce que valent les réponses et ne p
 
 | Étape | Ticket | État |
 |---|---|---|
-| Mesurer les vraies réponses une première fois et régler les prompts (demande une clé API) | [#10] | à faire |
+| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | en cours : 11/11 hors Go |
 | Vérifier les citations de chaque réponse avant de l'afficher | [#11] | fait |
 | Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] | fait |
 | Afficher coût et durée, régler modèle et effort par commande | [#13] | fait |
@@ -82,8 +84,8 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 | Étape | Ticket | État |
 |---|---|---|
 | Mode conversation `learn-it chat`, réponses en streaming | [#23] | fait |
-| Licence, versions et publication sur PyPI | [#24] | à faire |
-| Lancer la revue automatique côté serveur, sans Orca | [#25] | à faire |
+| Licence, versions et publication sur PyPI | [#24] | licence faite, PyPI à la fin |
+| Lancer la revue automatique côté serveur, sans Orca | [#25] | prête, secret à créer |
 
 ## Comment on avance
 
