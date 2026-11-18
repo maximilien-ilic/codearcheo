@@ -117,3 +117,34 @@ def test_snapshot_refuses_linked_history_and_revision_paths(project, tmp_path):
     with pytest.raises(ValueError):
         store.history_profile("../../private")
     assert not list(outside.iterdir())
+
+
+def test_an_example_only_technology_is_not_a_stack_change():
+    from learn_it.domain import ProjectProfile, Technology
+    from learn_it.timeline import compare_profiles
+
+    def profile(*technologies):
+        return ProjectProfile(name="p", files=1, languages={}, docs=[],
+                              technologies=list(technologies))
+
+    redis = Technology(name="Redis", category="data", source="examples/x/req.txt",
+                       auxiliary=True)
+    django = Technology(name="Django", category="framework", source="pyproject.toml")
+
+    changes = compare_profiles(profile(), profile(redis, django))
+
+    assert changes.technologies_added == ["Django"]
+
+
+def test_legacy_snapshot_does_not_report_an_auxiliary_technology_as_removed():
+    from learn_it.domain import ProjectProfile
+    from learn_it.timeline import compare_profiles
+
+    fields = {"name": "p", "files": 1, "languages": {}, "docs": []}
+    redis = {"name": "Redis", "category": "data", "source": "Examples/demo/requirements.txt"}
+    before = ProjectProfile.model_validate({**fields, "technologies": [redis]})
+    after = ProjectProfile.model_validate({
+        **fields, "technologies": [{**redis, "auxiliary": True}],
+    })
+
+    assert compare_profiles(before, after).technologies_removed == []

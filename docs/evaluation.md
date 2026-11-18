@@ -79,12 +79,101 @@ express. Le dépôt Go n'a pas été relancé, et le cas GitHub est ignoré avec
 Recalculés avec le barème corrigé sur les rapports enregistrés, les deux cas réussissent :
 **11 cas sur 11** pour ces projets.
 
+## Mesure 3 : effort `medium` (17 novembre 2026)
+
+Les mêmes 11 cas en effort `medium` : **10 cas réussis sur 11**, contre 11 en `high`. C'est
+19 % moins cher (1,99 $ contre 2,47 $) et 22 % plus rapide (463 s contre 594 s).
+
+Le seul cas raté, `shop-database`, est aussi le seul qui varie d'une mesure à l'autre : il a
+échoué deux fois sur trois en tout, toujours parce que la raison déduite n'est pas annoncée.
+
+## Changement 2 : annoncer les déductions en toutes lettres
+
+Le prompt système demande maintenant, quand aucun commit, doc ou commentaire ne donne la
+raison, de l'écrire en toutes lettres (« raison déduite, non documentée »). C'est
+l'exigence de l'[ADR 0003](adr/0003-les-faits-avant-le-llm.md) : le lecteur doit savoir
+quand il lit une déduction.
+
+## Mesure 4 : `shop` trois fois de suite, en `medium`
+
+**3 sur 3 à chaque fois**, `shop-database` compris (une fois sur trois avant le changement).
+
+## Mesure 5 : golang/go, et ce qu'elle a révélé
+
+Lancée avant les corrections de performance : **0 cas réussi sur 3**. Deux défauts sont
+apparus.
+
+- **Côté learn-it.** Le scan prenait environ 60 s, dont 57 s pour le graphe des imports.
+  `learn-it serve` scannant avant de répondre, Claude Code abandonnait le serveur MCP et
+  répondait sans outils. Le scan prend maintenant environ 13 s : un index des paquets Go
+  remplace un parcours de tous les modules pour chaque import, et un cache des modules
+  analysés évite de les reparser. Le serveur MCP dispose aussi de 180 s pour démarrer.
+- **Côté modèle.** Une réponse cite `src/net/http/http2.go:80-96`, alors que le fichier a
+  94 lignes, et un commit `b13342af1c` qui n'existe pas. La vérification des preuves les a
+  repérés ; ce sont exactement les erreurs qu'elle doit attraper.
+
+## Mesure 6 : golang/go après les corrections
+
+Scan en 13,7 s au lieu de 60, et l'agent dispose de ses outils (18 à 22 tours par cas).
+**2 cas réussis sur 3** au premier essai (`go-http-default-handler`, `go-why-handlerfunc`).
+`go-review-http` échouait encore sur des chemins raccourcis dans les preuves des
+recommandations (`build_test.go:39`, `buildtool.go:368`) : les champs `evidence` des décisions
+et des recommandations, que le modèle remplit via le schéma structuré, exigent maintenant eux
+aussi le chemin complet. Le contre-essai a réussi `go-http-default-handler` puis s'est arrêté
+sur la limite de session de l'abonnement ; l'effet sur `go-review-http` reste à mesurer.
+
+## Mesure 7 : évaluation complète, 18 novembre 2026
+
+Tous les projets, effort `high`, avec les changements 1 et 2 et les corrections de
+performance. **12 cas réussis sur 14**, contre 6 sur 15 à la mesure 1 ; le cas GitHub est
+ignoré avec ce moteur. Coût : 5,62 $ d'équivalent API, 19 minutes.
+
+Les deux échecs (`express-review`, `go-review-http`) ont la même cause : des chemins encore
+abrégés dans les raisons et la synthèse des rapports `review` (`legacy.yml:33`,
+`table.go:87-113`), malgré le prompt et la description des champs.
+
+## Changement 3 : compléter les chemins sans ambiguïté
+
+Avant de vérifier une réponse non diffusée ou un enregistrement, learn-it réécrit un nom de fichier seul
+en chemin complet quand un seul fichier du projet porte ce nom, ou quand la réponse cite déjà
+en entier un seul des fichiers candidats. Dans tous les autres cas, rien n'est deviné et la
+citation reste signalée. Un chemin déjà présent dans l'inventaire, un chemin explicite
+`./fichier.py` et les exemples dans les blocs de code ne sont pas réécrits. Les blocs de code
+ne servent pas non plus à départager les candidats. La plage de lignes est ensuite vérifiée
+comme avant. En streaming API et dans `chat`, le texte déjà affiché reste intact et le bilan
+contrôle ses références originales ; utiliser `ask --no-stream` pour bénéficier de la complétion.
+
+Recalculés hors ligne sur les rapports enregistrés de la mesure 7 pendant la session du
+18 novembre, les deux cas réussissent. Ce rejeu ne constitue pas une nouvelle mesure du modèle.
+
+## Mesure 8 : confirmation sur Express et Go, 18 novembre 2026
+
+Mêmes réglages, avec le changement 3 : **4 cas réussis sur 6 lancés**. Cinq réponses sont
+évaluables ; la sixième est bloquée par le quota de l'abonnement. Coût : 2,43 $ d'équivalent
+API, environ 9 minutes.
+
+| Cas | Résultat | Observation |
+|---|---|---|
+| express-middleware | réussi | 18 citations vérifiées |
+| express-why-listen | réussi | 14 citations vérifiées |
+| express-review | échec | 41 citations vérifiées, mais le mot attendu « middleware » est absent |
+| go-http-default-handler | réussi | 18 citations vérifiées |
+| go-why-handlerfunc | réussi | 16 citations vérifiées |
+| go-review-http | indisponible | limite de session Claude, réinitialisation annoncée à 14 h 10 (Paris) |
+
+Les citations de la nouvelle revue Express passent, mais cela ne suffit pas à faire réussir
+le cas entier. La nouvelle revue Go n'a pas pu être évaluée. On ne peut donc annoncer ni
+14/14, ni une confirmation complète du changement 3. Les résultats bruts sont conservés
+localement dans `~/.cache/learn-it/evals/results-20261118-095401.json` (mesure 7) et
+`results-20261118-100523.json` (mesure 8).
+
 ## Ce qu'il reste à mesurer
 
-- **Le dépôt Go** (68 707 commits) : réessayer après le changement 1, et voir si le refus de
-  sécurité sur `net/http` se reproduit. Si oui, tester `claude-sonnet-5-5` sur ce projet.
-- **La variabilité** : relancer chaque cas deux ou trois fois avant de conclure qu'un
-  changement de prompt aide.
-- **L'effort** : comparer `medium` et `high` (`LEARN_IT_EFFORT`) en score et en coût.
-- **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur le vrai
-  moteur de learn-it.
+- **`go-review-http`** après la complétion des chemins : la confirmation a atteint le quota.
+- **`express-review`** : vérifier la variabilité du contenu après son échec sur « middleware ».
+- **La variabilité** sur tous les cas, pas seulement `shop` : deux ou trois mesures chacun.
+- **L'effort** : `medium` coûte 19 % de moins pour un cas raté sur 11 avant le changement 2 ;
+  à remesurer avec lui pour choisir le réglage par défaut.
+- **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores et comparer
+  la correction facultative par le modèle. La complétion locale des chemins est déjà
+  disponible sans clé ; la correction IA des preuves structurées reste à faire (#34).

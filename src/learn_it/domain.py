@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from learn_it.code_models import CodeSummary
+
+_AUXILIARY = {
+    "example", "examples", "sample", "samples", "demo", "demos", "doc", "docs",
+    "test", "tests", "testdata", "fixtures", "benchmarks",
+}
+
+
+def is_auxiliary_source(path: str) -> bool:
+    return any(part.lower() in _AUXILIARY for part in PurePosixPath(path).parts[:-1])
 
 
 class Commit(BaseModel):
@@ -26,6 +36,10 @@ class Technology(BaseModel):
     category: str
     source: str  # file where it was detected: the first piece of evidence
     adopted: Commit | None = None  # oldest commit that introduced it
+    # Older manifest the adoption was traced back to, when `source` replaced it (setup.py…).
+    adopted_from: str | None = None
+    # Only found under examples/, tests/, docs/ or fixtures/: not the project's own stack.
+    auxiliary: bool = Field(default_factory=lambda fields: is_auxiliary_source(fields["source"]))
     # Text searched in the history of `source` to date the adoption (None: the file's creation).
     needle: str | None = Field(default=None, exclude=True)
 
@@ -102,7 +116,8 @@ class Decision(BaseModel):
         default=None, description="Sha of the commit that introduced it, when found."
     )
     evidence: list[str] = Field(
-        description="References backing this record, `path:lines` or `commit <sha>`, each "
+        description="References backing this record: `path:lines` with the full path from the "
+        "project root (`src/pkg/timed.py:170`, never `timed.py:170`) or `commit <sha>`, each "
         "followed by what it shows."
     )
 
@@ -119,7 +134,12 @@ class Recommendation(BaseModel):
     effort: Literal["S", "M", "L"]
     impact: Literal["low", "medium", "high"]
     first_steps: list[str] = Field(default_factory=list)
-    evidence: list[str] = Field(min_length=1)
+    evidence: list[str] = Field(
+        min_length=1,
+        description="References backing this record: `path:lines` with the full path from the "
+        "project root (`src/pkg/timed.py:170`, never `timed.py:170`) or `commit <sha>`, each "
+        "followed by what it shows.",
+    )
 
     @model_validator(mode="after")
     def actionable(self) -> Recommendation:

@@ -124,6 +124,9 @@ def run_claude_code(
         if schema is not None:
             command += ["--json-schema", json.dumps(schema)]
         env = {key: value for key, value in os.environ.items() if key not in _API_CREDENTIALS}
+        # `learn-it serve` scans the project before answering: the first scan of a very large
+        # repository can outlast Claude Code's default MCP startup timeout.
+        env.setdefault("MCP_TIMEOUT", "180000")
         started = time.monotonic()
         try:
             proc = subprocess.run(

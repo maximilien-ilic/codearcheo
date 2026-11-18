@@ -1,6 +1,6 @@
 # Feuille de route
 
-Mise à jour le 17 novembre 2026. Chaque étape a son ticket GitHub, et les [jalons][milestones] regroupent ces tickets en montrant leur avancement.
+Mise à jour le 18 novembre 2026. Chaque étape a son ticket GitHub, et les [jalons][milestones] regroupent ces tickets en montrant leur avancement.
 
 ## Ce qui a été fait récemment
 
@@ -19,9 +19,11 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 - **17 novembre, après-midi : les décisions du propriétaire et une première mesure réelle.** Licence MIT (#24, la publication sur PyPI attendra la fin du projet), revue côté serveur sur l'abonnement Claude (#25, prête dès que le secret existe), et un moteur `claude-code` qui fait tourner learn-it sur l'abonnement. La première évaluation réelle est passée de 6 à 11 cas réussis sur 11 hors dépôt Go, après deux corrections : des chemins complets dans les citations et le barème ([docs/evaluation.md](evaluation.md)).
 
+- **18 novembre : Go mesuré et premières protections de #34.** La mesure complète atteint 12/14, Go compris. Les deux échecs concernent des chemins abrégés : une complétion locale les résout en rejeu hors ligne. Une confirmation donne 4/6, avec un échec de contenu sur Express et une revue Go bloquée par le quota. L'export ADR refuse désormais une décision sans preuve vérifiable, sauf option explicite, et signale chaque citation invalide. Le cache de l'analyse syntaxique évite aussi de reparcourir les fichiers déjà refusés ; l'analyse Go à chaud descend à 8,4 s ([mesures](scan-performance.md)).
+
 ## Où on en est
 
-Il reste six étapes ouvertes. Une seule est prioritaire : mesurer les vraies réponses ([#10]), car tout le comportement IA n'a été testé qu'avec un faux client. Deux étapes attendent une décision du propriétaire du projet ([#24], [#25]).
+Il reste quatre étapes ouvertes. La priorité est de finir les mesures de [#10] : confirmer les dernières corrections, mesurer la variabilité et les niveaux d'effort, puis le moteur API. [#34] est partiellement réalisé : complétion locale des chemins et protection de l'export ADR ; la correction par l'IA des preuves structurées attend la mesure du gain de la correction API. Les décisions du propriétaire sont prises : licence MIT, publication sur PyPI à la fin du projet ([#24]), et revue serveur sur l'abonnement Claude, active dès que son secret existe ([#25]).
 
 ## La suite
 
@@ -39,11 +41,11 @@ Avant d'ajouter des fonctionnalités, savoir ce que valent les réponses et ne p
 
 | Étape | Ticket | État |
 |---|---|---|
-| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | en cours : 11/11 hors Go |
+| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | en cours : 12/14, confirmation partielle 4/6 |
 | Vérifier les citations de chaque réponse avant de l'afficher | [#11] | fait |
 | Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] | fait |
 | Afficher coût et durée, régler modèle et effort par commande | [#13] | fait |
-| Corriger aussi les preuves des décisions et recommandations | [#34] | à faire, après #10 |
+| Corriger aussi les preuves des décisions et recommandations | [#34] | complétion locale et garde ADR faits ; correction IA après #10 |
 
 ### v0.3 — Retrouver le pourquoi
 
@@ -54,8 +56,8 @@ La raison d'un choix se trouve souvent dans la PR qui l'a introduit ou dans un A
 | Lire les pull requests et issues GitHub liées aux commits | [#14] | fait |
 | Reconnaître davantage d'écosystèmes : Java, Ruby, PHP, .NET, infrastructure | [#15] | fait |
 | Partir des ADR déjà présents dans le projet analysé | [#16] | fait |
-| Dater une dépendance à travers les migrations de manifeste | [#32] | à faire |
-| Distinguer la stack du projet de celle de ses exemples et tests | [#33] | à faire |
+| Dater une dépendance à travers les migrations de manifeste | [#32] | fait |
+| Distinguer la stack du projet de celle de ses exemples et tests | [#33] | fait |
 
 ### v0.4 — Faire vivre les décisions
 

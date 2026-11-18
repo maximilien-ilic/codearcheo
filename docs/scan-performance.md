@@ -82,3 +82,18 @@ datation et d'activité sont remplacés pour la référence.
 Les profils sont encore strictement identiques sur les trois paires. Le dixième
 appel Git lit l'origine du projet : il n'ajoute pas de parcours d'historique.
 La mesure complète est `benchmarks/git-eacee88-integrated.json`.
+
+## Analyse Go avec le cache chaud, 18 novembre 2026
+
+Sur golang/go au SHA `cc2737b0ca9c8a1a0d1fcc26142277e27152a1f2`, l'analyse
+syntaxique à chaud (`code.analyze` avec son inventaire, sans le reste du profil) passe
+de 12,5 s à **8,4–8,6 s** sur la même machine. Ce temps n'est pas celui du scan complet.
+Le graphe reste identique à celui de la version précédente, à froid comme à chaud :
+3 749 modules, 8 259 fichiers ignorés, mêmes symboles et imports résolus.
+
+Les refus déterministes de parsing, notamment le dépassement du budget de nœuds sur
+neuf gros fichiers générés, sont désormais mis en cache avec leur motif. Les modules
+déjà sérialisés ne sont plus sérialisés une seconde fois, et la sélection de la racine
+Go utilise un préfixe de chemin plutôt qu'un parcours des parents. Le cache dépend
+toujours du contenu et des versions des parseurs. Il occupe encore environ 235 Mo :
+sa réduction reste une optimisation possible.

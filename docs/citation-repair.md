@@ -11,6 +11,15 @@ de `ask`, `why` et `overview` lorsque des références sont invalides. Une répo
 référence ne déclenche pas d'invention de sources. Les décisions et recommandations
 structurées sont vérifiées et signalées, sans correction indépendante de leurs enregistrements.
 
+Une complétion locale précède désormais cette étape pour les réponses non diffusées et
+les preuves structurées : `timed.py:170` devient le chemin complet si l'inventaire ou les
+chemins déjà cités lèvent l'ambiguïté. Elle préserve les chemins existants à la racine,
+les chemins explicites `./…` et les blocs de code ; les lignes sont ensuite vérifiées.
+Elle ne consomme aucun appel IA. En streaming API et dans `chat`, le corps déjà affiché
+reste intact et ses références originales sont contrôlées. Les métriques de correction IA
+comparent la réponse après cette complétion à la proposition du modèle ; elles ne mesurent
+pas séparément le gain de la complétion locale.
+
 Le modèle reçoit la réponse initiale, les références invalides, quelques extraits bornés de
 fichiers autorisés et des commits récents. Aucun fichier ignoré, lien ou secret connu n'est
 ajouté au contexte. Tous les textes du dépôt sont marqués comme données non fiables. La

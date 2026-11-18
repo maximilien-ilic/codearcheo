@@ -69,3 +69,61 @@ def test_unknown_standalone_extensions_require_an_explicit_project_path(project)
     report = verify("`schema.custom:1` et `./schema.custom:1`", project.root)
     assert report.ok
     assert [citation.ref for citation in report.citations] == ["`./schema.custom:1`"]
+
+
+def test_unique_bare_file_names_are_completed_and_ambiguous_ones_left(project):
+    from learn_it.analyzers import inventory
+    from learn_it.evidence import complete_paths
+
+    (project.root / "pkg").mkdir()
+    (project.root / "pkg" / "app.py").write_text("x = 1\n")  # now two app.py
+    files = inventory.list_files(project.root)
+
+    assert complete_paths("- ci.yml:1 et Dockerfile:1", files) == (
+        "- .github/workflows/ci.yml:1 et Dockerfile:1"
+    )
+    assert complete_paths("app.py:1", files) == "app.py:1"  # ambiguous: not guessed
+    assert complete_paths("`.github/workflows/ci.yml:1`", files) == "`.github/workflows/ci.yml:1`"
+
+
+def test_an_ambiguous_name_is_completed_from_a_path_the_text_cites_in_full(project):
+    from learn_it.analyzers import inventory
+    from learn_it.evidence import complete_paths
+
+    for folder in ("pkg", "other"):
+        (project.root / folder).mkdir()
+        (project.root / folder / "helper.py").write_text("x = 1\n")
+    files = inventory.list_files(project.root)
+    text = "Voir pkg/helper.py:1. Plus loin : helper.py:1."
+
+    assert complete_paths(text, files) == "Voir pkg/helper.py:1. Plus loin : pkg/helper.py:1."
+
+
+@pytest.mark.parametrize("reference", ["app.py:1", "`app.py:1`", "./app.py:1"])
+def test_a_root_path_is_never_redirected_to_a_different_file(reference):
+    from learn_it.evidence import complete_paths
+
+    text = f"Voir pkg/app.py:1. Puis {reference}."
+    assert complete_paths(text, ["app.py", "pkg/app.py"]) == text
+
+
+def test_an_explicit_relative_path_is_not_relocated():
+    from learn_it.evidence import complete_paths
+
+    text = "Voir `./helper.py:1` et ./helper.py:1."
+    assert complete_paths(text, ["pkg/helper.py"]) == text
+
+
+def test_fenced_examples_cannot_disambiguate_a_citation():
+    from learn_it.evidence import complete_paths
+
+    text = "```text\n`pkg/helper.py`\n```\nVoir helper.py:1."
+    assert complete_paths(text, ["pkg/helper.py", "other/helper.py"]) == text
+
+
+def test_path_completion_does_not_make_invalid_line_ranges_pass(project):
+    from learn_it.evidence import complete_paths
+
+    text = complete_paths("ci.yml:999", [".github/workflows/ci.yml"])
+    assert text == ".github/workflows/ci.yml:999"
+    assert not verify(text, project.root).ok

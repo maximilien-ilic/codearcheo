@@ -12,7 +12,7 @@ from pathlib import Path, PurePosixPath
 
 import yaml
 
-from learn_it.domain import Technology
+from learn_it.domain import Technology, is_auxiliary_source
 
 # Dependencies worth calling out because they are architectural choices, not utilities.
 # Any other dependency found in a manifest is reported as a plain "library".
@@ -153,11 +153,6 @@ CATEGORIES = [
     "library",
 ]
 _VENDORED = {"node_modules", "vendor", "third_party"}
-# Manifests in these folders describe examples, tests or docs, not the project itself.
-_AUXILIARY = {
-    "example", "examples", "sample", "samples", "demo", "demos", "doc", "docs",
-    "test", "tests", "testdata", "fixtures", "benchmarks",
-}
 _SELF_DECLARING = {"pyproject.toml", "package.json", "Cargo.toml", "go.mod"}
 _REQUIREMENT = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
 _REQUIREMENTS_FILE = re.compile(r"^requirements.*\.txt$")
@@ -294,8 +289,7 @@ MANIFESTS: dict[str, Callable[[Path], list[str]]] = {
 def _priority(path: str) -> tuple[bool, int, str]:
     """Main manifests first: the root, then shallower paths, auxiliary folders last."""
     parts = PurePosixPath(path).parts
-    auxiliary = bool(_AUXILIARY & {part.lower() for part in parts[:-1]})
-    return auxiliary, len(parts), path
+    return is_auxiliary_source(path), len(parts), path
 
 
 def _key(parser: Callable[[Path], list[str]], name: str) -> tuple[Callable, str]:
@@ -378,7 +372,10 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
 
     def add(name: str, category: str, source: str, needle: str | None = None) -> None:
         if name not in found:  # first source wins
-            found[name] = Technology(name=name, category=category, source=source, needle=needle)
+            # Main sources are read first, so an auxiliary first source means no main one.
+            found[name] = Technology(
+                name=name, category=category, source=source, needle=needle,
+            )
 
     # The root manifest must win over an example or a test fixture declaring the same package.
     ordered = [

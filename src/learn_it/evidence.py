@@ -131,13 +131,50 @@ def find_matches(text: str) -> list[CitationMatch]:
     ]
 
 
+def complete_paths(text: str, files: list[str]) -> str:
+    """Rewrite `timed.py:170` as `src/pkg/timed.py:170` when exactly one project file has
+    that name, or when the text itself cites exactly one of the files of that name in full.
+    Other ambiguous names are left alone: guessing would make a false citation pass."""
+    by_name: dict[str, list[str]] = {}
+    for path in files:
+        by_name.setdefault(PurePosixPath(path).name, []).append(path)
+    allowed = set(files)
+    named = {c.path for c in find_citations(text) if c.path and "/" in c.path}
+    protected = fenced_spans(text)
+    named |= {
+        match[1].split(":", 1)[0].removeprefix("./")
+        for match in _CODE_SPAN.finditer(text)
+        if not any(match.start() < end and match.end() > start for start, end in protected)
+    }
+    parts, last = [], 0
+    for match in sorted(find_matches(text), key=lambda m: m.start):
+        path = match.citation.path
+        if not path or path in allowed or "/" in path or match.start < last:
+            continue
+        if match.citation.ref.lstrip("`").startswith("./"):
+            continue
+        candidates = by_name.get(path, [])
+        if len(candidates) > 1:
+            candidates = [candidate for candidate in candidates if candidate in named]
+        if len(candidates) != 1 or candidates[0] == path:
+            continue
+        cited = text[match.start:match.end].replace(path, candidates[0], 1)
+        parts += [text[last:match.start], cited]
+        last = match.end
+    return "".join(parts) + text[last:]
+
+
 def mentioned_paths(text: str) -> set[str]:
     """Paths written as code spans, with or without lines: `app.py`, `app.py:3`."""
     return {span.split(":", 1)[0].removeprefix("./") for span in _CODE_SPAN.findall(text)}
 
 
 def verify(text: str, root: Path) -> EvidenceReport:
-    report = EvidenceReport(find_citations(text))
+    return verify_citations(find_citations(text), root)
+
+
+def verify_citations(citations: list[Citation], root: Path) -> EvidenceReport:
+    report = EvidenceReport(list(dict.fromkeys(citations)))
     allowed = set(inventory.list_files(root)) if any(c.path for c in report.citations) else set()
     for citation in report.citations:
         if problem := _problem(citation, root, allowed):
@@ -165,6 +202,8 @@ def _problem(citation: Citation, root: Path, allowed: set[str]) -> str | None:
         except (git.GitError, FileNotFoundError):
             return "commit introuvable"
         return None
+    if citation.path is None:
+        return "format de référence non reconnu"
     path = citation.path or ""
     if path not in allowed or not inventory.is_safe_path(root, path) or not (root / path).is_file():
         return "fichier introuvable"
