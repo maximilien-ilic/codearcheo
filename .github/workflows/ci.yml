@@ -10,7 +10,9 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # On a PR, a new push makes the previous run useless. On master, every merged commit
+  # keeps its own result: cancelled runs showed up as failures after quick merges.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
