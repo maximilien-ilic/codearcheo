@@ -15,6 +15,7 @@ from learn_it import git
 from learn_it.analyzers import inventory
 
 _FILE = re.compile(r"`(?P<path>[^`\r\n:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
+_INLINE_CODE = re.compile(r"(?<!`)(`+)(?!`)[^`\r\n]*\1(?!`)")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
@@ -109,7 +110,13 @@ def fenced_spans(text: str) -> list[tuple[int, int]]:
 
 def find_matches(text: str) -> list[CitationMatch]:
     """Return original citation spans outside fenced source examples and diagrams."""
-    explicit = list(_FILE.finditer(text))
+    explicit = []
+    for span in _INLINE_CODE.finditer(text):
+        # Match the citation within its paired delimiters. Keep one backtick at
+        # each end so replacements preserve any surrounding backticks.
+        extra = len(span[1]) - 1
+        if match := _FILE.fullmatch(text, span.start() + extra, span.end() - extra):
+            explicit.append(match)
     # A space inside a quoted path can otherwise make its suffix look like a bare citation.
     bare = [
         match for match in _BARE_FILE.finditer(text)
@@ -129,6 +136,7 @@ def find_matches(text: str) -> list[CitationMatch]:
     matches += [
         CitationMatch(m.start(), m.end(), Citation(ref=m[0], sha=m["sha"].lower()))
         for m in _COMMIT.finditer(text)
+        if not any(span.start() <= m.start() < span.end() for span in explicit)
     ]
     protected = fenced_spans(text)
     return [
