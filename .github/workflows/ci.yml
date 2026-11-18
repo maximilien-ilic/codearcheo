@@ -9,9 +9,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  # On a PR, a new push makes the previous run useless. On master, every merged commit
-  # keeps its own result: cancelled runs showed up as failures after quick merges.
+  # A shared group can replace a pending run even when cancellation is disabled.
+  # Give each push its own group and keep grouping updates to the same PR.
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
