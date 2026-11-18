@@ -235,3 +235,21 @@ def test_a_dependency_kept_in_a_renamed_manifest_is_not_a_migration(tmp_path):
     assert techs["FastAPI"].source == "pyproject.toml"
     assert techs["FastAPI"].adopted.subject == "Adopt FastAPI at the root"
     assert techs["FastAPI"].adopted_from is None
+
+
+def test_adoption_is_traced_when_the_old_manifest_is_archived(tmp_path):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("fastapi\n")
+    _commit(tmp_path, "Adopt FastAPI", "2020-01-01T10:00:00+00:00")
+    requirements.rename(tmp_path / "requirements.txt.bak")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "app"\ndependencies = ["fastapi"]\n'
+    )
+    _commit(tmp_path, "Migrate to pyproject.toml", "2023-01-18T10:00:00+00:00")
+
+    fastapi = next(t for t in scan(Project(tmp_path, "app")).technologies if t.name == "FastAPI")
+
+    assert fastapi.source == "pyproject.toml"
+    assert fastapi.adopted.subject == "Adopt FastAPI"
+    assert fastapi.adopted_from == "requirements.txt"
