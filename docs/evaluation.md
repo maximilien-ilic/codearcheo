@@ -215,6 +215,24 @@ le cas entier. La nouvelle revue Go n'a pas pu être évaluée. On ne peut donc 
 localement dans `~/.cache/learn-it/evals/results-20261118-095401.json` (mesure 7) et
 `results-20261118-100523.json` (mesure 8).
 
+## Changement 4 : la revue commence par l'architecture
+
+La mesure 8 a révélé une revue d'Express qui ne parlait jamais du modèle de middlewares,
+la décision centrale du framework, et se consacrait à Dependabot, à la CI et au lint. La
+consigne de `review` demande maintenant de traiter d'abord les décisions qui structurent
+l'architecture et le flux principal, puis l'infrastructure et l'outillage.
+
+## Mesure 9 : les trois revues, 18 novembre 2026
+
+`--case` sur les trois cas `review`, effort `high` : **2 réussis sur 3**.
+
+- `express-review` réussit : la revue traite le modèle de middlewares.
+- `shop-review-decisions` réussit.
+- `go-review-http` échoue toujours sur « cite `src/net/http/…` ». Ce cas demande une revue
+  de tout golang/go (68 707 commits) et exige qu'elle cite `net/http` : rien n'oblige une
+  revue globale à choisir ce paquet parmi des milliers. L'attente est à revoir, ou `review`
+  doit accepter un périmètre (`--path src/net/http`). Le cas n'a pas été modifié pour passer.
+
 ## Ce qu'il reste à mesurer
 
 - **`go-review-http`** après la complétion des chemins : la confirmation a atteint le quota.
