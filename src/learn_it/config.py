@@ -11,6 +11,10 @@ def _default_cache_dir() -> Path:
     return Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "learn-it"
 
 
+def cache_dir_from_env() -> Path:
+    return Path(os.environ.get("LEARN_IT_CACHE_DIR", _default_cache_dir()))
+
+
 @dataclass(frozen=True)
 class Settings:
     model: str = "claude-opus-5-5"
@@ -69,7 +73,7 @@ class Settings:
             effort=effort if effort is not None else env("LEARN_IT_EFFORT", cls.effort),
             language=env("LEARN_IT_LANG", cls.language),
             max_iterations=int(env("LEARN_IT_MAX_ITERATIONS", cls.max_iterations)),
-            cache_dir=Path(env("LEARN_IT_CACHE_DIR", _default_cache_dir())),
+            cache_dir=cache_dir_from_env(),
             budget=budget
             if budget is not None
             else (int(env("LEARN_IT_BUDGET")) if env("LEARN_IT_BUDGET") else None),
