@@ -215,3 +215,23 @@ def test_a_removed_dependency_is_not_a_manifest_migration(tmp_path):
     assert techs["FastAPI"].adopted.subject == "Migrate click and adopt FastAPI"
     assert techs["FastAPI"].adopted_from is None
     assert techs["Click"].adopted.subject == "Remove prototype"
+
+
+def test_a_dependency_kept_in_a_renamed_manifest_is_not_a_migration(tmp_path):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    requirements = tmp_path / "requirements.txt"
+    requirements.write_text("fastapi\n")
+    _commit(tmp_path, "Adopt FastAPI in a component", "2020-01-01T10:00:00+00:00")
+    component = tmp_path / "component"
+    component.mkdir()
+    requirements.rename(component / requirements.name)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "app"\ndependencies = ["fastapi"]\n'
+    )
+    _commit(tmp_path, "Adopt FastAPI at the root", "2023-01-18T10:00:00+00:00")
+
+    techs = {t.name: t for t in scan(Project(tmp_path, "app")).technologies}
+
+    assert techs["FastAPI"].source == "pyproject.toml"
+    assert techs["FastAPI"].adopted.subject == "Adopt FastAPI at the root"
+    assert techs["FastAPI"].adopted_from is None

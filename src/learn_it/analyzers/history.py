@@ -199,11 +199,12 @@ def trace_migrations(
             touched = changes[commit.sha]
             if not any(new == path and status in "ARC" for status, _, new in touched):
                 break  # the manifest already existed: this commit really adopted it
+            # A rename to another path can leave the dependency in that other manifest.
             legacy = {
-                old for status, old, _ in touched
+                old for status, old, new in touched
                 if old != path and status in "DMR" and _LEGACY.search(old)
                 and tech.needle in contents(f"{commit.sha}^", old)
-                and (status != "M" or tech.needle not in contents(commit.sha, old))
+                and (status == "D" or new == path or tech.needle not in contents(commit.sha, new))
             }
             earlier = []
             for candidate in legacy:
