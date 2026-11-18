@@ -143,3 +143,55 @@ def test_fixture_package_name_does_not_hide_primary_dependency(tmp_path):
         tmp_path, ["package.json", "tests/fixtures/react/package.json"],
     )}
     assert "React" in names
+
+
+def test_technologies_only_found_in_examples_are_auxiliary(tmp_path):
+    """Flask: Redis and Celery only come from examples/celery/ (#33)."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "flask"\ndependencies = ["click>=8.1"]\n'
+    )
+    example = tmp_path / "examples" / "celery"
+    example.mkdir(parents=True)
+    (example / "requirements.txt").write_text("celery\nclick\nredis\n")
+    files = ["examples/celery/requirements.txt", "pyproject.toml"]
+
+    auxiliary = {t.name: t.auxiliary for t in stack.detect(tmp_path, files)}
+
+    assert auxiliary == {"Click": False, "Celery": True, "Redis": True}
+
+
+def test_adoption_is_traced_back_through_manifest_migrations(tmp_path):
+    """Flask: Click is older than the switch to pyproject.toml (#32)."""
+    _git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "setup.py").write_text('setup(install_requires=["click"])\n')
+    _commit(tmp_path, "Use click for the CLI", "2014-05-01T10:00:00+00:00")
+    (tmp_path / "setup.py").unlink()
+    (tmp_path / "setup.cfg").write_text("[options]\ninstall_requires =\n    click>=7\n")
+    _commit(tmp_path, "Move metadata to setup.cfg", "2019-03-01T10:00:00+00:00")
+    (tmp_path / "setup.cfg").unlink()
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "app"\ndependencies = ["click>=8", "rich"]\n'
+    )
+    _commit(tmp_path, "switch to pyproject.toml", "2023-01-18T10:00:00+00:00")
+
+    techs = {t.name: t for t in scan(Project(tmp_path, "app")).technologies}
+
+    assert techs["Click"].adopted.subject == "Use click for the CLI"
+    assert techs["Click"].adopted_from == "setup.py"
+    assert techs["Click"].source == "pyproject.toml"
+
+
+def test_a_dependency_new_with_its_manifest_keeps_that_date(tmp_path):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "requirements.txt").write_text("requests\n")
+    _commit(tmp_path, "First version", "2020-01-01T10:00:00+00:00")
+    (tmp_path / "requirements.txt").unlink()
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "app"\ndependencies = ["requests", "fastapi"]\n'
+    )
+    _commit(tmp_path, "switch to pyproject.toml and add FastAPI", "2023-01-18T10:00:00+00:00")
+
+    fastapi = next(t for t in scan(Project(tmp_path, "app")).technologies if t.name == "FastAPI")
+
+    assert fastapi.adopted.subject == "switch to pyproject.toml and add FastAPI"
+    assert fastapi.adopted_from is None

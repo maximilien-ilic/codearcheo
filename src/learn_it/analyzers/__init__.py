@@ -17,7 +17,8 @@ def scan(project: Project) -> ProjectProfile:
 
     facts: dict[str, Any] = {}
     if git.is_repo(root):
-        history.date_technologies(root, technologies)
+        created_by = history.date_technologies(root, technologies)
+        history.trace_migrations(root, technologies, created_by)
         commits = history.recent_commits(root)
         count, contributors, first = history.activity(root)
         facts = {

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import tempfile
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -123,6 +125,16 @@ class Store:
             return _decisions.validate_json(path.read_text(encoding="utf-8"))
         except (FileNotFoundError, ValidationError):
             return []
+
+    def load_json(self, name: str) -> Any:
+        """A cache file, or None when it is missing or unreadable."""
+        try:
+            return json.loads(self._path(name).read_text(encoding="utf-8"))
+        except (FileNotFoundError, ValueError):
+            return None
+
+    def save_json(self, name: str, data: Any) -> Path:
+        return self._write(name, json.dumps(data, ensure_ascii=False))
 
     def save_report(self, name: str, markdown: str) -> Path:
         return self._write(f"{name}.md", markdown)

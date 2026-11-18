@@ -192,6 +192,37 @@ def test_interactive_chat_saves_full_transcript_and_closes(project, monkeypatch)
     assert closed == [True]
 
 
+def test_chat_does_not_rewrite_citations_after_the_body_was_streamed(project, monkeypatch):
+    original = "Voir ci.yml:1."
+    chunks, saved = [], []
+
+    class FakeAgent:
+        def __init__(self, *args, **kwargs):
+            self.transcript = []
+
+        def ask(self, question, *, on_text, **kwargs):
+            self.transcript.append(("Claude", original))
+            on_text(original)
+            return original
+
+        def markdown(self):
+            saved.append(self.transcript[-1][1])
+            return self.transcript[-1][1]
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(chat, "ConversationAgent", FakeAgent)
+    monkeypatch.setattr(chat, "stream_text", chunks.append)
+    session = Session(project, scan(project), Store(project.root), Settings())
+    questions = iter(["question", "/save", "/exit"])
+    chat.interactive(session, read=lambda: next(questions))
+
+    assert "".join(chunks) == saved[0] + "\n"
+    assert saved[0].startswith(original + "\n\n---")
+    assert "1 introuvable(s)" in saved[0]
+
+
 def test_interrupted_stream_reports_usage_as_incomplete_and_closes(monkeypatch):
     closed = []
 

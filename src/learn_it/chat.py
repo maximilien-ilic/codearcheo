@@ -51,7 +51,7 @@ def interactive(session: Session, *, read: Callable[[], str] | None = None) -> N
                 render.err.print("/save reste disponible pour enregistrer, /exit pour terminer.")
                 continue
             if isinstance(answer, str):
-                checked = session.checked(answer)
+                checked = session.checked(answer, normalize_paths=False)
                 stream_text(checked[len(answer.rstrip()):])
                 agent.transcript[-1] = ("Claude", checked)
             stream_text("\n")

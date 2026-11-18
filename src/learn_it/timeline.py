@@ -75,8 +75,9 @@ def compare_profiles(
     before: ProjectProfile, after: ProjectProfile,
     old_decisions: list[Decision] | None = None, new_decisions: list[Decision] | None = None,
 ) -> Changes:
-    old = {x.name for x in before.technologies}
-    new = {x.name for x in after.technologies}
+    # A technology only used by examples or tests is not a change of the project's stack.
+    old = {x.name for x in before.technologies if not x.auxiliary}
+    new = {x.name for x in after.technologies if not x.auxiliary}
     changes = Changes(
         before.head or "sans-git", after.head or "travail-en-cours",
         sorted(new - old), sorted(old - new),
