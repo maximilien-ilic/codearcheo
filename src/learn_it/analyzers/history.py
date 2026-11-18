@@ -204,7 +204,10 @@ def trace_migrations(
                 old for status, old, new in touched
                 if old != path and status in "DMR" and _LEGACY.search(old)
                 and tech.needle in contents(f"{commit.sha}^", old)
-                and (status == "D" or new == path or tech.needle not in contents(commit.sha, new))
+                and (
+                    status == "D" or new == path or not _LEGACY.search(new)
+                    or tech.needle not in contents(commit.sha, new)
+                )
             }
             earlier = []
             for candidate in legacy:
