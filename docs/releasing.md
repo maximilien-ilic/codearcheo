@@ -36,6 +36,12 @@ dans un nouveau runner. Il installe les deux paquets depuis cet artefact et refa
 local. La publication dépend de cette vérification, qui teste aussi le transfert des fichiers
 entre les jobs. Seul le job final `publish` possède la permission OIDC.
 
+Cette préparation complète a été vérifiée sur GitHub le 18 novembre 2026 :
+[exécution 44306945361](https://github.com/maximilien-ilic/learn-it/actions/runs/44306945361),
+construction et vérification des archives réussies, publication ignorée. Le
+[relevé](benchmarks/release-preparation-20261118.json) conserve le commit testé et
+l'empreinte de l'artefact. Cette validation ne constitue pas une publication PyPI.
+
 ## Configurer Trusted Publishing
 
 Depuis le compte PyPI du propriétaire, ajouter un éditeur GitHub avec ces valeurs :

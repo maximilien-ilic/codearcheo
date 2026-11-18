@@ -1,0 +1,21 @@
+{
+  "repository": "maximilien-ilic/learn-it",
+  "run_id": 44306945361,
+  "url": "https://github.com/maximilien-ilic/learn-it/actions/runs/44306945361",
+  "source_sha": "8b20b744177e185ce3ea5643c5b4b84493ba647e",
+  "event": "workflow_dispatch",
+  "conclusion": "success",
+  "jobs": {
+    "build": "success",
+    "verify-artifacts": "success",
+    "publish": "skipped"
+  },
+  "artifacts": [
+    {
+      "name": "distributions",
+      "id": 14428417070,
+      "size_in_bytes": 336935,
+      "digest": "sha256:e23fa40de3e3da86bfbc1377db38d78676811cd3bb165c09cde2111b3fcee0ef"
+    }
+  ]
+}
