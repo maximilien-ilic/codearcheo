@@ -138,7 +138,8 @@ def date_technologies(root: Path, technologies: list[Technology]) -> dict[str, s
 
 # Manifests a project commonly migrates away from: where a dependency may have lived before.
 _LEGACY = re.compile(
-    r"(^|/)(setup\.py|setup\.cfg|Pipfile|requirements[^/]*\.txt|package\.json|Cargo\.toml"
+    r"(^|/)(pyproject\.toml|setup\.py|setup\.cfg|Pipfile|requirements[^/]*\.txt"
+    r"|package\.json|Cargo\.toml"
     r"|go\.mod|pom\.xml|build\.gradle(\.kts)?|Gemfile|composer\.json)$"
 )
 
@@ -171,24 +172,38 @@ def trace_migrations(
     for the dependency in the manifests that commit deleted, renamed or rewrote.
     """
     changes: dict[str, list[tuple[str, str, str]]] = {}
+    manifests: dict[tuple[str, str], str] = {}
+
+    def contents(revision: str, path: str) -> str:
+        key = revision, path
+        if key not in manifests:
+            try:
+                manifests[key] = git.run(root, "show", "--no-textconv", f"{revision}:{path}")
+            except git.GitError:
+                manifests[key] = ""
+        return manifests[key]
+
     for tech in technologies:
         if tech.category == "library" or tech.adopted is None or not tech.needle:
             continue
         # Only a dependency manifest can replace an older one, and only when it was created
         # by the adopting commit: otherwise no extra git call is spent on this technology.
-        name = PurePosixPath(tech.source).name
-        if name != "pyproject.toml" and not _LEGACY.search(name):
+        if not _LEGACY.search(tech.source):
             continue
         if created_by.get(tech.source) != tech.adopted.sha:
             continue
         commit, path = tech.adopted, tech.source
         for _ in range(max_hops):
-            touched = changes.setdefault(commit.sha, _changes(root, commit.sha))
+            if commit.sha not in changes:
+                changes[commit.sha] = _changes(root, commit.sha)
+            touched = changes[commit.sha]
             if not any(new == path and status in "ARC" for status, _, new in touched):
                 break  # the manifest already existed: this commit really adopted it
             legacy = {
-                old for status, old, new in touched
-                if old != path and status in "DMRC" and _LEGACY.search(old)
+                old for status, old, _ in touched
+                if old != path and status in "DMR" and _LEGACY.search(old)
+                and tech.needle in contents(f"{commit.sha}^", old)
+                and (status != "M" or tech.needle not in contents(commit.sha, old))
             }
             earlier = []
             for candidate in legacy:
@@ -201,7 +216,7 @@ def trace_migrations(
                     earlier.append((found[-1], candidate))
             if not earlier:
                 break
-            commit, path = min(earlier, key=lambda item: item[0].date)
+            commit, path = min(earlier, key=lambda item: (item[0].date, item[1]))
             tech.adopted, tech.adopted_from = commit, path
 
 

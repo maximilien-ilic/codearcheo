@@ -90,3 +90,25 @@ def test_invalid_evidence_is_listed_in_the_exported_adr(tmp_path, decision):
 
     text = path.read_text()
     assert "## Preuves non vérifiées" in text and "database.py:99" in text
+
+
+def test_unrecognized_evidence_is_flagged_even_with_a_valid_citation(tmp_path, decision):
+    mixed = decision.model_copy(update={
+        "evidence": ["`database.py:1`", "commit deadbe"],
+        "introduced_in": "unknown",
+    })
+
+    (path,) = export_decisions(tmp_path, [mixed], tmp_path / "docs" / "adr")
+
+    warnings = path.read_text().split("## Preuves non vérifiées")[1]
+    assert "commit deadbe" in warnings
+    assert "commit unknown" in warnings
+
+
+def test_allow_unproven_warns_when_the_evidence_list_is_empty(tmp_path, decision):
+    empty = decision.model_copy(update={"evidence": []})
+
+    (path,) = export_decisions(tmp_path, [empty], tmp_path / "docs" / "adr",
+                               allow_unproven=True)
+
+    assert "## Preuves non vérifiées" in path.read_text()

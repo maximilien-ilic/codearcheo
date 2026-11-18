@@ -170,7 +170,11 @@ def mentioned_paths(text: str) -> set[str]:
 
 
 def verify(text: str, root: Path) -> EvidenceReport:
-    report = EvidenceReport(find_citations(text))
+    return verify_citations(find_citations(text), root)
+
+
+def verify_citations(citations: list[Citation], root: Path) -> EvidenceReport:
+    report = EvidenceReport(list(dict.fromkeys(citations)))
     allowed = set(inventory.list_files(root)) if any(c.path for c in report.citations) else set()
     for citation in report.citations:
         if problem := _problem(citation, root, allowed):
@@ -198,6 +202,8 @@ def _problem(citation: Citation, root: Path, allowed: set[str]) -> str | None:
         except (git.GitError, FileNotFoundError):
             return "commit introuvable"
         return None
+    if citation.path is None:
+        return "format de référence non reconnu"
     path = citation.path or ""
     if path not in allowed or not inventory.is_safe_path(root, path) or not (root / path).is_file():
         return "fichier introuvable"
