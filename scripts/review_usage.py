@@ -98,9 +98,12 @@ def timestamp(value: str) -> datetime:
 
 def archived_usage(repo: str, run: dict, request=github) -> dict[str, Any] | None:
     name = f"claude-review-usage-{run['id']}-{run['run_attempt']}"
-    payload = request(
-        f"repos/{repo}/actions/runs/{run['id']}/artifacts?" + urlencode({"name": name})
-    )
+    try:
+        payload = request(
+            f"repos/{repo}/actions/runs/{run['id']}/artifacts?" + urlencode({"name": name})
+        )
+    except subprocess.SubprocessError:
+        return None
     artifacts = [
         item for item in payload["artifacts"] if item["name"] == name and not item["expired"]
     ]
@@ -171,9 +174,19 @@ def report(
     for initial in runs:
         for attempt in range(1, initial["run_attempt"] + 1):
             run = {**initial, "run_attempt": attempt}
-            jobs = request(
-                f"repos/{repo}/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs"
-            )
+            sample = {
+                "run_id": run["id"], "run_attempt": run["run_attempt"],
+                "created_at": run["created_at"], "model_started": None,
+                "missing_token": False, "api_equivalent_usd": None,
+            }
+            samples.append(sample)
+            try:
+                jobs = request(
+                    f"repos/{repo}/actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs"
+                )
+            except subprocess.SubprocessError:
+                standard_runners = False
+                continue
             steps = [step for job in jobs["jobs"] for step in job.get("steps", [])]
             standard_runners &= bool(jobs["jobs"]) and all(
                 set(job.get("labels", [])) & STANDARD_LINUX for job in jobs["jobs"]
@@ -202,16 +215,7 @@ def report(
             elif started:
                 usage = archived_usage(repo, run, request)
                 cost = usage["api_equivalent_usd"] if usage else None
-            samples.append(
-                {
-                    "run_id": run["id"],
-                    "run_attempt": run["run_attempt"],
-                    "created_at": run["created_at"],
-                    "model_started": started,
-                    "missing_token": no_token,
-                    "api_equivalent_usd": cost,
-                }
-            )
+            sample.update(model_started=started, missing_token=no_token, api_equivalent_usd=cost)
     observed_days = (now - start).total_seconds() / 86400
     projected = len(runs) * 30 / observed_days
     active = [sample for sample in samples if sample["model_started"] is True]
