@@ -106,7 +106,11 @@ def archived_usage(repo: str, run: dict, request=github) -> dict[str, Any] | Non
     ]
     if len(artifacts) != 1 or artifacts[0]["size_in_bytes"] > MAX_ARTIFACT_BYTES:
         return None
-    data = request(f"repos/{repo}/actions/artifacts/{artifacts[0]['id']}/zip", binary=True)
+    try:
+        data = request(f"repos/{repo}/actions/artifacts/{artifacts[0]['id']}/zip", binary=True)
+    except subprocess.SubprocessError:
+        # An expired or otherwise unavailable download only affects this sample.
+        return None
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             info = archive.getinfo("usage.json")
@@ -180,14 +184,14 @@ def report(
                 if step["name"] == "Revue Claude"
                 or step["name"].startswith("Run anthropics/claude-code-action@")
             ]
-            started = (
-                any(
-                    step.get("started_at") and step.get("conclusion") != "skipped"
-                    for step in model_steps
-                )
-                if model_steps
-                else None
-            )
+            started = None
+            if any(
+                step.get("started_at") and step.get("conclusion") != "skipped"
+                for step in model_steps
+            ):
+                started = True
+            elif model_steps and all(step.get("conclusion") == "skipped" for step in model_steps):
+                started = False
             no_token = any(
                 step["name"] == "Secret absent" and step.get("conclusion") == "success"
                 for step in steps

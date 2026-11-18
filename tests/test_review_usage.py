@@ -2,6 +2,7 @@
 
 import io
 import json
+import subprocess
 import zipfile
 from datetime import UTC, datetime, timedelta
 
@@ -127,6 +128,36 @@ def test_a_missing_review_artifact_cannot_bias_the_cost_average_downward():
     assert measured["known_api_equivalent_subtotal_usd"] == 0.25
     assert measured["usage_missing"] == 1
     assert measured["per_review_api_equivalent_usd"] is None
+
+
+def test_an_artifact_lost_between_listing_and_download_preserves_the_report():
+    base = GitHub(costs=(0.25, 0.75), skipped=False)
+
+    def request(endpoint, **options):
+        if endpoint.endswith("/artifacts/2/zip"):
+            raise subprocess.CalledProcessError(1, ["gh", "api"], stderr=b"HTTP 410")
+        return base(endpoint, **options)
+
+    measured = usage.report(usage.REPO, days=7, now=NOW, request=request)
+    assert measured["model_reviews_started"] == 2
+    assert measured["known_api_equivalent_subtotal_usd"] == 0.25
+    assert measured["usage_missing"] == 1
+    assert measured["projected_30d_api_equivalent_usd"] is None
+
+
+def test_a_pending_model_step_is_not_counted_as_a_free_attempt():
+    base = GitHub(costs=(0.25,), skipped=False)
+
+    def request(endpoint, **options):
+        response = base(endpoint, **options)
+        if endpoint.endswith("/jobs"):
+            response["jobs"][0]["steps"][1].update(started_at=None, conclusion=None)
+        return response
+
+    measured = usage.report(usage.REPO, days=7, now=NOW, request=request)
+    assert measured["runs"][0]["model_started"] is None
+    assert measured["runs"][0]["api_equivalent_usd"] is None
+    assert measured["usage_missing"] == 1
 
 
 @pytest.mark.parametrize("second_started", [True, False])
