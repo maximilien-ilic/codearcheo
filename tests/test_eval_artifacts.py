@@ -100,6 +100,24 @@ def test_backend_errors_are_distinct_from_quality_failures(evaluation, monkeypat
     assert "Qualité : 1/1 réponses évaluables ; 1 réponse(s) indisponible(s)." in output
 
 
+def test_review_evaluation_uses_and_archives_its_requested_path(evaluation, monkeypatch):
+    workdir, spec = evaluation
+    case = {
+        "id": "scoped", "command": "review", "path": "app.py",
+        "cite_any_file": ["app.py"],
+    }
+    spec["cases"] = [case]
+
+    def review(session, *, path):
+        assert path == "app.py"
+        return "Déclarée dans `app.py:3`."
+
+    monkeypatch.setattr(run.features, "review", review)
+    assert run.main([]) == 0
+    _, report = load_report(workdir)
+    assert report["results"][0]["case_definition"] == case
+
+
 def test_decision_records_are_archived_independently_of_the_mutable_store(evaluation, monkeypatch):
     workdir, spec = evaluation
     spec["cases"] = [{"id": "decisions", "command": "decisions"}]

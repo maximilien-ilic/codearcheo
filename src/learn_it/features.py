@@ -9,6 +9,7 @@ import json
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from pathlib import PurePosixPath
 from typing import Any
 
 from anthropic import beta_tool
@@ -229,8 +230,26 @@ def decisions(session: Session) -> str:
     return report
 
 
-def review(session: Session) -> str:
-    known = session.store.load_decisions()
+def review(session: Session, *, path: str | None = None) -> str:
+    relative = PurePosixPath(path).as_posix() if path is not None else "."
+    scope_label = json.dumps(relative, ensure_ascii=False) if relative != "." else None
+    scope = ""
+    if scope_label is not None:
+        root = session.project.root
+        if (
+            not inventory.is_safe_path(root, relative)
+            or not any(
+                name == relative or name.startswith(relative + "/")
+                for name in inventory.list_files(root)
+            )
+        ):
+            raise AgentError(
+                f"Périmètre de revue inaccessible : {path!r}. "
+                "Choisis un fichier ou dossier visible depuis la racine du projet."
+            )
+        scope = prompts.REVIEW_SCOPE.format(path=scope_label)
+
+    known = session.store.load_decisions() if scope_label is None else []
     known_block = (
         prompts.KNOWN_DECISIONS.format(
             decisions=json.dumps([d.model_dump() for d in known], ensure_ascii=False, indent=1)
@@ -249,7 +268,9 @@ def review(session: Session) -> str:
         return f"Recorded recommendation {len(recorded)}: {recorded[-1].title}"
 
     tool = beta_tool(record_recommendation, input_schema=Recommendation)
-    task = prompts.REVIEW.format(known_decisions=known_block, language=session.settings.language)
+    task = prompts.REVIEW.format(
+        scope=scope, known_decisions=known_block, language=session.settings.language
+    )
     task += (
         "\nRecord each recommendation with record_recommendation, including keep verdicts. "
         "Use keep/improve/replace, low/medium/high impact, S/M/L effort. Give reasons, proposal, "
@@ -262,6 +283,8 @@ def review(session: Session) -> str:
         )
     recorded = recommendations.ordered(recorded)
     session.store.save_recommendations(recorded)
+    if scope_label is not None:
+        synthesis = f"**Périmètre de la revue**\n\n    {scope_label}\n\n{synthesis}"
     report = session.checked(recommendations.markdown(recorded, synthesis))
     session.store.save_report("review", report)
     return report

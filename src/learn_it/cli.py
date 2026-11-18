@@ -297,6 +297,9 @@ def review(
     budget: BudgetOption = None,
     max_requests: RequestLimitOption = None,
     max_output_tokens: OutputLimitOption = None,
+    path: Annotated[
+        str | None, typer.Option("--path", help="Fichier ou dossier depuis la racine du projet.")
+    ] = None,
     issues: Annotated[
         bool, typer.Option("--issues", help="Proposer la création de tickets.")
     ] = False,
@@ -308,7 +311,7 @@ def review(
             max_requests=max_requests, max_output_tokens=max_output_tokens,
         )
         with render.err.status("Claude évalue les décisions…"):
-            report = features.review(session)
+            report = features.review(session, path=path)
         render.markdown(report)
         candidates = [r for r in session.store.load_recommendations() if r.verdict != "keep"]
         if issues and candidates:

@@ -236,7 +236,8 @@ def test_run_case_dispatches_new_commands_without_calling_api(project, command, 
     case = next(case for case in spec["cases"] if case["command"] == command)
     seen = []
 
-    def response(*args):
+    def response(*args, **options):
+        assert options == ({"path": None} if command == "review" else {})
         seen.append(args)
         return framework_answer(project.root) + " PostgreSQL `docker-compose.yml:3`."
 

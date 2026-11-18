@@ -97,10 +97,11 @@ Write in {language}."""
 REVIEW = """\
 Review this project's technical decisions as a senior architect would, against its actual \
 context: its size, maturity, activity and domain, as you observe them.
+{scope}
 {known_decisions}
 Start with the decisions that shape the architecture and the main execution flow (core \
 abstractions, data model, request or data pipeline), then cover infrastructure and tooling. \
-A review that skips the project's central design choice is incomplete.
+A review that skips the central design choice in the requested scope is incomplete.
 
 For each significant decision, give:
 - Verdict: keep, improve or replace.
@@ -114,6 +115,11 @@ saying so is useful. End with a prioritized action plan, highest impact for the 
 first.
 
 Write in {language}."""
+
+REVIEW_SCOPE = """\
+Focus this review on the project-relative path {path}. Start by exploring that path. \
+Every recommendation must address a decision that affects this scope and cite evidence from it. \
+Use other files and project history for context where needed."""
 
 KNOWN_DECISIONS = """
 Decisions reconstructed earlier by `learn-it decisions`. Verify them, they may be incomplete:

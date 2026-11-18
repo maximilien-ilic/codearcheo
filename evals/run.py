@@ -119,7 +119,7 @@ def run_case(
         elif case["command"] == "why":
             answer = features.why(session, case["target"])
         elif case["command"] == "review":
-            answer = features.review(session)
+            answer = features.review(session, path=case.get("path"))
             capture["recommendations"] = [
                 record.model_dump() for record in session.store.load_recommendations()
             ]

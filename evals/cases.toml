@@ -145,6 +145,7 @@ cite_any_file = ["src/net/http/server.go"]
 [[projects.cases]]
 id = "go-review-http"
 command = "review"
+path = "src/net/http"
 mention = ["http"]
 cite_any_file = ["src/net/http/server.go", "src/net/http/serve_test.go", "src/net/http/transport.go"]
 
