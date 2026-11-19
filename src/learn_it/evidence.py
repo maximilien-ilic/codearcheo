@@ -19,6 +19,7 @@ _FILE = re.compile(r"`(?P<path>[^`\r\n:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>
 _INLINE_CODE = re.compile(
     r"(?<!`)(`++)(?:[^`\r\n]++|(?!\1(?!`))`++|(?>\r\n?|\n)(?![ \t]*[\r\n]))*+\1(?!`)"
 )
+_ATX_HEADING = re.compile(r"(?<![^\r\n]) {0,3}#{1,6}(?=[ \t\r\n]|$)[^\r\n]*")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
@@ -114,13 +115,16 @@ def fenced_spans(text: str) -> list[tuple[int, int]]:
 def find_matches(text: str) -> list[CitationMatch]:
     """Return original citation spans outside fenced source examples and diagrams."""
     protected = fenced_spans(text)
-    # Match across soft line breaks, with each fence ending the preceding prose segment.
+    # Keep inline code within its Markdown block, including citations inside headings.
     code_spans = []
     offset = 0
-    for start, end in protected:
+    for start, end in [*protected, (len(text), len(text))]:
+        for heading in _ATX_HEADING.finditer(text, offset, start):
+            code_spans.extend(_INLINE_CODE.finditer(text, offset, heading.start()))
+            code_spans.extend(_INLINE_CODE.finditer(text, heading.start(), heading.end()))
+            offset = heading.end()
         code_spans.extend(_INLINE_CODE.finditer(text, offset, start))
         offset = end
-    code_spans.extend(_INLINE_CODE.finditer(text, offset))
     explicit = []
     for span in code_spans:
         # Match the citation within its paired delimiters. Keep one backtick at
