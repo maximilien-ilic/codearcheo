@@ -64,12 +64,17 @@ class Session:
         """A fresh view of immutable initial/final evidence metadata for offline comparisons."""
         return self._last_repair.as_dict() if self._last_repair is not None else None
 
-    def checked(self, answer: str, *, repair: bool = False, normalize_paths: bool = True) -> str:
+    def checked(
+        self, answer: str, *, repair: bool = False, normalize_paths: bool = True,
+        scope: str | None = None,
+    ) -> str:
         """Warn without hiding the answer; retain the same warning in saved reports."""
         # Answers still abbreviate some paths (`legacy.yml:33`): complete the unambiguous ones.
         # A live stream has already displayed its body; only append checks in that case.
         if normalize_paths:
-            answer = evidence.complete_paths(answer, inventory.list_files(self.project.root))
+            answer = evidence.complete_paths(
+                answer, inventory.list_files(self.project.root), scope
+            )
         report = evidence.verify(answer, self.project.root)
         repair_note = ""
         if repair and self.repair_citations:
@@ -151,13 +156,15 @@ class Session:
         )
 
 
-def _complete_evidence(fields: dict[str, Any], session: Session) -> dict[str, Any]:
+def _complete_evidence(
+    fields: dict[str, Any], session: Session, scope: str | None = None,
+) -> dict[str, Any]:
     """Structured records still abbreviate paths (`legacy.yml:33`); complete unique ones."""
     items = fields.get("evidence")
     if not isinstance(items, list) or not all(isinstance(item, str) for item in items):
         return fields  # let validation report the malformed record
     files = inventory.list_files(session.project.root)
-    return {**fields, "evidence": [evidence.complete_paths(item, files) for item in items]}
+    return {**fields, "evidence": [evidence.complete_paths(item, files, scope) for item in items]}
 
 
 def ask(session: Session, question: str) -> str:
@@ -273,7 +280,9 @@ def review(session: Session, *, path: str | None = None) -> str:
     def record_recommendation(**fields: Any) -> str:
         """Record one evidence-based recommendation about a technical decision."""
         try:
-            recommendation = Recommendation.model_validate(_complete_evidence(fields, session))
+            recommendation = Recommendation.model_validate(
+                _complete_evidence(fields, session, relative if scoped_files else None)
+            )
         except ValidationError as exc:
             raise ToolError(f"Invalid recommendation, fix it and call again:\n{exc}") from exc
         if scoped_files:
@@ -308,6 +317,9 @@ def review(session: Session, *, path: str | None = None) -> str:
     session.store.save_recommendations(recorded)
     if scope_label is not None:
         synthesis = f"**Périmètre de la revue**\n\n    {scope_label}\n\n{synthesis}"
-    report = session.checked(recommendations.markdown(recorded, synthesis))
+    report = session.checked(
+        recommendations.markdown(recorded, synthesis),
+        scope=relative if scoped_files else None,
+    )
     session.store.save_report("review", report)
     return report
