@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import subprocess
 import tempfile
 from pathlib import Path
+from textwrap import indent
 
-from learn_it import git
+from learn_it import evidence, git
 from learn_it.domain import Recommendation
 from learn_it.sources import Project, parse_github
 
@@ -21,23 +23,62 @@ def ordered(items: list[Recommendation]) -> list[Recommendation]:
 
 def item_markdown(item: Recommendation) -> str:
     lines = [
-        f"## {item.title}", "", f"Décision : {item.decision}", "",
+        evidence.close_open_fence(f"## {item.title}"), "",
+        evidence.close_open_fence(f"Décision : {item.decision}"), "",
         f"Verdict : **{item.verdict}** · impact **{item.impact}** · effort **{item.effort}**", "",
-        "### Raisons", "", *(f"- {x}" for x in item.reasons), "",
+        "### Raisons", "", *_markdown_items(item.reasons), "",
     ]
     if item.proposal:
-        lines += ["### Proposition", "", item.proposal, ""]
+        lines += ["### Proposition", "", evidence.close_open_fence(item.proposal), ""]
     if item.tradeoffs:
-        lines += ["### Compromis", "", *(f"- {x}" for x in item.tradeoffs), ""]
+        lines += ["### Compromis", "", *_markdown_items(item.tradeoffs), ""]
     if item.first_steps:
-        lines += ["### Tâches", "", *(f"- [ ] {x}" for x in item.first_steps), ""]
-    lines += ["### Preuves", "", *(f"- {x}" for x in item.evidence), ""]
+        lines += ["### Tâches", "", *_markdown_items(item.first_steps, checklist=True), ""]
+    lines += ["### Preuves", "", *_markdown_items(item.evidence), ""]
     return "\n".join(lines)
+
+
+def _markdown_items(items: list[str], *, checklist: bool = False) -> list[str]:
+    prefix = "- [ ] " if checklist else "- "
+    rendered = []
+    for item in items:
+        first, newline, rest = evidence.close_open_fence(item).partition("\n")
+        rendered.append(f"{prefix}{first}{newline}{indent(rest, '  ')}")
+    return rendered
+
+
+def _checked_item_markdown(root: Path, item: Recommendation) -> str:
+    # A fence in one field must not hide a citation in another field or list item.
+    fields = [
+        f"## {item.title}", f"Décision : {item.decision}", *item.reasons, item.proposal,
+        *item.tradeoffs, *item.first_steps,
+    ]
+    citations = [
+        citation for text in fields
+        for citation in evidence.find_citations(text, respect_quote_boundaries=True)
+    ]
+    for entry in item.evidence:
+        citations.extend(
+            evidence.find_citations(entry, respect_quote_boundaries=True)
+            or [evidence.Citation(ref=entry)]
+        )
+    report = evidence.verify_citations(citations, root)
+    body = item_markdown(item)
+    if report.problems:
+        lines = [body, "### Preuves non vérifiées", ""]
+        for citation, problem in report.problems.items():
+            # Render arbitrary unrecognized evidence as literal, single-line text.
+            ref = html.escape(citation.ref, quote=False).replace("`", "&#96;")
+            ref = ref.replace("\r", " ").replace("\n", " ")
+            lines.append(f"- <code>{ref}</code> : {problem}")
+        body = "\n".join(lines) + "\n"
+    return body
 
 
 def markdown(items: list[Recommendation], synthesis: str) -> str:
     return "\n\n".join([
-        "# Revue des décisions", synthesis.strip(), *(item_markdown(r) for r in ordered(items))
+        "# Revue des décisions", evidence.close_open_fence(synthesis.strip()),
+        *(item_markdown(r) for r in ordered(items)),
     ])
 
 
@@ -83,7 +124,9 @@ def publish(project: Project, items: list[Recommendation], *, confirmed: bool = 
                 urls.append(previous["url"])
                 continue
             body = Path(temporary) / "body.md"
-            body.write_text(f"{marker}\n\n{item_markdown(item)}\n", encoding="utf-8")
+            body.write_text(
+                f"{marker}\n\n{_checked_item_markdown(project.root, item)}\n", encoding="utf-8",
+            )
             url = _gh(
                 "issue", "create", "--repo", repo, "--title", item.title,
                 "--body-file", str(body),
