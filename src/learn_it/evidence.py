@@ -21,6 +21,7 @@ _INLINE_CODE = re.compile(
 )
 _ATX_HEADING = re.compile(r"(?<![^\r\n])(?P<prefix>[ \t>]*+)#{1,6}(?=[ \t\r\n]|$)[^\r\n]*")
 _HEADING_PREFIX = re.compile(r"(?: {0,3}> ?+)*+ {0,3}")
+_QUOTE_PREFIX = re.compile(r"(?:[ \t]*>)*")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
@@ -71,8 +72,9 @@ def _line_number(value: str) -> int:
     return int(value) if len(value) <= 10 else 10**11
 
 
-def find_citations(text: str) -> list[Citation]:
-    return list(dict.fromkeys(match.citation for match in find_matches(text)))
+def find_citations(text: str, *, respect_quote_boundaries: bool = False) -> list[Citation]:
+    matches = find_matches(text, respect_quote_boundaries=respect_quote_boundaries)
+    return list(dict.fromkeys(match.citation for match in matches))
 
 
 def _source_shaped(path: str) -> bool:
@@ -89,7 +91,9 @@ def _source_shaped(path: str) -> bool:
     return PurePosixPath(path).suffix.lower() in _SOURCE_SUFFIXES
 
 
-def _fences(text: str) -> tuple[list[tuple[int, int]], str]:
+def _fences(
+    text: str, *, respect_quote_boundaries: bool = False,
+) -> tuple[list[tuple[int, int]], str]:
     """Protect complete and unclosed Markdown fences, including nested list/quote examples.
 
     A shorter run of backticks inside a longer fence is code, not a closing fence. Treating
@@ -97,14 +101,23 @@ def _fences(text: str) -> tuple[list[tuple[int, int]], str]:
     """
     spans = []
     start, marker, width, offset = None, "", 0, 0
+    quote_depth = 0
     for line in text.splitlines(keepends=True):
-        body = line.lstrip(" \t>")
+        prefix = _QUOTE_PREFIX.match(line)[0] if respect_quote_boundaries else ""
+        depth = prefix.count(">")
+        body = line[len(prefix):].lstrip(" \t" if respect_quote_boundaries else " \t>")
+        if start is not None and depth < quote_depth:
+            spans.append((start, offset))
+            start = None
         if start is None:
             body = re.sub(r"^(?:[-+*]|\d+[.)])[ \t]+", "", body)
             opening = re.match(r"(`{3,}|~{3,})([^\r\n]*)(?:\r?\n)?$", body)
             if opening and not (opening[1][0] == "`" and "`" in opening[2]):
                 start, marker, width = offset, opening[1][0], len(opening[1])
-        elif re.fullmatch(rf"{re.escape(marker)}{{{width},}}[ \t]*(?:\r?\n)?", body):
+                quote_depth = depth
+        elif depth == quote_depth and re.fullmatch(
+            rf"{re.escape(marker)}{{{width},}}[ \t]*(?:\r?\n)?", body,
+        ):
             spans.append((start, offset + len(line)))
             start = None
         offset += len(line)
@@ -121,16 +134,16 @@ def fenced_spans(text: str) -> list[tuple[int, int]]:
 
 def close_open_fence(text: str) -> str:
     """Terminate a field's code block before appending other Markdown sections."""
-    _, closing = _fences(text)
+    _, closing = _fences(text, respect_quote_boundaries=True)
     if not closing:
         return text
     separator = "" if text.endswith("\n") else "\n"
     return text + separator + closing
 
 
-def find_matches(text: str) -> list[CitationMatch]:
+def find_matches(text: str, *, respect_quote_boundaries: bool = False) -> list[CitationMatch]:
     """Return original citation spans outside fenced source examples and diagrams."""
-    protected = fenced_spans(text)
+    protected, _ = _fences(text, respect_quote_boundaries=respect_quote_boundaries)
     # Keep inline code within its Markdown block, including citations inside headings.
     code_spans = []
     offset = 0

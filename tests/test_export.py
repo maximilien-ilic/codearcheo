@@ -177,3 +177,41 @@ def test_nested_code_example_cannot_hide_another_fields_citations(
     warnings = path.read_text().split("## Preuves non vérifiées")[1]
     assert "`missing.py:9` : fichier introuvable" in warnings
     assert "example.py:2" not in warnings
+
+
+def test_unclosed_quoted_fence_ends_with_its_quote(tmp_path, decision):
+    mixed = decision.model_copy(update={
+        "context": "> ````python\n> example.py:2\n\nVoir `missing.py:9`.\n\n~~~python\ncode",
+    })
+
+    (path,) = export_decisions(tmp_path, [mixed], tmp_path / "docs" / "adr")
+
+    text = path.read_text()
+    assert "code\n~~~\n\n## Décision" in text
+    warnings = text.split("## Preuves non vérifiées")[1]
+    assert "`missing.py:9` : fichier introuvable" in warnings
+    assert "example.py:2" not in warnings
+
+
+def test_tildes_at_start_of_adr_title_stay_in_the_heading(tmp_path, decision):
+    mixed = decision.model_copy(update={"title": "~~~ Voir missing.py:9"})
+
+    (path,) = export_decisions(tmp_path, [mixed], tmp_path / "docs" / "adr")
+
+    assert "missing.py:9 : fichier introuvable" in path.read_text()
+
+
+@pytest.mark.parametrize("closing", ["", "\n~~~"])
+def test_multiline_adr_list_item_keeps_fenced_example_inside_item(tmp_path, decision, closing):
+    mixed = decision.model_copy(update={
+        "alternatives": ["~~~python\nexample.py:2" + closing],
+        "rationale": "Voir missing.py:9.",
+    })
+
+    (path,) = export_decisions(tmp_path, [mixed], tmp_path / "docs" / "adr")
+
+    text = path.read_text()
+    assert "- ~~~python\n  example.py:2\n  ~~~\n\n## Conséquences" in text
+    warnings = text.split("## Preuves non vérifiées")[1]
+    assert "missing.py:9 : fichier introuvable" in warnings
+    assert "example.py:2" not in warnings

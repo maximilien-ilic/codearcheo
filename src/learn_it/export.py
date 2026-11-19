@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from pathlib import Path
+from textwrap import indent
 
 from learn_it import evidence
 from learn_it.analyzers.inventory import is_safe_path
@@ -33,20 +34,27 @@ def check_evidence(root: Path, decision: Decision) -> evidence.EvidenceReport:
     return evidence.verify_citations(citations, root)
 
 
-def _check_prose(root: Path, decision: Decision) -> evidence.EvidenceReport:
+def _check_prose(root: Path, decision: Decision, number: int) -> evidence.EvidenceReport:
     # Markdown delimiters belong to one field/list item, not the neighbouring fields.
     fields = [
-        decision.title, decision.context, decision.decision, decision.rationale,
+        _title_heading(decision, number), decision.context, decision.decision, decision.rationale,
         *decision.alternatives, *decision.consequences,
     ]
-    citations = [citation for text in fields for citation in evidence.find_citations(text)]
+    citations = [
+        citation for text in fields
+        for citation in evidence.find_citations(text, respect_quote_boundaries=True)
+    ]
     return evidence.verify_citations(citations, root)
+
+
+def _title_heading(decision: Decision, number: int) -> str:
+    return f"# {number:04d}. {decision.title}"
 
 
 def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None = None) -> str:
     source = "documentée" if decision.rationale_source == "documented" else "déduite"
     lines = [
-        evidence.close_open_fence(f"# {number:04d}. {decision.title}"), "",
+        evidence.close_open_fence(_title_heading(decision, number)), "",
         "- Statut : proposée (à confirmer)", "",
         f"*Reconstituée par learn-it ; justification {source}. Vérifier avant adoption.*", "",
         "## Contexte", "", evidence.close_open_fence(decision.context), "",
@@ -69,7 +77,11 @@ def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None
 
 
 def _markdown_items(items: list[str]) -> list[str]:
-    return [evidence.close_open_fence(f"- {item}") for item in items]
+    rendered = []
+    for item in items:
+        first, newline, rest = evidence.close_open_fence(item).partition("\n")
+        rendered.append(f"- {first}{newline}{indent(rest, '  ')}")
+    return rendered
 
 
 def export_decisions(
@@ -126,7 +138,7 @@ def export_decisions(
         if path.exists() and not force:
             raise FileExistsError(path)
         # Check prose too, without treating its valid citations as declared evidence.
-        body_problems = _check_prose(root, decision).problems
+        body_problems = _check_prose(root, decision, number).problems
         report = evidence.EvidenceReport(
             citations=list(dict.fromkeys([*report.citations, *body_problems])),
             problems={**report.problems, **body_problems},
