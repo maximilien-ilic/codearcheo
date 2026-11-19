@@ -157,3 +157,13 @@ def test_quoted_path_does_not_supply_a_commit_citation(project):
 
     assert report.ok
     assert [citation.path for citation in report.citations] == ["commit deadbee.py"]
+
+
+def test_inline_example_with_inner_backticks_does_not_supply_a_file_citation():
+    text = "Exemple : ``utiliser `app.py:1` ou lost.py:2``. Source : `src/main.py:3`."
+
+    assert [citation.path for citation in find_citations(text)] == ["src/main.py"]
+
+
+def test_double_backticks_can_delimit_a_file_citation():
+    assert [citation.path for citation in find_citations("``app.py:1``")] == ["app.py"]
