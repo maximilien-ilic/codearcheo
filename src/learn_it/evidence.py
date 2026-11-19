@@ -19,7 +19,8 @@ _FILE = re.compile(r"`(?P<path>[^`\r\n:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>
 _INLINE_CODE = re.compile(
     r"(?<!`)(`++)(?:[^`\r\n]++|(?!\1(?!`))`++|(?>\r\n?|\n)(?![ \t]*[\r\n]))*+\1(?!`)"
 )
-_ATX_HEADING = re.compile(r"(?<![^\r\n])(?: {0,3}> ?+)*+ {0,3}#{1,6}(?=[ \t\r\n]|$)[^\r\n]*")
+_ATX_HEADING = re.compile(r"(?<![^\r\n])(?P<prefix>[ \t>]*+)#{1,6}(?=[ \t\r\n]|$)[^\r\n]*")
+_HEADING_PREFIX = re.compile(r"(?: {0,3}> ?+)*+ {0,3}")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
@@ -120,6 +121,8 @@ def find_matches(text: str) -> list[CitationMatch]:
     offset = 0
     for start, end in [*protected, (len(text), len(text))]:
         for heading in _ATX_HEADING.finditer(text, offset, start):
+            if not _HEADING_PREFIX.fullmatch(heading["prefix"].expandtabs(4)):
+                continue
             code_spans.extend(_INLINE_CODE.finditer(text, offset, heading.start()))
             code_spans.extend(_INLINE_CODE.finditer(text, heading.start(), heading.end()))
             offset = heading.end()

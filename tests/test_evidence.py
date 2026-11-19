@@ -218,8 +218,14 @@ def test_a_backtick_run_in_a_heading_cannot_hide_citations_in_the_next_paragraph
     assert [citation.path for citation in find_citations(text)] == ["app.py"]
 
 
-@pytest.mark.parametrize("quote", ["> ", "> > "])
+@pytest.mark.parametrize("quote", ["> ", "> > ", ">\t", ">\t>\t"])
 def test_unmatched_backticks_cannot_hide_citations_in_a_quoted_heading(quote):
     text = f"{quote}Délimiteur seul ``\n{quote}# Sources app.py:1 et `b.py:2`\n{quote}Fin ``."
 
     assert {citation.path for citation in find_citations(text)} == {"app.py", "b.py"}
+
+
+def test_tab_indentation_does_not_turn_an_inline_example_into_a_heading():
+    text = "> Délimiteur seul ``\n>\t\t# Exemple app.py:1\n> Fin ``. Source : src/main.py:3"
+
+    assert [citation.path for citation in find_citations(text)] == ["src/main.py"]
