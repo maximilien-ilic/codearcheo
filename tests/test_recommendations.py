@@ -1,7 +1,10 @@
 import json
+from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from anthropic.lib.tools import ToolError
+from markdown_it import MarkdownIt
 from typer.testing import CliRunner
 
 from learn_it import cli, features, recommendations
@@ -19,6 +22,124 @@ def recommendation(**updates):
         effort="S", impact="high", first_steps=["Ajouter un test."], evidence=["`app.py:1`"],
     )
     return Recommendation(**(values | updates))
+
+
+@pytest.fixture
+def publication(project, monkeypatch):
+    bodies = []
+
+    def fake(*args):
+        if args[1] == "list":
+            return "[]"
+        assert args[1] == "create"
+        bodies.append(Path(args[args.index("--body-file") + 1]).read_text())
+        return f"https://github.com/owner/repo/issues/{len(bodies)}"
+
+    monkeypatch.setattr(recommendations, "_gh", fake)
+    return replace(project, origin="https://github.com/owner/repo"), bodies
+
+
+@pytest.mark.parametrize("field", [
+    "title", "decision", "reasons", "proposal", "tradeoffs", "first_steps", "evidence",
+])
+def test_published_issue_keeps_invalid_citation_warnings(publication, field):
+    project, bodies = publication
+    value = "Voir `missing.py:9`."
+    if field in {"reasons", "tradeoffs", "first_steps", "evidence"}:
+        value = [value]
+
+    recommendations.publish(project, [recommendation(**{field: value})], confirmed=True)
+
+    warning = bodies[0].split("### Preuves non vérifiées\n", 1)[1]
+    assert "missing.py:9" in warning
+    assert "fichier introuvable" in warning
+
+
+def test_publication_checks_evidence_again_after_the_review(publication):
+    project, bodies = publication
+    item = recommendation()
+    assert "Preuves non vérifiées" not in recommendations.item_markdown(item)
+    (project.root / "app.py").unlink()
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    assert "### Preuves non vérifiées" in bodies[0]
+    assert "fichier introuvable" in bodies[0]
+
+
+@pytest.mark.parametrize("reference", ["`app.py:99999`", "commit deadbee", "source inconnue"])
+def test_publication_flags_other_unverifiable_evidence(publication, reference):
+    project, bodies = publication
+    recommendations.publish(project, [recommendation(evidence=[reference])], confirmed=True)
+
+    assert "### Preuves non vérifiées" in bodies[0]
+
+
+@pytest.mark.parametrize("opening", ["```python", "~~~python", "> ```python", "- ```python"])
+def test_open_example_cannot_hide_the_next_field_or_warning(publication, opening):
+    project, bodies = publication
+    prefix = "> " if opening.startswith(">") else "  " if opening.startswith("-") else ""
+    item = recommendation(
+        reasons=[f"{opening}\n{prefix}example.py:999"], proposal="Voir `missing.py:9`.",
+    )
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    body = bodies[0]
+    warning_start = body.index("### Preuves non vérifiées")
+    assert "<h3>Preuves non vérifiées</h3>" in MarkdownIt().render(body)
+    assert "missing.py:9" in body[warning_start:]
+    assert "example.py:999" not in body[warning_start:]
+
+
+@pytest.mark.parametrize("field", ["reasons", "tradeoffs", "first_steps"])
+@pytest.mark.parametrize("opening", ["```python", "~~~python"])
+def test_multiline_list_item_preserves_the_next_item_and_warning(publication, field, opening):
+    project, bodies = publication
+    item = recommendation(**{field: [f"{opening}\nexample.py:999", "Voir missing.py:9."]})
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    rendered = MarkdownIt().render(bodies[0])
+    warning = rendered.split("<h3>Preuves non vérifiées</h3>", 1)[1]
+    assert "missing.py:9" in warning
+    assert "example.py:999" not in warning
+
+
+def test_unrecognized_evidence_cannot_turn_the_warning_into_code(publication):
+    project, bodies = publication
+    item = recommendation(evidence=["```python\nsource inconnue", "missing.py:9"])
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    warning = MarkdownIt().render(bodies[0]).split("<h3>Preuves non vérifiées</h3>", 1)[1]
+    assert "<pre>" not in warning
+    assert "format de référence non reconnu" in warning
+    assert "missing.py:9" in warning
+    assert "fichier introuvable" in warning
+
+
+@pytest.mark.parametrize("field", ["reasons", "tradeoffs", "first_steps", "evidence"])
+@pytest.mark.parametrize("marker", ["```", "~~~"])
+def test_indented_fence_does_not_hide_published_warnings(publication, field, marker):
+    project, bodies = publication
+    item = recommendation(
+        **{field: [f"  {marker}python\nexample.py:999\n{marker}"]},
+        proposal="Voir missing.py:9.",
+    )
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    assert "<h3>Preuves non vérifiées</h3>" in MarkdownIt().render(bodies[0])
+
+
+def test_valid_published_evidence_does_not_raise_a_warning(publication):
+    project, bodies = publication
+
+    recommendations.publish(project, [recommendation()], confirmed=True)
+
+    assert "Preuves non vérifiées" not in bodies[0]
+    assert "learn-it:recommendation:" in bodies[0]
 
 
 def test_review_records_json_and_sorts_plan(project, monkeypatch):
@@ -148,8 +269,6 @@ def test_a_prose_only_review_never_erases_previous_recommendations(project, monk
 
 
 def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch):
-    from dataclasses import replace
-
     calls = []
     item = recommendation()
     project = replace(project, origin="https://github.com/owner/repo")

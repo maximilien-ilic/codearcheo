@@ -71,6 +71,13 @@ utilise `gh` et l'origine GitHub du projet ; une empreinte dans le corps évite 
 recréer un ticket déjà publié, même fermé. Au-delà de la limite de recherche de
 1 000 tickets, la publication s'arrête pour éviter une déduplication incomplète.
 
+Avant de créer chaque ticket, learn-it vérifie de nouveau les preuves déclarées et les
+citations de tous les champs de la recommandation dans le projet courant. Une source
+introuvable, des lignes invalides ou une preuve dont le format n'est pas reconnu figurent
+dans une section « Preuves non vérifiées » du ticket. Les champs et les éléments de
+liste sont contrôlés séparément ; les exemples de code restent exclus et leurs
+délimiteurs ne peuvent pas masquer les avertissements du champ suivant.
+
 ## Comparer deux états
 
 ```bash

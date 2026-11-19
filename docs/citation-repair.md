@@ -20,6 +20,12 @@ dans un champ est refermé à la fin de ce champ pour préserver les sections su
 Chaque champ et chaque élément de liste sont vérifiés séparément : un exemple de code
 imbriqué dans l'un ne peut pas masquer les citations d'un autre.
 
+Les tickets créés par `review --issues` conservent eux aussi une section
+« Preuves non vérifiées » pour les références invalides ou non reconnues. Les sources
+déclarées et la prose de chaque recommandation sont revérifiées au moment de la création,
+même si le fichier cité a disparu depuis l'analyse. Ce contrôle local n'effectue aucune
+correction par le modèle.
+
 Une complétion locale précède désormais cette étape pour les réponses non diffusées et
 les preuves structurées : `timed.py:170` devient le chemin complet si l'inventaire ou les
 chemins déjà cités lèvent l'ambiguïté. Elle préserve les chemins existants à la racine,
