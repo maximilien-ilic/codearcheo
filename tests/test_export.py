@@ -156,3 +156,24 @@ def test_unclosed_code_fence_does_not_hide_later_citations(tmp_path, decision, f
     assert "`missing.py:9` : fichier introuvable" in warnings
     assert "example.py:2" not in warnings
     assert f"example.py:2\n{fence}\n\n## Décision" in text
+
+
+@pytest.mark.parametrize("field", ["context", "alternatives"])
+@pytest.mark.parametrize("example", [
+    "> ````python\n> example.py:2",
+    "- ~~~~python\n  example.py:2",
+])
+def test_nested_code_example_cannot_hide_another_fields_citations(
+    tmp_path, decision, field, example,
+):
+    invalid = "Voir `missing.py:9`."
+    fields = ({"context": example, "rationale": invalid} if field == "context"
+              else {"alternatives": [example, invalid]})
+
+    (path,) = export_decisions(
+        tmp_path, [decision.model_copy(update=fields)], tmp_path / "docs" / "adr",
+    )
+
+    warnings = path.read_text().split("## Preuves non vérifiées")[1]
+    assert "`missing.py:9` : fichier introuvable" in warnings
+    assert "example.py:2" not in warnings

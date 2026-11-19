@@ -17,6 +17,8 @@ dans « Preuves non vérifiées ». Une citation dans ce texte ne remplace pas l
 preuves déclarées : sans preuve déclarée vérifiable, `--allow-unproven` reste nécessaire
 et l'ADR conserve son avertissement. Un bloc de code de premier niveau laissé ouvert
 dans un champ est refermé à la fin de ce champ pour préserver les sections suivantes.
+Chaque champ et chaque élément de liste sont vérifiés séparément : un exemple de code
+imbriqué dans l'un ne peut pas masquer les citations d'un autre.
 
 Une complétion locale précède désormais cette étape pour les réponses non diffusées et
 les preuves structurées : `timed.py:170` devient le chemin complet si l'inventaire ou les

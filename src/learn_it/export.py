@@ -33,6 +33,16 @@ def check_evidence(root: Path, decision: Decision) -> evidence.EvidenceReport:
     return evidence.verify_citations(citations, root)
 
 
+def _check_prose(root: Path, decision: Decision) -> evidence.EvidenceReport:
+    # Markdown delimiters belong to one field/list item, not the neighbouring fields.
+    fields = [
+        decision.title, decision.context, decision.decision, decision.rationale,
+        *decision.alternatives, *decision.consequences,
+    ]
+    citations = [citation for text in fields for citation in evidence.find_citations(text)]
+    return evidence.verify_citations(citations, root)
+
+
 def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None = None) -> str:
     source = "documentée" if decision.rationale_source == "documented" else "déduite"
     lines = [
@@ -116,7 +126,7 @@ def export_decisions(
         if path.exists() and not force:
             raise FileExistsError(path)
         # Check prose too, without treating its valid citations as declared evidence.
-        body_problems = evidence.verify(madr(decision, number), root).problems
+        body_problems = _check_prose(root, decision).problems
         report = evidence.EvidenceReport(
             citations=list(dict.fromkeys([*report.citations, *body_problems])),
             problems={**report.problems, **body_problems},
