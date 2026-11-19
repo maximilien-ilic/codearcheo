@@ -1,9 +1,14 @@
-# Revues du code de Claude
+# Revues du code de Claude et Codex
 
 La revue locale surveille `master` de `maximilien-ilic/learn-it` toutes les cinq
 minutes avec une automatisation Orca. Elle utilise les connexions locales Codex et
 `gh`, sans clé API ajoutée aux secrets GitHub. Un worktree distinct est créé à
-chaque exécution utile ; le checkout de Claude reste disponible.
+chaque exécution utile ; le checkout principal de travail reste disponible.
+
+Tous les nouveaux commits de `master` sont couverts, qu'ils proviennent de Claude,
+de Codex ou d'une autre personne. Aucun filtre ne porte sur l'auteur, le committer,
+l'agent qui pousse ou les mentions de co-auteur. Les correctifs du relecteur sont
+eux aussi revus une fois fusionnés dans `master`.
 
 ## Déroulement
 
@@ -16,7 +21,8 @@ chaque exécution utile ; le checkout de Claude reste disponible.
 3. La revue couvre tous les commits depuis le dernier SHA revu jusqu'au SHA
    revendiqué. Les pushes rapprochés peuvent être regroupés. Un force-push qui casse
    la continuité impose une revue complète. Seule `master` est surveillée ; les
-   branches de correction ne déclenchent pas de boucle.
+   pushes sur les branches de PR attendent leur fusion dans `master` pour être
+   couverts. Leurs auteurs ne changent pas cette règle.
 4. L'agent crée ou met à jour des PR et des tickets avec preuves, tâches et tests.
    Il garde les tickets ouverts tant que les PR ne sont pas fusionnées. Sans
    correction, aucun PR vide n'est créé. L'issue #4 reçoit le compte rendu.
