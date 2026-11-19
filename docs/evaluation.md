@@ -308,6 +308,38 @@ le cas échouerait toujours, à juste titre. #74 rend en outre `--repair-citatio
 disponible sur l'abonnement, ce qui permet de mesurer la correction par le modèle sans clé
 API.
 
+## Changement 6 : moins de tokens par tâche
+
+- L'effort par défaut passe à `medium`, sur la base de la mesure 10.
+- Le profil du projet est envoyé en JSON compact, sans indentation ni champs vides. C'est le prompt système, relu à chaque requête.
+- `read_file` numérote les lignes avec une tabulation au lieu de les aligner avec des espaces.
+- En mode structuré, Claude Code n'écrit plus la réponse en texte libre avant la sortie structurée : ce texte était jeté.
+
+Taille mesurée par requête, en tokens comptés par le modèle :
+
+| | Express | Go |
+|---|---|---|
+| Prompt système | 6 503 → 4 248 (−35 %) | 7 720 → 6 013 (−22 %) |
+| `read_file`, 400 lignes | 4 637 → 4 521 (−2,5 %) | 6 864 → 6 213 (−9,5 %) |
+
+## Mesure 11 : après le changement 6, 19 novembre 2026
+
+Deux évaluations complètes en `medium` (`a0487c5`), comparées aux deux passes `medium` de la mesure 10 :
+
+| | Mesure 10 | Mesure 11 |
+|---|---|---|
+| Score | 14/14, 14/14 | 13/14, 14/14 |
+| Coût moyen (équivalent API) | 3,41 $ | 3,36 $ |
+| Lecture du cache | 1,73 M | 1,49 M (−14 %) |
+| Tokens de sortie | 64 k | 66 k |
+
+- **Le seul échec** est go-why-handlerfunc, sur `svn.go:127` : un nom seul ambigu. C'est le même type d'erreur qu'à la mesure 10.
+- **La relecture du cache baisse de 14 %.** Le coût total ne baisse que de 1,5 %, car la sortie domine le prix et le nombre de tours varie de ±30 % d'une passe à l'autre.
+- **La duplication de la réponse** n'a pas d'effet mesurable sur la sortie.
+- **L'essentiel de l'économie** vient de l'effort `medium` : −32 % par rapport à `high` (mesure 10).
+
+Rapports : `results-20261119-225657-5006f91b.json` et `results-20261119-231118-82323424.json`.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
