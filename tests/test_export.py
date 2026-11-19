@@ -112,3 +112,31 @@ def test_allow_unproven_warns_when_the_evidence_list_is_empty(tmp_path, decision
                                allow_unproven=True)
 
     assert "## Preuves non vérifiées" in path.read_text()
+
+
+@pytest.mark.parametrize(
+    "field", ["title", "context", "decision", "rationale", "alternatives", "consequences"],
+)
+def test_citations_outside_the_evidence_list_are_flagged(tmp_path, decision, field):
+    text = "Voir `missing.py:9`."
+    value = [text] if field in {"alternatives", "consequences"} else text
+    mixed = decision.model_copy(update={field: value})
+
+    (path,) = export_decisions(tmp_path, [mixed], tmp_path / "docs" / "adr")
+
+    assert "## Preuves non vérifiées" in path.read_text()
+    warnings = path.read_text().split("## Preuves non vérifiées")[1]
+    assert "`missing.py:9` : fichier introuvable" in warnings
+
+
+def test_a_citation_in_prose_does_not_replace_declared_evidence(tmp_path, decision):
+    undeclared = decision.model_copy(update={
+        "evidence": [], "rationale": "Voir `database.py:1`.",
+    })
+
+    with pytest.raises(ValueError, match="Aucune preuve vérifiable"):
+        export_decisions(tmp_path, [undeclared], tmp_path / "docs" / "adr")
+
+    (path,) = export_decisions(tmp_path, [undeclared], tmp_path / "docs" / "adr",
+                               allow_unproven=True)
+    assert "## Preuves non vérifiées" in path.read_text()
