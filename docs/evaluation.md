@@ -288,7 +288,11 @@ API.
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
   `uv run --all-extras python -m evals.run --backend claude-code --compare-citations`.
-  Son gain décide de la suite de #34.
+  Sur les cas actuels, elle n'aurait rien à corriger. Dans les 54 réponses exploitables de
+  la mesure 10, une seule contient des citations invalides : la revue Go, une commande
+  `review`, que `--repair-citations` ne couvre pas. Les 40 réponses `ask` et `why` sont
+  toutes valides après la complétion locale. Mesurer un gain demande donc des cas plus
+  durs, ou une correction étendue aux revues et aux décisions (#34).
 - **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur l'autre
   moteur.
 - **L'effort par défaut** : la mesure 10 plaide pour `medium`. Une troisième passe par
