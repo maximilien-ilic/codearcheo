@@ -19,7 +19,7 @@ _FILE = re.compile(r"`(?P<path>[^`\r\n:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>
 _INLINE_CODE = re.compile(
     r"(?<!`)(`++)(?:[^`\r\n]++|(?!\1(?!`))`++|(?>\r\n?|\n)(?![ \t]*[\r\n]))*+\1(?!`)"
 )
-_ATX_HEADING = re.compile(r"(?<![^\r\n]) {0,3}#{1,6}(?=[ \t\r\n]|$)[^\r\n]*")
+_ATX_HEADING = re.compile(r"(?<![^\r\n])(?: {0,3}> ?+)*+ {0,3}#{1,6}(?=[ \t\r\n]|$)[^\r\n]*")
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
