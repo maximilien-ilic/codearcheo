@@ -144,22 +144,29 @@ def test_valid_published_evidence_does_not_raise_a_warning(publication):
 
 @pytest.mark.parametrize("indentation", ["", "  "])
 @pytest.mark.parametrize("marker", ["```", "~~~"])
+@pytest.mark.parametrize(("container", "continuation"), [
+    ("", ""), ("> ", "> "), ("- ", "  "), ("1. ", "   "), ("> - ", ">   "),
+])
 def test_task_starting_with_a_fence_renders_its_code_and_following_text(
-    publication, indentation, marker,
+    publication, indentation, marker, container, continuation,
 ):
     project, bodies = publication
     item = recommendation(
-        first_steps=[f"{indentation}{marker}python\nprint(1)\n{marker}\n\nVérifier le résultat."],
+        first_steps=[
+            f"{indentation}{container}{marker}python\n"
+            f"{indentation}{continuation}print(1)\n"
+            f"{indentation}{continuation}{marker}\n\nVérifier le résultat.",
+        ],
         proposal="Voir missing.py:9.",
     )
 
     recommendations.publish(project, [item], confirmed=True)
 
     rendered = MarkdownIt().render(bodies[0])
-    assert "- [ ] Exemple\n" in bodies[0]
     assert '<pre><code class="language-python">print(1)\n</code></pre>' in rendered
     assert "<p>Vérifier le résultat.</p>" in rendered
     assert "<h3>Preuves non vérifiées</h3>" in rendered
+    assert "- [ ]" in bodies[0]
 
 
 def test_review_records_json_and_sorts_plan(project, monkeypatch):

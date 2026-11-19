@@ -15,6 +15,11 @@ from learn_it import evidence, git
 from learn_it.domain import Recommendation
 from learn_it.sources import Project, parse_github
 
+_LEADING_FENCE = re.compile(
+    r" {0,3}(?:>[ \t]{0,4}|(?:[-+*]|[0-9]{1,9}[.)])[ \t]{1,7})*"
+    r"(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)(?:\r?\n|$)"
+)
+
 
 def ordered(items: list[Recommendation]) -> list[Recommendation]:
     impact = {"high": 0, "medium": 1, "low": 2}
@@ -44,8 +49,8 @@ def _markdown_items(items: list[str], *, checklist: bool = False) -> list[str]:
     rendered = []
     for item in items:
         content = evidence.close_open_fence(item)
-        if checklist and re.match(r" {0,3}(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)(?:\r?\n|$)", content):
-            # The task marker makes a fence on the same line ordinary paragraph text.
+        if checklist and _LEADING_FENCE.match(content):
+            # A task marker would turn the opening fence and its containers into text.
             rendered.append(f"{prefix}Exemple\n{indent(content, '  ')}")
         elif content.startswith((" ", "\t")):
             # Leading whitespace must not change the continuation indentation.
