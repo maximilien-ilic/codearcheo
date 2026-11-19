@@ -99,6 +99,34 @@ def test_an_ambiguous_name_is_completed_from_a_path_the_text_cites_in_full(proje
     assert complete_paths(text, files) == "Voir pkg/helper.py:1. Plus loin : pkg/helper.py:1."
 
 
+def test_a_unique_path_suffix_is_completed():
+    from learn_it.evidence import complete_paths
+
+    files = ["src/cmd/dist/test.go", "src/cmd/go/test.go"]
+    assert complete_paths("La CI (cmd/dist/test.go:713-721).", files) == (
+        "La CI (src/cmd/dist/test.go:713-721)."
+    )
+    assert complete_paths("`cmd/dist/test.go:713`", files) == "`src/cmd/dist/test.go:713`"
+
+
+def test_an_ambiguous_path_suffix_needs_a_full_citation_in_the_text():
+    from learn_it.evidence import complete_paths
+
+    files = ["src/net/http/pprof/pprof.go", "src/runtime/pprof/pprof.go"]
+    assert complete_paths("pprof/pprof.go:97", files) == "pprof/pprof.go:97"
+    text = "Voir src/runtime/pprof/pprof.go:1. Puis pprof/pprof.go:97."
+    assert complete_paths(text, files) == (
+        "Voir src/runtime/pprof/pprof.go:1. Puis src/runtime/pprof/pprof.go:97."
+    )
+
+
+@pytest.mark.parametrize("reference", ["../dist/test.go:1", "dist/../dist/test.go:1"])
+def test_a_suffix_that_leaves_its_folder_is_not_completed(reference):
+    from learn_it.evidence import complete_paths
+
+    assert complete_paths(reference, ["src/cmd/dist/test.go"]) == reference
+
+
 @pytest.mark.parametrize("reference", ["app.py:1", "`app.py:1`", "./app.py:1"])
 def test_a_root_path_is_never_redirected_to_a_different_file(reference):
     from learn_it.evidence import complete_paths

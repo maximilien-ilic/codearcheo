@@ -150,6 +150,7 @@ def find_matches(text: str) -> list[CitationMatch]:
 def complete_paths(text: str, files: list[str]) -> str:
     """Rewrite `timed.py:170` as `src/pkg/timed.py:170` when exactly one project file has
     that name, or when the text itself cites exactly one of the files of that name in full.
+    A path suffix (`cmd/dist/test.go:713`, relative to `src/`) is completed the same way.
     Other ambiguous names are left alone: guessing would make a false citation pass."""
     by_name: dict[str, list[str]] = {}
     for path in files:
@@ -165,11 +166,16 @@ def complete_paths(text: str, files: list[str]) -> str:
     parts, last = [], 0
     for match in sorted(find_matches(text), key=lambda m: m.start):
         path = match.citation.path
-        if not path or path in allowed or "/" in path or match.start < last:
+        if not path or path in allowed or match.start < last:
             continue
         if match.citation.ref.lstrip("`").startswith("./"):
             continue
-        candidates = by_name.get(path, [])
+        if "/" in path:
+            if path.startswith((".", "/")) or ".." in PurePosixPath(path).parts:
+                continue
+            candidates = [file for file in files if file.endswith(f"/{path}")]
+        else:
+            candidates = by_name.get(path, [])
         if len(candidates) > 1:
             candidates = [candidate for candidate in candidates if candidate in named]
         if len(candidates) != 1 or candidates[0] == path:
