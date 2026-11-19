@@ -311,3 +311,22 @@ def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch):
         project, [item, recommendation(title="Keep", verdict="keep")], confirmed=True
     ) == ["existing"]
     assert len(calls) == 1
+
+
+def test_scoped_review_completes_a_name_unique_within_its_scope(project, monkeypatch):
+    for directory in ("src", "src_other"):
+        (project.root / directory).mkdir()
+        (project.root / directory / "module.py").write_text("value = 1\n")
+
+    def fake(system, task, tools, settings, on_tool=None):
+        record = next(t for t in tools if getattr(t, "name", "") == "record_recommendation")
+        record.call(recommendation(evidence=["module.py:1"]).model_dump())
+        return "Voir module.py:1."
+
+    monkeypatch.setattr(features, "run_agent", fake)
+    session = Session(project, scan(project), Store(project.root), Settings())
+    report = features.review(session, path="src")
+
+    assert session.store.load_recommendations()[0].evidence == ["src/module.py:1"]
+    assert "Voir src/module.py:1." in report
+    assert "0 introuvable(s)" in report

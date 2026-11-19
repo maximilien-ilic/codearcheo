@@ -120,6 +120,21 @@ def test_an_ambiguous_path_suffix_needs_a_full_citation_in_the_text():
     )
 
 
+def test_a_scope_settles_a_name_only_one_of_its_files_has():
+    from learn_it.evidence import complete_paths
+
+    files = ["src/net/http/pprof/pprof.go", "src/runtime/pprof/pprof.go",
+             "src/net/http/export_test.go", "src/net/http/internal/http2/export_test.go"]
+    text = "Relu dans pprof.go:97, doublé dans export_test.go:198."
+    assert complete_paths(text, files) == text
+    assert complete_paths(text, files, "src/net/http") == (
+        "Relu dans src/net/http/pprof/pprof.go:97, doublé dans export_test.go:198."
+    )
+    assert complete_paths(text, files, "src/net/http/pprof") == (
+        "Relu dans src/net/http/pprof/pprof.go:97, doublé dans export_test.go:198."
+    )
+
+
 @pytest.mark.parametrize("reference", ["../dist/test.go:1", "dist/../dist/test.go:1"])
 def test_a_suffix_that_leaves_its_folder_is_not_completed(reference):
     from learn_it.evidence import complete_paths
