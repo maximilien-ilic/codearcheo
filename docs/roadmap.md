@@ -1,6 +1,6 @@
 # Feuille de route
 
-Mise à jour le 18 novembre 2026. Chaque étape a son ticket GitHub, et les [jalons][milestones] regroupent ces tickets en montrant leur avancement.
+Mise à jour le 19 novembre 2026. Chaque étape a son ticket GitHub, et les [jalons][milestones] regroupent ces tickets en montrant leur avancement.
 
 ## Ce qui a été fait récemment
 
@@ -23,7 +23,7 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 ## Où on en est
 
-Il reste quatre étapes ouvertes. La priorité est de finir les mesures de [#10] : confirmer les dernières corrections, mesurer la variabilité et les niveaux d'effort, puis le moteur API. [#34] est partiellement réalisé : complétion locale des chemins et protection de l'export ADR ; la correction par l'IA des preuves structurées attend la mesure du gain de la correction API. Les décisions du propriétaire sont prises : licence MIT, publication sur PyPI à la fin du projet ([#24]), et revue serveur sur l'abonnement Claude, active dès que son secret existe ([#25]).
+Il reste quatre étapes ouvertes. La mesure 10 de [#10] compare deux passes par effort : 27/28 réponses réussies en `high`, 28/28 en `medium`, avec un coût moyen des réponses inférieur de 32 %. Les erreurs de quota restent comptées à part. Il reste à mesurer le gain de la correction des citations et le moteur API ; une troisième passe par effort peut consolider le choix du réglage par défaut. [#34] est partiellement réalisé : complétion locale des chemins et protection de l'export ADR ; la correction par l'IA des preuves structurées attend toujours un gain mesuré sur les réponses texte. Leur correction est désormais disponible aussi sur l'abonnement, mais les 40 réponses texte de la mesure 10 n'ont aucune citation invalide à corriger. Les décisions du propriétaire sont prises : licence MIT, publication sur PyPI à la fin du projet ([#24]), et revue serveur sur l'abonnement Claude, active dès que son secret existe ([#25]).
 
 ## La suite
 
@@ -41,7 +41,7 @@ Avant d'ajouter des fonctionnalités, savoir ce que valent les réponses et ne p
 
 | Étape | Ticket | État |
 |---|---|---|
-| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | en cours : 12/14, confirmation partielle 4/6 |
+| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | variabilité et effort mesurés ; gain de correction et moteur API à mesurer |
 | Vérifier les citations de chaque réponse avant de l'afficher | [#11] | fait |
 | Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] | fait |
 | Afficher coût et durée, régler modèle et effort par commande | [#13] | fait |

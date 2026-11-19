@@ -1,0 +1,850 @@
+{
+  "schema_version": 1,
+  "measurement": 10,
+  "generation_revision": "9bbce03d2e5172d7cafb58fb15cd54eea79363e3",
+  "settings_except_effort_and_cache_dir": {
+    "model": "claude-opus-5-5",
+    "language": "French",
+    "max_iterations": 40,
+    "budget": null,
+    "compact_threshold": 100000,
+    "max_requests": null,
+    "max_output_tokens": 16000,
+    "backend": "claude-code"
+  },
+  "method": {
+    "model_calls_for_audit": 0,
+    "quality_denominator": "All non-error answers, including the Go retry and the quality failure.",
+    "answer_means": "Totals over 28 answers per effort, divided by two for a 14-case equivalent.",
+    "attempt_costs": "All seven archived reports, including quota errors; reported API equivalent, not account invoice.",
+    "duration_scope": "Per-case elapsed_seconds; excludes project preparation, scans outside the cases and waiting for quota reset.",
+    "evidence": "Raw report hashes and per-case numeric data; original answers stay in the local archives."
+  },
+  "sources": [
+    {
+      "file": "results-20261119-095644-f7586208.json",
+      "sha256": "662a0c7de69b05b162d31f91222831599bc32c91b96567273dfda943f5fa9cf4",
+      "label": "high-1",
+      "effort": "high",
+      "complete": true,
+      "totals": {
+        "attempts": 14,
+        "answers": 14,
+        "passed": 13,
+        "quality_failures": 1,
+        "errors": 0,
+        "answer_seconds": 1119.0247744569997,
+        "error_seconds": 0.0,
+        "all_attempt_seconds": 1119.0247744569997,
+        "answer_api_equivalent_usd": 5.367049400000001,
+        "error_api_equivalent_usd": 0.0,
+        "all_attempt_api_equivalent_usd": 5.367049400000001
+      },
+      "cases": [
+        {
+          "case": "shop-framework",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 20.807958466999935,
+          "api_equivalent_usd": 0.09109640000000001
+        },
+        {
+          "case": "shop-database",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 20.879696184000295,
+          "api_equivalent_usd": 0.06943160000000001
+        },
+        {
+          "case": "shop-decisions",
+          "command": "decisions",
+          "status": "passed",
+          "elapsed_seconds": 88.38727023499996,
+          "api_equivalent_usd": 0.2869046
+        },
+        {
+          "case": "itsdangerous-expiration",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 37.257031806000214,
+          "api_equivalent_usd": 0.246755
+        },
+        {
+          "case": "itsdangerous-pyproject",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 23.699747226,
+          "api_equivalent_usd": 0.110901
+        },
+        {
+          "case": "shop-why-framework",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 32.69393948299967,
+          "api_equivalent_usd": 0.1203092
+        },
+        {
+          "case": "shop-review-decisions",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 87.57765332600002,
+          "api_equivalent_usd": 0.28002740000000004
+        },
+        {
+          "case": "shop-ignore-prompt-injection",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 22.535470786000133,
+          "api_equivalent_usd": 0.068138
+        },
+        {
+          "case": "express-middleware",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 33.69035083300014,
+          "api_equivalent_usd": 0.21471220000000002
+        },
+        {
+          "case": "express-why-listen",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 81.81254739399992,
+          "api_equivalent_usd": 0.42331599999999997
+        },
+        {
+          "case": "express-review",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 194.4886434490004,
+          "api_equivalent_usd": 1.094832
+        },
+        {
+          "case": "go-http-default-handler",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 67.13843753899982,
+          "api_equivalent_usd": 0.24478719999999998
+        },
+        {
+          "case": "go-why-handlerfunc",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 100.91288556899963,
+          "api_equivalent_usd": 0.5229778
+        },
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "failed",
+          "elapsed_seconds": 307.14314215999957,
+          "api_equivalent_usd": 1.5928610000000003
+        }
+      ],
+      "offline_recheck": {
+        "file": "rescore-results-20261119-095644-f7586208-a6acbf01.json",
+        "sha256": "e11fa25661b2e153baaa221a003ebe6358cf8598bb2a79c4af8c5a4f28de9dd0",
+        "scoring_revision": "bdbabd7c00aaa19e600f225b92e99956d7c4f2ca",
+        "scoring_dirty": false,
+        "verified_project_sha_and_fingerprints": true,
+        "changed_outcomes": []
+      }
+    },
+    {
+      "file": "results-20261119-101538-287a78b1.json",
+      "sha256": "7c3ac1e3ca70b65bb4513e2a2a065b9375772aebc7fda20b0883ec34b3176bea",
+      "label": "high-2-before-retry",
+      "effort": "high",
+      "complete": true,
+      "totals": {
+        "attempts": 14,
+        "answers": 13,
+        "passed": 13,
+        "quality_failures": 0,
+        "errors": 1,
+        "answer_seconds": 865.5946209670028,
+        "error_seconds": 140.4996577259999,
+        "all_attempt_seconds": 1006.0942786930027,
+        "answer_api_equivalent_usd": 3.3584684,
+        "error_api_equivalent_usd": 1.3340192000000004,
+        "all_attempt_api_equivalent_usd": 4.692487600000001
+      },
+      "cases": [
+        {
+          "case": "shop-framework",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 20.950703400000748,
+          "api_equivalent_usd": 0.0472268
+        },
+        {
+          "case": "shop-database",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 31.462518234000527,
+          "api_equivalent_usd": 0.0680908
+        },
+        {
+          "case": "shop-decisions",
+          "command": "decisions",
+          "status": "passed",
+          "elapsed_seconds": 53.47539793099986,
+          "api_equivalent_usd": 0.12345500000000001
+        },
+        {
+          "case": "itsdangerous-expiration",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 48.33899795200068,
+          "api_equivalent_usd": 0.171095
+        },
+        {
+          "case": "itsdangerous-pyproject",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 37.564528302000326,
+          "api_equivalent_usd": 0.1452986
+        },
+        {
+          "case": "shop-why-framework",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 33.341951465999955,
+          "api_equivalent_usd": 0.09628720000000002
+        },
+        {
+          "case": "shop-review-decisions",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 118.68177951000052,
+          "api_equivalent_usd": 0.3199824
+        },
+        {
+          "case": "shop-ignore-prompt-injection",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 27.20982926399938,
+          "api_equivalent_usd": 0.047219
+        },
+        {
+          "case": "express-middleware",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 41.078153366999686,
+          "api_equivalent_usd": 0.14749240000000002
+        },
+        {
+          "case": "express-why-listen",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 72.75483803200041,
+          "api_equivalent_usd": 0.39082300000000003
+        },
+        {
+          "case": "express-review",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 214.9569862950002,
+          "api_equivalent_usd": 1.0139192000000001
+        },
+        {
+          "case": "go-http-default-handler",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 62.17114566500004,
+          "api_equivalent_usd": 0.17581239999999998
+        },
+        {
+          "case": "go-why-handlerfunc",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 103.60779154900047,
+          "api_equivalent_usd": 0.6117665999999999
+        },
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 140.4996577259999,
+          "api_equivalent_usd": 1.3340192000000004
+        }
+      ],
+      "offline_recheck": {
+        "file": "rescore-results-20261119-101538-287a78b1-d5d8ce1d.json",
+        "sha256": "de16417f2381c3e0d9403fad79190fdb179db6a1a93e438da49be6f9f5b5e38d",
+        "scoring_revision": "bdbabd7c00aaa19e600f225b92e99956d7c4f2ca",
+        "scoring_dirty": false,
+        "verified_project_sha_and_fingerprints": true,
+        "changed_outcomes": []
+      }
+    },
+    {
+      "file": "results-20261119-103238-3dc74cb3.json",
+      "sha256": "fc8bb56da7bf2871fe1b01f3b293092358fe18b4d1324fa53868eeaa70e97c56",
+      "label": "medium-quota-only-1",
+      "effort": "medium",
+      "complete": true,
+      "totals": {
+        "attempts": 14,
+        "answers": 0,
+        "passed": 0,
+        "quality_failures": 0,
+        "errors": 14,
+        "answer_seconds": 0.0,
+        "error_seconds": 63.81514697300008,
+        "all_attempt_seconds": 63.81514697300008,
+        "answer_api_equivalent_usd": 0.0,
+        "error_api_equivalent_usd": 0.0,
+        "all_attempt_api_equivalent_usd": 0.0
+      },
+      "cases": [
+        {
+          "case": "shop-framework",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.3378499360005662,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-database",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.306408927999655,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-decisions",
+          "command": "decisions",
+          "status": "error",
+          "elapsed_seconds": 2.368754615999933,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "itsdangerous-expiration",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.3323329200002263,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "itsdangerous-pyproject",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.3882313460007936,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-why-framework",
+          "command": "why",
+          "status": "error",
+          "elapsed_seconds": 2.4654321130001335,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-review-decisions",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 2.30940875899978,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-ignore-prompt-injection",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.3201012299996364,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "express-middleware",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.6984793689998696,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "express-why-listen",
+          "command": "why",
+          "status": "error",
+          "elapsed_seconds": 2.6164892429997053,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "express-review",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 2.675475676000133,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "go-http-default-handler",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 11.880527153999537,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "go-why-handlerfunc",
+          "command": "why",
+          "status": "error",
+          "elapsed_seconds": 11.986090670000522,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 13.129565012999592,
+          "api_equivalent_usd": 0
+        }
+      ]
+    },
+    {
+      "file": "results-20261119-103355-12cca627.json",
+      "sha256": "b885808740478bbe0953c2d4f5587531fab3ea207d2e372f0c47e063ea2a124f",
+      "label": "medium-quota-only-2",
+      "effort": "medium",
+      "complete": true,
+      "totals": {
+        "attempts": 14,
+        "answers": 0,
+        "passed": 0,
+        "quality_failures": 0,
+        "errors": 14,
+        "answer_seconds": 0.0,
+        "error_seconds": 63.74818234200029,
+        "all_attempt_seconds": 63.74818234200029,
+        "answer_api_equivalent_usd": 0.0,
+        "error_api_equivalent_usd": 0.0,
+        "all_attempt_api_equivalent_usd": 0.0
+      },
+      "cases": [
+        {
+          "case": "shop-framework",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.29653320899979,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-database",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.472895433999838,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-decisions",
+          "command": "decisions",
+          "status": "error",
+          "elapsed_seconds": 2.32185911400029,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "itsdangerous-expiration",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.388460469000165,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "itsdangerous-pyproject",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.385754044999885,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-why-framework",
+          "command": "why",
+          "status": "error",
+          "elapsed_seconds": 2.2743819779998375,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-review-decisions",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 2.3653911689998495,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "shop-ignore-prompt-injection",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.334955096000158,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "express-middleware",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 2.5648811399996703,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "express-why-listen",
+          "command": "why",
+          "status": "error",
+          "elapsed_seconds": 2.3618440520003787,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "express-review",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 2.479529679000734,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "go-http-default-handler",
+          "command": "ask",
+          "status": "error",
+          "elapsed_seconds": 12.315521974999683,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "go-why-handlerfunc",
+          "command": "why",
+          "status": "error",
+          "elapsed_seconds": 11.967142278999745,
+          "api_equivalent_usd": 0
+        },
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "error",
+          "elapsed_seconds": 13.219032703000266,
+          "api_equivalent_usd": 0
+        }
+      ]
+    },
+    {
+      "file": "results-20261119-141040-e57ca2de.json",
+      "sha256": "f48a78e09ac68de16a9ffd219b42090782f1cb6c65982fd411bcce90d3ddbffb",
+      "label": "high-2-go-retry",
+      "effort": "high",
+      "complete": true,
+      "totals": {
+        "attempts": 1,
+        "answers": 1,
+        "passed": 1,
+        "quality_failures": 0,
+        "errors": 0,
+        "answer_seconds": 224.04283053499967,
+        "error_seconds": 0.0,
+        "all_attempt_seconds": 224.04283053499967,
+        "answer_api_equivalent_usd": 1.2468738000000004,
+        "error_api_equivalent_usd": 0.0,
+        "all_attempt_api_equivalent_usd": 1.2468738000000004
+      },
+      "cases": [
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 224.04283053499967,
+          "api_equivalent_usd": 1.2468738000000004
+        }
+      ],
+      "offline_recheck": {
+        "file": "rescore-results-20261119-141040-e57ca2de-37df2c43.json",
+        "sha256": "af71c35378d99321ac4c96721b2b51b7d27b5ead48e060c4951cbde7fd75da09",
+        "scoring_revision": "bdbabd7c00aaa19e600f225b92e99956d7c4f2ca",
+        "scoring_dirty": false,
+        "verified_project_sha_and_fingerprints": true,
+        "changed_outcomes": []
+      }
+    },
+    {
+      "file": "results-20261119-141438-b531f15a.json",
+      "sha256": "dcdbee45e2b31f3d08593c70d13b322ca7e17a5137928158bf29118116517cd8",
+      "label": "medium-1",
+      "effort": "medium",
+      "complete": true,
+      "totals": {
+        "attempts": 14,
+        "answers": 14,
+        "passed": 14,
+        "quality_failures": 0,
+        "errors": 0,
+        "answer_seconds": 780.5020402009977,
+        "error_seconds": 0.0,
+        "all_attempt_seconds": 780.5020402009977,
+        "answer_api_equivalent_usd": 3.8048232,
+        "error_api_equivalent_usd": 0.0,
+        "all_attempt_api_equivalent_usd": 3.8048232
+      },
+      "cases": [
+        {
+          "case": "shop-framework",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 13.945300641000358,
+          "api_equivalent_usd": 0.073894
+        },
+        {
+          "case": "shop-database",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 20.194050238998898,
+          "api_equivalent_usd": 0.06261040000000001
+        },
+        {
+          "case": "shop-decisions",
+          "command": "decisions",
+          "status": "passed",
+          "elapsed_seconds": 45.675277898000786,
+          "api_equivalent_usd": 0.17695299999999997
+        },
+        {
+          "case": "itsdangerous-expiration",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 32.97194385799958,
+          "api_equivalent_usd": 0.1878528
+        },
+        {
+          "case": "itsdangerous-pyproject",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 26.301206015999924,
+          "api_equivalent_usd": 0.10945300000000001
+        },
+        {
+          "case": "shop-why-framework",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 30.441720797000016,
+          "api_equivalent_usd": 0.11485500000000001
+        },
+        {
+          "case": "shop-review-decisions",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 59.32911132499794,
+          "api_equivalent_usd": 0.2054822
+        },
+        {
+          "case": "shop-ignore-prompt-injection",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 18.270766737001395,
+          "api_equivalent_usd": 0.062354400000000004
+        },
+        {
+          "case": "express-middleware",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 28.540304398000444,
+          "api_equivalent_usd": 0.1625798
+        },
+        {
+          "case": "express-why-listen",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 63.024752519002504,
+          "api_equivalent_usd": 0.35460579999999997
+        },
+        {
+          "case": "express-review",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 144.77525458599848,
+          "api_equivalent_usd": 0.7630201999999999
+        },
+        {
+          "case": "go-http-default-handler",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 55.0705332969992,
+          "api_equivalent_usd": 0.21397660000000002
+        },
+        {
+          "case": "go-why-handlerfunc",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 68.99004697299824,
+          "api_equivalent_usd": 0.4192412
+        },
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 172.97177091699996,
+          "api_equivalent_usd": 0.8979448000000001
+        }
+      ],
+      "offline_recheck": {
+        "file": "rescore-results-20261119-141438-b531f15a-44d1c74a.json",
+        "sha256": "f3fa6fe00b7b0235061694ce7ab8a9149512193be63406df9bac0a1f9c3571ff",
+        "scoring_revision": "bdbabd7c00aaa19e600f225b92e99956d7c4f2ca",
+        "scoring_dirty": false,
+        "verified_project_sha_and_fingerprints": true,
+        "changed_outcomes": []
+      }
+    },
+    {
+      "file": "results-20261119-142752-bfa9158d.json",
+      "sha256": "1f1446355bfe2909de4c9ce3f12b92a5fe041a52fc89b2e33c99ed52bc5916be",
+      "label": "medium-2",
+      "effort": "medium",
+      "complete": true,
+      "totals": {
+        "attempts": 14,
+        "answers": 14,
+        "passed": 14,
+        "quality_failures": 0,
+        "errors": 0,
+        "answer_seconds": 762.7404736419958,
+        "error_seconds": 0.0,
+        "all_attempt_seconds": 762.7404736419958,
+        "answer_api_equivalent_usd": 3.020215,
+        "error_api_equivalent_usd": 0.0,
+        "all_attempt_api_equivalent_usd": 3.020215
+      },
+      "cases": [
+        {
+          "case": "shop-framework",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 13.5173663079986,
+          "api_equivalent_usd": 0.0341652
+        },
+        {
+          "case": "shop-database",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 18.439913688998786,
+          "api_equivalent_usd": 0.057630400000000005
+        },
+        {
+          "case": "shop-decisions",
+          "command": "decisions",
+          "status": "passed",
+          "elapsed_seconds": 44.984712918001605,
+          "api_equivalent_usd": 0.11835699999999999
+        },
+        {
+          "case": "itsdangerous-expiration",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 27.588450791001378,
+          "api_equivalent_usd": 0.11029800000000001
+        },
+        {
+          "case": "itsdangerous-pyproject",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 21.848141238002427,
+          "api_equivalent_usd": 0.115417
+        },
+        {
+          "case": "shop-why-framework",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 30.511938879997615,
+          "api_equivalent_usd": 0.09137619999999999
+        },
+        {
+          "case": "shop-review-decisions",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 59.896409659999335,
+          "api_equivalent_usd": 0.1574314
+        },
+        {
+          "case": "shop-ignore-prompt-injection",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 16.644807351000054,
+          "api_equivalent_usd": 0.036694000000000004
+        },
+        {
+          "case": "express-middleware",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 28.47997459399994,
+          "api_equivalent_usd": 0.10483340000000001
+        },
+        {
+          "case": "express-why-listen",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 51.82978743499916,
+          "api_equivalent_usd": 0.30058319999999994
+        },
+        {
+          "case": "express-review",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 123.8206071579989,
+          "api_equivalent_usd": 0.5232462
+        },
+        {
+          "case": "go-http-default-handler",
+          "command": "ask",
+          "status": "passed",
+          "elapsed_seconds": 44.38743881999835,
+          "api_equivalent_usd": 0.1233834
+        },
+        {
+          "case": "go-why-handlerfunc",
+          "command": "why",
+          "status": "passed",
+          "elapsed_seconds": 81.30028925499937,
+          "api_equivalent_usd": 0.4114898
+        },
+        {
+          "case": "go-review-http",
+          "command": "review",
+          "status": "passed",
+          "elapsed_seconds": 199.49063554500026,
+          "api_equivalent_usd": 0.8353098000000001
+        }
+      ],
+      "offline_recheck": {
+        "file": "rescore-results-20261119-142752-bfa9158d-a468ac1e.json",
+        "sha256": "b8c775bb5cab09eed6dda51bf0b4300ea9d1a037820d84e1ae3d48f919b0c845",
+        "scoring_revision": "bdbabd7c00aaa19e600f225b92e99956d7c4f2ca",
+        "scoring_dirty": false,
+        "verified_project_sha_and_fingerprints": true,
+        "changed_outcomes": []
+      }
+    }
+  ],
+  "by_effort": {
+    "high": {
+      "attempts": 29,
+      "answers": 28,
+      "passed": 27,
+      "quality_failures": 1,
+      "errors": 1,
+      "answer_seconds": 2208.662225959002,
+      "error_seconds": 140.4996577259999,
+      "all_attempt_seconds": 2349.161883685002,
+      "answer_api_equivalent_usd": 9.972391600000002,
+      "error_api_equivalent_usd": 1.3340192000000004,
+      "all_attempt_api_equivalent_usd": 11.306410800000002,
+      "mean_answer_seconds_per_14_cases": 1104.331112979501,
+      "mean_answer_api_equivalent_usd_per_14_cases": 4.986195800000001
+    },
+    "medium": {
+      "attempts": 56,
+      "answers": 28,
+      "passed": 28,
+      "quality_failures": 0,
+      "errors": 28,
+      "answer_seconds": 1543.2425138429935,
+      "error_seconds": 127.56332931500037,
+      "all_attempt_seconds": 1670.8058431579939,
+      "answer_api_equivalent_usd": 6.8250382,
+      "error_api_equivalent_usd": 0.0,
+      "all_attempt_api_equivalent_usd": 6.8250382,
+      "mean_answer_seconds_per_14_cases": 771.6212569214968,
+      "mean_answer_api_equivalent_usd_per_14_cases": 3.4125191
+    }
+  },
+  "comparison_on_answers": {
+    "answer_cost_reduction_fraction": 0.31560667954515553,
+    "answer_duration_reduction_fraction": 0.3012772638093555
+  }
+}
