@@ -79,8 +79,13 @@ def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None
 def _markdown_items(items: list[str]) -> list[str]:
     rendered = []
     for item in items:
-        first, newline, rest = evidence.close_open_fence(item).partition("\n")
-        rendered.append(f"- {first}{newline}{indent(rest, '  ')}")
+        content = evidence.close_open_fence(item)
+        if content.startswith((" ", "\t")):
+            # Spaces after the marker would raise the item's required indentation.
+            rendered.append(f"-\n{indent(content, '  ')}")
+        else:
+            first, newline, rest = content.partition("\n")
+            rendered.append(f"- {first}{newline}{indent(rest, '  ')}")
     return rendered
 
 

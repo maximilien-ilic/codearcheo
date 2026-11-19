@@ -215,3 +215,18 @@ def test_multiline_adr_list_item_keeps_fenced_example_inside_item(tmp_path, deci
     warnings = text.split("## Preuves non vérifiées")[1]
     assert "missing.py:9 : fichier introuvable" in warnings
     assert "example.py:2" not in warnings
+
+
+def test_indented_fence_in_adr_list_item_keeps_warnings_outside_code(tmp_path, decision):
+    mixed = decision.model_copy(update={
+        "alternatives": ["  ~~~python\nexample.py:2\n~~~"],
+        "rationale": "Voir missing.py:9.",
+    })
+
+    (path,) = export_decisions(tmp_path, [mixed], tmp_path / "docs" / "adr")
+
+    text = path.read_text()
+    assert "-\n    ~~~python\n  example.py:2\n  ~~~\n\n## Conséquences" in text
+    warnings = text.split("## Preuves non vérifiées")[1]
+    assert "missing.py:9 : fichier introuvable" in warnings
+    assert "example.py:2" not in warnings
