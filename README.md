@@ -150,7 +150,7 @@ ne peuvent pas appliquer.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`, et une revue Claude côté serveur est prête ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**Ce qui reste à prouver.** La variabilité est faible : sur quatre évaluations complètes (mesure 10), un seul cas sur 56 échoue, une revue Go qui abrégeait trois chemins. L'effort `medium` réussit tout, avec 32 % de coût en moins que `high`. Il reste à mesurer la correction des citations par le modèle, désormais possible sur l'abonnement, puis le moteur API.
+**Ce qui reste à prouver.** Sur les 56 réponses obtenues à la mesure 10, une seule échoue au barème : une revue Go qui abrégeait trois chemins. L'effort `medium` réussit 28/28 réponses, avec un coût moyen des réponses inférieur de 32 % à `high`. Les erreurs de quota et leur consommation sont [comptées à part](docs/evaluation.md#mesure-10--variabilité-et-effort-19-novembre-2026). Il reste à mesurer la correction des citations par le modèle, désormais possible sur l'abonnement, puis le moteur API.
 
 **Ce qu'il reste à faire.**
 

@@ -242,24 +242,25 @@ cas et les prochaines mesures enregistreront le périmètre demandé. La mesure 
 
 ## Mesure 10 : variabilité et effort, 19 novembre 2026
 
-Quatre évaluations complètes du même code (`9bbce03`, sans modification locale), deux en
-`high` et deux en `medium`, sur les 14 cas de l'abonnement. Le cas
+Deux passes par effort sur le même code (`9bbce03`, sans modification locale), en
+`high` et en `medium`, sur les 14 cas de l'abonnement. La seconde passe `high` est
+complétée par une reprise du dernier cas après un quota. Le cas
 `github-pr-only-rationale` reste hors de ce moteur. go-review-http cible désormais
 `src/net/http` : c'est sa première mesure avec ce périmètre.
 
-| Effort | Passe 1 | Passe 2 | Durée moyenne | Coût moyen (équivalent API) |
+| Effort | Passe 1 | Passe 2 | Durée moyenne des réponses | Coût moyen des réponses (équivalent API) |
 |---|---|---|---|---|
 | `high` | 13/14 | 14/14 | 18,4 min | 4,99 $ |
 | `medium` | 14/14 | 14/14 | 12,9 min | 3,41 $ |
 
-- **La variabilité est faible.** Sur 56 exécutions, il y a un seul échec : go-review-http
+- **Un échec de qualité parmi 56 réponses obtenues.** go-review-http échoue
   à la première passe `high`. Express et la revue Express, ratés aux mesures 8 et 9,
   réussissent quatre fois sur quatre.
-- **`medium` est moins cher sans coûter en qualité.** Il est 30 % plus rapide et 32 % moins
-  cher que `high`, et plus rapide en moyenne sur chacun des 14 cas. Le gain est le plus net
-  sur les revues : express-review coûte 0,64 $ contre 1,05 $, go-review-http 0,87 $ contre 1,42 $.
-  Deux passes par effort restent un petit échantillon : `medium` n'est pas meilleur, il
-  n'est simplement pas pire sur ces 28 exécutions.
+- **Les réponses `medium` sont moins coûteuses sur cet échantillon.** Elles sont 30 % plus
+  rapides et 32 % moins chères que `high`, et plus rapides en moyenne sur chacun des 14 cas.
+  Le gain est le plus net sur les revues : express-review coûte 0,64 $ contre 1,05 $,
+  go-review-http 0,87 $ contre 1,42 $. Deux passes par effort restent un petit échantillon
+  pour établir une différence de qualité.
 - **L'échec de go-review-http (passe `high` n°1)** vient de trois citations abrégées sur
   81. `export_test.go:198-214` et `pprof.go:97` désignent plusieurs fichiers de golang/go
   et restent ambiguës. `cmd/dist/test.go:713-721` est écrite relativement à `src/`, comme
@@ -268,11 +269,34 @@ Quatre évaluations complètes du même code (`9bbce03`, sans modification local
   seul, avec le même code, après la réinitialisation. Il a réussi avec 58 citations
   vérifiées.
 
+Les moyennes du premier tableau portent sur 28 réponses par effort, divisées par deux
+pour une passe équivalente de 14 cas. Elles incluent la réponse échouée au barème et la
+reprise Go réussie, mais excluent les erreurs sans réponse. Les durées additionnent les
+temps par cas, sans la préparation des projets ni l'attente de réinitialisation du quota.
+
+Le coût total des tentatives est différent : le quota Go a interrompu une génération
+qui avait déjà consommé **1,33 $ d'équivalent API**. Deux autres lancements `medium`
+ont été entièrement refusés avant la réinitialisation, soit 28 erreurs sans réponse ;
+leurs compteurs retournent un coût nul. Sur les sept rapports archivés, on compte donc
+**85 tentatives, 56 réponses et 29 erreurs de moteur**.
+
+| Effort | Qualité des réponses | Erreurs de moteur | Coût des réponses | Coût des erreurs | Coût total des tentatives |
+|---|---|---|---|---|---|
+| `high` | 27/28 | 1 | 9,97 $ | 1,33 $ | 11,31 $ |
+| `medium` | 28/28 | 28 | 6,83 $ | 0,00 $ | 6,83 $ |
+
+Ces montants restent des équivalents API retournés par Claude Code, sans déduire la
+facture du compte. Les [données numériques et empreintes des sept rapports](benchmarks/evaluation-20261119.json)
+permettent de vérifier les totaux. Un recalcul hors ligne des cinq rapports contenant
+des réponses, au code `bdbabd7`, vérifie les SHA et empreintes des projets et conserve
+tous les résultats. Il ne produit aucune nouvelle réponse du modèle.
+
 Les rapports bruts sont dans `~/.cache/learn-it/evals/` :
 `results-20261119-095644-f7586208.json` et `results-20261119-101538-287a78b1.json` (+
 `results-20261119-141040-e57ca2de.json` pour go-review-http) en `high`,
 `results-20261119-141438-b531f15a.json` et `results-20261119-142752-bfa9158d.json` en
-`medium`.
+`medium`. Les deux lancements entièrement refusés par le quota sont
+`results-20261119-103238-3dc74cb3.json` et `results-20261119-103355-12cca627.json`.
 
 ## Changement 5 : compléter les suffixes de chemin (#75)
 
@@ -288,7 +312,7 @@ API.
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
   `uv run --all-extras python -m evals.run --backend claude-code --compare-citations`.
-  Sur les cas actuels, elle n'aurait rien à corriger. Dans les 54 réponses exploitables de
+  Sur les cas actuels, elle n'aurait rien à corriger. Dans les 56 réponses obtenues de
   la mesure 10, une seule contient des citations invalides : la revue Go, une commande
   `review`, que `--repair-citations` ne couvre pas. Les 40 réponses `ask` et `why` sont
   toutes valides après la complétion locale. Mesurer un gain demande donc des cas plus
