@@ -1,8 +1,132 @@
 import gzip
+import os
+from pathlib import Path
 
 import pytest
 
+from learn_it.domain import Decision, ProjectProfile, Recommendation
 from learn_it.store import Store
+
+
+@pytest.fixture(params=["profile", "decisions", "recommendations", "report", "json"])
+def save_document(request):
+    def save(store, value):
+        if request.param == "profile":
+            return store.save_profile(ProjectProfile(
+                name=value, files=0, languages={}, technologies=[], docs=[],
+            ))
+        if request.param == "decisions":
+            return store.save_decisions([Decision(
+                title=value, category="data", context="Context", decision="Decision",
+                rationale="Inference", rationale_source="inferred", consequences=[], evidence=[],
+            )])
+        if request.param == "recommendations":
+            return store.save_recommendations([Recommendation(
+                title=value, decision="Decision", verdict="keep", reasons=["Reason"],
+                effort="S", impact="low", evidence=["source.py:1"],
+            )])
+        if request.param == "report":
+            return store.save_report("review", value)
+        return store.save_json("cache.json", {"value": value})
+    return save
+
+
+@pytest.fixture
+def interrupted_writes(monkeypatch):
+    """Fail after writing a partial document, with direct or temporary-file writers."""
+    marker = "INTERRUPTED_NEW_DOCUMENT"
+    write_text = Path.write_text
+    fdopen = os.fdopen
+
+    def fail_write_text(path, content, *args, **kwargs):
+        if marker in content:
+            write_text(path, content[:len(content) // 2], *args, **kwargs)
+            raise OSError("simulated interrupted write")
+        return write_text(path, content, *args, **kwargs)
+
+    class FailingWriter:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def __enter__(self):
+            self.stream.__enter__()
+            return self
+
+        def __exit__(self, *args):
+            return self.stream.__exit__(*args)
+
+        def __getattr__(self, name):
+            return getattr(self.stream, name)
+
+        def write(self, content):
+            if marker in content:
+                self.stream.write(content[:len(content) // 2])
+                self.stream.flush()
+                raise OSError("simulated interrupted write")
+            return self.stream.write(content)
+
+    monkeypatch.setattr(Path, "write_text", fail_write_text)
+    monkeypatch.setattr(
+        os, "fdopen", lambda *args, **kwargs: FailingWriter(fdopen(*args, **kwargs)),
+    )
+    return marker
+
+
+def test_failed_document_write_keeps_the_previous_version(
+    tmp_path, save_document, interrupted_writes,
+):
+    store = Store(tmp_path)
+    path = save_document(store, "previous complete document")
+    original = path.read_bytes()
+
+    with pytest.raises(OSError, match="simulated interrupted write"):
+        save_document(store, interrupted_writes)
+
+    assert path.read_bytes() == original
+    assert {item.name for item in store.dir.iterdir()} == {".gitignore", path.name}
+
+
+def test_failed_first_document_write_leaves_no_partial_file(
+    tmp_path, save_document, interrupted_writes,
+):
+    store = Store(tmp_path)
+
+    with pytest.raises(OSError, match="simulated interrupted write"):
+        save_document(store, interrupted_writes)
+
+    assert {item.name for item in store.dir.iterdir()} == {".gitignore"}
+
+
+def test_failed_document_replacement_keeps_the_previous_version(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    path = store.save_json("cache.json", {"previous": True})
+    original = path.read_bytes()
+
+    def fail_replace(self, target):
+        raise OSError("replacement failed")
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    with pytest.raises(OSError, match="replacement failed"):
+        store.save_json("cache.json", {"previous": False})
+
+    assert path.read_bytes() == original
+    assert {item.name for item in store.dir.iterdir()} == {".gitignore", path.name}
+
+
+def test_failed_document_flush_keeps_the_previous_version(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    path = store.save_json("cache.json", {"previous": True})
+    original = path.read_bytes()
+
+    def fail_fsync(descriptor):
+        raise OSError("flush failed")
+
+    monkeypatch.setattr(os, "fsync", fail_fsync)
+    with pytest.raises(OSError, match="flush failed"):
+        store.save_json("cache.json", {"previous": False})
+
+    assert path.read_bytes() == original
+    assert {item.name for item in store.dir.iterdir()} == {".gitignore", path.name}
 
 
 def test_store_refuses_a_linked_output_directory(tmp_path):
