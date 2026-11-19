@@ -119,6 +119,20 @@ def test_unrecognized_evidence_cannot_turn_the_warning_into_code(publication):
     assert "fichier introuvable" in warning
 
 
+@pytest.mark.parametrize("field", ["reasons", "tradeoffs", "first_steps", "evidence"])
+@pytest.mark.parametrize("marker", ["```", "~~~"])
+def test_indented_fence_does_not_hide_published_warnings(publication, field, marker):
+    project, bodies = publication
+    item = recommendation(
+        **{field: [f"  {marker}python\nexample.py:999\n{marker}"]},
+        proposal="Voir missing.py:9.",
+    )
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    assert "<h3>Preuves non vérifiées</h3>" in MarkdownIt().render(bodies[0])
+
+
 def test_valid_published_evidence_does_not_raise_a_warning(publication):
     project, bodies = publication
 

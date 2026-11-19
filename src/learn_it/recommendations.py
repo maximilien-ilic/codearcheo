@@ -42,8 +42,13 @@ def _markdown_items(items: list[str], *, checklist: bool = False) -> list[str]:
     prefix = "- [ ] " if checklist else "- "
     rendered = []
     for item in items:
-        first, newline, rest = evidence.close_open_fence(item).partition("\n")
-        rendered.append(f"{prefix}{first}{newline}{indent(rest, '  ')}")
+        content = evidence.close_open_fence(item)
+        if content.startswith((" ", "\t")):
+            # Leading whitespace must not change the continuation indentation.
+            rendered.append(f"{prefix.rstrip()}\n{indent(content, '  ')}")
+        else:
+            first, newline, rest = content.partition("\n")
+            rendered.append(f"{prefix}{first}{newline}{indent(rest, '  ')}")
     return rendered
 
 
