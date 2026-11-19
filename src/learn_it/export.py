@@ -36,16 +36,17 @@ def check_evidence(root: Path, decision: Decision) -> evidence.EvidenceReport:
 def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None = None) -> str:
     source = "documentée" if decision.rationale_source == "documented" else "déduite"
     lines = [
-        f"# {number:04d}. {decision.title}", "", "- Statut : proposée (à confirmer)", "",
+        evidence.close_open_fence(f"# {number:04d}. {decision.title}"), "",
+        "- Statut : proposée (à confirmer)", "",
         f"*Reconstituée par learn-it ; justification {source}. Vérifier avant adoption.*", "",
-        "## Contexte", "", decision.context, "",
-        "## Décision", "", decision.decision, "",
-        "## Justification", "", decision.rationale, "",
+        "## Contexte", "", evidence.close_open_fence(decision.context), "",
+        "## Décision", "", evidence.close_open_fence(decision.decision), "",
+        "## Justification", "", evidence.close_open_fence(decision.rationale), "",
     ]
     if decision.alternatives:
-        lines += ["## Alternatives", "", *(f"- {x}" for x in decision.alternatives), ""]
-    lines += ["## Conséquences", "", *(f"- {x}" for x in decision.consequences), ""]
-    lines += ["## Preuves", "", *(f"- {x}" for x in decision.evidence), ""]
+        lines += ["## Alternatives", "", *_markdown_items(decision.alternatives), ""]
+    lines += ["## Conséquences", "", *_markdown_items(decision.consequences), ""]
+    lines += ["## Preuves", "", *_markdown_items(decision.evidence), ""]
     if decision.introduced_in:
         lines += [f"Introduite dans le commit {decision.introduced_in}.", ""]
     if report is not None and report.problems:
@@ -55,6 +56,10 @@ def madr(decision: Decision, number: int, report: evidence.EvidenceReport | None
     elif report is not None and not report.citations:
         lines += ["## Preuves non vérifiées", "", evidence.summary(report), ""]
     return "\n".join(lines)
+
+
+def _markdown_items(items: list[str]) -> list[str]:
+    return [evidence.close_open_fence(f"- {item}") for item in items]
 
 
 def export_decisions(

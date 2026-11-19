@@ -15,7 +15,8 @@ L'export ADR vérifie aussi les citations du titre, du contexte, de la décision
 justification, des alternatives et des conséquences. Les références invalides figurent
 dans « Preuves non vérifiées ». Une citation dans ce texte ne remplace pas la liste des
 preuves déclarées : sans preuve déclarée vérifiable, `--allow-unproven` reste nécessaire
-et l'ADR conserve son avertissement.
+et l'ADR conserve son avertissement. Un bloc de code de premier niveau laissé ouvert
+dans un champ est refermé à la fin de ce champ pour préserver les sections suivantes.
 
 Une complétion locale précède désormais cette étape pour les réponses non diffusées et
 les preuves structurées : `timed.py:170` devient le chemin complet si l'inventaire ou les
