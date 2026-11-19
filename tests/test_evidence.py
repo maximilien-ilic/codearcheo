@@ -216,3 +216,10 @@ def test_a_backtick_run_in_a_heading_cannot_hide_citations_in_the_next_paragraph
     text = "# Délimiteur seul ``\nVoir app.py:1 et un autre délimiteur ``."
 
     assert [citation.path for citation in find_citations(text)] == ["app.py"]
+
+
+@pytest.mark.parametrize("quote", ["> ", "> > "])
+def test_unmatched_backticks_cannot_hide_citations_in_a_quoted_heading(quote):
+    text = f"{quote}Délimiteur seul ``\n{quote}# Sources app.py:1 et `b.py:2`\n{quote}Fin ``."
+
+    assert {citation.path for citation in find_citations(text)} == {"app.py", "b.py"}
