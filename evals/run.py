@@ -209,10 +209,6 @@ def main(
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
-    if settings.backend == "claude-code" and (repair_citations or compare_citations):
-        print("La correction des citations n'existe pas avec --backend claude-code.",
-              file=sys.stderr)
-        return 2
     try:
         specs = select_cases(load_cases(), names, case_ids or [])
     except ValueError as exc:

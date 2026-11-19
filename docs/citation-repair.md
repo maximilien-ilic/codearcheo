@@ -30,6 +30,11 @@ de sortie choisie si elle est inférieure. Cette option peut consommer un appel 
 La même limite globale de session couvre l'analyse et la correction. Si le quota est épuisé,
 la réponse initiale et ses avertissements sont conservés.
 
+Avec `LEARN_IT_BACKEND=claude-code`, la correction passe aussi par l'abonnement : un appel
+`claude -p` d'un seul tour, sans outil intégré ni serveur MCP, avec le même prompt système
+et la même acceptation locale. `claude -p` ne permet pas de borner la sortie, et ce moteur
+n'a pas de limite locale de requêtes : la seule garantie est l'unique tour.
+
 Le modèle propose un plan JSON de remplacement des références, pas une nouvelle réponse.
 Le programme applique uniquement les références invalides reconnues à leurs positions
 exactes : le texte extérieur à ces fragments, les références valides et le diagramme
@@ -78,6 +83,12 @@ uv run python -m evals.run shop --compare-citations --max-requests 6 --max-outpu
 ```
 
 Cette commande consomme des tokens API ; elle n'a pas été exécutée pour ce travail.
+Sur l'abonnement, sans clé API ni plafond local :
+
+```bash
+uv run --all-extras python -m evals.run --backend claude-code --compare-citations
+```
+
 `--compare-citations` conserve les réponses initiale et retenue, les références invalides,
 les contrôles et les scores avant/après issus de la même analyse. Les tokens, le coût estimé
 et la durée sont enregistrés par cas. Il n'y a pas deux analyses de départ indépendantes.

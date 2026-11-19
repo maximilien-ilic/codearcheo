@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import PurePosixPath
 from typing import Any
 
@@ -84,6 +84,8 @@ class Session:
                 answer, self.project.root, self.settings, initial=report,
                 commits=[{"sha": c.sha, "subject": c.subject} for c in self.profile.recent_commits],
                 call_options=options,
+                invoke=self._repair_on_claude_code if self.settings.backend == "claude-code"
+                else None,
             )
             answer = self._last_repair.selected_answer
             report = self._last_repair.selected_report.report()
@@ -125,19 +127,28 @@ class Session:
     def _run_claude_code(
         self, system: str, task: str, extra_tools: Sequence[Tool], *, check: bool
     ) -> str:
-        """Same task on the Claude subscription: no streaming, no local limits, no repair."""
-        if self.repair_citations:
-            raise AgentError("--repair-citations n'est pas disponible avec le moteur claude-code.")
+        """Same task on the Claude subscription: no streaming and no local limits."""
         options = {"on_usage": self.on_usage} if self.on_usage is not None else {}
         answer = run_claude_code(
             system, task, list(extra_tools), self.settings, root=self.project.root, **options
         )
         if not check:
             return answer
-        checked = self.checked(answer)
+        checked = self.checked(answer, repair=self.repair_citations and not extra_tools)
         if self.on_text is not None:
             self.on_text(checked)
         return checked
+
+    def _repair_on_claude_code(
+        self, system: str, task: str, tools: Sequence[Tool], settings: Settings, *,
+        single_request: bool = False, on_usage: UsageCallback | None = None, **_: Any,
+    ) -> str:
+        """The repair request without any tool; `claude -p` cannot cap its output."""
+        return run_claude_code(
+            system, task, list(tools),
+            replace(settings, max_output_tokens=Settings.max_output_tokens),
+            root=self.project.root, on_usage=on_usage, exploration=False,
+        )
 
 
 def _complete_evidence(fields: dict[str, Any], session: Session) -> dict[str, Any]:

@@ -16,11 +16,14 @@ from learn_it.store import Store
 
 FAKE = """#!{python}
 import json, os, sys
-with open(os.environ["FAKE_CLAUDE_LOG"], "w") as log:
-    argv = sys.argv[1:]
-    mcp = json.load(open(argv[argv.index("--mcp-config") + 1]))
-    json.dump({{"argv": argv, "mcp": mcp, "api_key": "ANTHROPIC_API_KEY" in os.environ}}, log)
-print(os.environ["FAKE_CLAUDE_OUTPUT"])
+path = os.environ["FAKE_CLAUDE_LOG"]
+calls = json.load(open(path)) if os.path.exists(path) else []
+argv = sys.argv[1:]
+mcp = json.load(open(argv[argv.index("--mcp-config") + 1]))
+calls.append({{"argv": argv, "mcp": mcp, "api_key": "ANTHROPIC_API_KEY" in os.environ}})
+json.dump(calls, open(path, "w"))
+outputs = json.loads(os.environ["FAKE_CLAUDE_OUTPUT"])
+print(json.dumps(outputs[min(len(calls), len(outputs)) - 1]))
 """
 
 
@@ -36,11 +39,13 @@ def fake_claude(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_CLAUDE_LOG", str(tmp_path / "call.json"))
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-should-not-reach-claude")
 
-    def reply(**result):
-        result = {"type": "result", "is_error": False, "num_turns": 3, "total_cost_usd": 0.12,
-                  "usage": {"input_tokens": 10, "output_tokens": 20}, **result}
-        monkeypatch.setenv("FAKE_CLAUDE_OUTPUT", json.dumps(result))
-        return lambda: json.loads((tmp_path / "call.json").read_text())
+    def reply(*then, **result):
+        """One reply per call, in order; the last one repeats. The log returns the last call."""
+        outputs = [{"type": "result", "is_error": False, "num_turns": 3, "total_cost_usd": 0.12,
+                    "usage": {"input_tokens": 10, "output_tokens": 20}, **item}
+                   for item in (result, *then)]
+        monkeypatch.setenv("FAKE_CLAUDE_OUTPUT", json.dumps(outputs))
+        return lambda: json.loads((tmp_path / "call.json").read_text())[-1]
 
     return reply
 
@@ -124,10 +129,53 @@ def test_failures_and_unsupported_options_are_explicit(project, fake_claude):
         features.ask(session(project, max_requests=3), "?")
     with pytest.raises(AgentError, match="max-output-tokens"):
         features.ask(session(project, max_output_tokens=20), "?")
-    repaired = session(project)
-    repaired.repair_citations = True
-    with pytest.raises(AgentError, match="repair-citations"):
-        features.ask(repaired, "?")
+
+
+def test_citation_repair_is_one_tool_free_request_on_the_subscription(
+    project, fake_claude, tmp_path,
+):
+    edit = {"edits": [{"citation": "`./apps.py:3`", "replacement": "`app.py:3`"}]}
+    call = fake_claude({"result": json.dumps(edit), "num_turns": 1},
+                       result="FastAPI depuis `./apps.py:3`.")
+    current = session(project)
+    current.repair_citations = True
+
+    answer = features.ask(current, "Quel framework ?")
+
+    assert answer.startswith("FastAPI depuis `app.py:3`.")
+    assert current.last_repair["accepted"]
+    calls = json.loads((tmp_path / "call.json").read_text())
+    assert len(calls) == 2
+    argv = call()["argv"]
+    assert call()["mcp"] == {"mcpServers": {}}  # neither project tools nor built-in ones
+    assert argv[argv.index("--tools") + 1] == ""
+    assert "--allowedTools" not in argv
+    assert argv[argv.index("--max-turns") + 1] == "1"
+    assert argv[argv.index("--system-prompt") + 1].startswith("Repair source references")
+    assert not call()["api_key"]
+
+
+def test_rejected_repair_keeps_the_initial_answer(project, fake_claude):
+    fake_claude({"result": "Voici la correction : `app.py:3`", "num_turns": 1},
+                result="FastAPI depuis `./apps.py:3`.")
+    current = session(project)
+    current.repair_citations = True
+
+    answer = features.ask(current, "Quel framework ?")
+
+    assert answer.startswith("FastAPI depuis `./apps.py:3`.")
+    assert current.last_repair["reason"] == "repair_failed"
+    assert "réponse initiale conservée" in answer
+
+
+def test_no_repair_request_when_every_citation_is_valid(project, fake_claude, tmp_path):
+    fake_claude(result="FastAPI depuis `app.py:3`.")
+    current = session(project)
+    current.repair_citations = True
+
+    features.ask(current, "Quel framework ?")
+
+    assert len(json.loads((tmp_path / "call.json").read_text())) == 1
 
 
 def test_unknown_backend_is_rejected():
