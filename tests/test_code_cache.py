@@ -9,6 +9,17 @@ from learn_it.analyzers import code
 pytest.importorskip("tree_sitter")
 
 
+class _NoMemory(dict):
+    def __setitem__(self, key, value):  # every analyze goes through the disk cache
+        pass
+
+
+@pytest.fixture(autouse=True)
+def disk_cache_only(request, monkeypatch):
+    if "memory" not in request.node.name:
+        monkeypatch.setattr(code, "_LAST_GRAPH", _NoMemory())
+
+
 @pytest.fixture
 def parses(monkeypatch):
     calls = []
@@ -163,3 +174,24 @@ def test_oversized_replacement_keeps_usable_legacy_cache(project, parses, monkey
     assert "new.py" in parses and "app.py" not in parses
     assert legacy.read_bytes() == original
     assert not compressed.exists()
+
+
+def test_the_last_graph_is_kept_in_memory_until_a_source_changes(project, parses, tmp_path):
+    first = code.analyze(project.root)
+    parses.clear()
+    assert code.analyze(project.root) is first
+    assert code.analyze(project.root, None) is first
+
+    (project.root / "app.py").write_text("from fastapi import FastAPI\n\ndef added(): pass\n")
+    edited = code.analyze(project.root)
+    assert edited is not first and parses == ["app.py"]
+    assert "added" in {symbol.name for symbol in edited.modules["app.py"].symbols}
+
+    (project.root / "extra.py").write_text("import app\n")
+    assert "extra.py" in code.analyze(project.root).modules
+
+
+def test_memory_is_kept_per_file_list(project):
+    every = code.analyze(project.root)
+    only = code.analyze(project.root, ["app.py"])
+    assert only is not every and list(only.modules) == ["app.py"]
