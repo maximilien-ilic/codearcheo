@@ -194,9 +194,9 @@ def complete_paths(text: str, files: list[str], scope: str | None = None) -> str
     """Rewrite `timed.py:170` as `src/pkg/timed.py:170` when exactly one project file has
     that name, or when the text itself cites exactly one of the files of that name in full.
     A path suffix (`cmd/dist/test.go:713`, relative to `src/`) is completed the same way.
-    A text about one folder (`scope`, a review's --path) also settles a name that only one
-    file of that folder has. Other ambiguous names are left alone: guessing would make a
-    false citation pass."""
+    With no explicit match in the text, a review's --path can settle a name that only
+    one file in the scope has. Other ambiguous names are left alone: guessing would
+    make a false citation pass."""
     by_name: dict[str, list[str]] = {}
     for path in files:
         by_name.setdefault(PurePosixPath(path).name, []).append(path)
@@ -221,11 +221,15 @@ def complete_paths(text: str, files: list[str], scope: str | None = None) -> str
             candidates = [file for file in files if file.endswith(f"/{path}")]
         else:
             candidates = by_name.get(path, [])
-        if len(candidates) > 1 and scope:
-            inside = [c for c in candidates if c == scope or c.startswith(f"{scope}/")]
-            candidates = inside if len(inside) == 1 else candidates
         if len(candidates) > 1:
-            candidates = [candidate for candidate in candidates if candidate in named]
+            explicit = [candidate for candidate in candidates if candidate in named]
+            if explicit:
+                candidates = explicit
+            elif scope:
+                candidates = [
+                    candidate for candidate in candidates
+                    if candidate == scope or candidate.startswith(f"{scope}/")
+                ]
         if len(candidates) != 1 or candidates[0] == path:
             continue
         cited = text[match.start:match.end].replace(path, candidates[0], 1)
