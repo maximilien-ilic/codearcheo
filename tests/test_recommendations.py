@@ -166,7 +166,26 @@ def test_task_starting_with_a_fence_renders_its_code_and_following_text(
     assert '<pre><code class="language-python">print(1)\n</code></pre>' in rendered
     assert "<p>Vérifier le résultat.</p>" in rendered
     assert "<h3>Preuves non vérifiées</h3>" in rendered
-    assert "- [ ]" in bodies[0]
+    assert "[ ] Exemple" in rendered
+
+
+def test_task_starting_with_a_tab_indented_nested_fence(publication):
+    project, bodies = publication
+    item = recommendation(
+        first_steps=[
+            "- \t> ~~~python\n    > print(1)\n    > ~~~\n\nVérifier le résultat.",
+            "Confirmer le résultat.",
+        ],
+        proposal="Voir missing.py:9.",
+    )
+
+    recommendations.publish(project, [item], confirmed=True)
+
+    rendered = MarkdownIt().render(bodies[0])
+    assert '<pre><code class="language-python">print(1)\n</code></pre>' in rendered
+    assert "<p>Vérifier le résultat.</p>" in rendered
+    assert "<li>\n<p>[ ] Confirmer le résultat.</p>" in rendered
+    assert "<h3>Preuves non vérifiées</h3>" in rendered
 
 
 def test_review_records_json_and_sorts_plan(project, monkeypatch):
