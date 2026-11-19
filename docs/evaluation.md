@@ -240,15 +240,56 @@ dans l'un des fichiers attendus. Les rapports archivés conservent la définitio
 cas et les prochaines mesures enregistreront le périmètre demandé. La mesure ciblée
 établira un nouveau point de référence pour ce périmètre.
 
+## Mesure 10 : variabilité et effort, 19 novembre 2026
+
+Quatre évaluations complètes du même code (`9bbce03`, sans modification locale), deux en
+`high` et deux en `medium`, sur les 14 cas de l'abonnement. Le cas
+`github-pr-only-rationale` reste hors de ce moteur. go-review-http cible désormais
+`src/net/http` : c'est sa première mesure avec ce périmètre.
+
+| Effort | Passe 1 | Passe 2 | Durée moyenne | Coût moyen (équivalent API) |
+|---|---|---|---|---|
+| `high` | 13/14 | 14/14 | 18,4 min | 4,99 $ |
+| `medium` | 14/14 | 14/14 | 12,9 min | 3,41 $ |
+
+- **La variabilité est faible.** Sur 56 exécutions, il y a un seul échec : go-review-http
+  à la première passe `high`. Express et la revue Express, ratés aux mesures 8 et 9,
+  réussissent quatre fois sur quatre.
+- **`medium` est moins cher sans coûter en qualité.** Il est 30 % plus rapide et 32 % moins
+  cher que `high`, et plus rapide en moyenne sur chacun des 14 cas. Le gain est le plus net
+  sur les revues : express-review coûte 0,64 $ contre 1,05 $, go-review-http 0,87 $ contre 1,42 $.
+  Deux passes par effort restent un petit échantillon : `medium` n'est pas meilleur, il
+  n'est simplement pas pire sur ces 28 exécutions.
+- **L'échec de go-review-http (passe `high` n°1)** vient de trois citations abrégées sur
+  81. `export_test.go:198-214` et `pprof.go:97` désignent plusieurs fichiers de golang/go
+  et restent ambiguës. `cmd/dist/test.go:713-721` est écrite relativement à `src/`, comme
+  le font souvent les développeurs Go (voir le changement 5).
+- **Le quota a coupé la deuxième passe `high`** au dernier cas. go-review-http a été rejoué
+  seul, avec le même code, après la réinitialisation. Il a réussi avec 58 citations
+  vérifiées.
+
+Les rapports bruts sont dans `~/.cache/learn-it/evals/` :
+`results-20261119-095644-f7586208.json` et `results-20261119-101538-287a78b1.json` (+
+`results-20261119-141040-e57ca2de.json` pour go-review-http) en `high`,
+`results-20261119-141438-b531f15a.json` et `results-20261119-142752-bfa9158d.json` en
+`medium`.
+
+## Changement 5 : compléter les suffixes de chemin (#75)
+
+La complétion locale traite aussi les suffixes de chemin, et non plus seulement les noms de
+fichier seuls. `cmd/dist/test.go:713` devient `src/cmd/dist/test.go:713` quand un seul
+fichier du projet se termine ainsi, ou quand le texte cite l'un d'eux en entier. En rejeu
+hors ligne de la réponse ratée à la mesure 10, les citations introuvables passent de 3 à 2 :
+le cas échouerait toujours, à juste titre. #74 rend en outre `--repair-citations`
+disponible sur l'abonnement, ce qui permet de mesurer la correction par le modèle sans clé
+API.
+
 ## Ce qu'il reste à mesurer
 
-- **`go-review-http`** : rejouer le cas désormais ciblé sur `src/net/http` pour établir
-  son premier score avec ce périmètre.
-- **`express-review`** : vérifier si la revue traite régulièrement des middlewares après
-  le succès de la mesure 9.
-- **La variabilité** sur tous les cas, pas seulement `shop` : deux ou trois mesures chacun.
-- **L'effort** : `medium` coûte 19 % de moins pour un cas raté sur 11 avant le changement 2 ;
-  à remesurer avec lui pour choisir le réglage par défaut.
-- **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores et comparer
-  la correction facultative par le modèle. La complétion locale des chemins est déjà
-  disponible sans clé ; la correction IA des preuves structurées reste à faire (#34).
+- **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
+  `uv run --all-extras python -m evals.run --backend claude-code --compare-citations`.
+  Son gain décide de la suite de #34.
+- **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur l'autre
+  moteur.
+- **L'effort par défaut** : la mesure 10 plaide pour `medium`. Une troisième passe par
+  effort consoliderait ce choix.
