@@ -142,3 +142,18 @@ def test_completed_path_with_spaces_still_verifies(project):
     report = verify(text, project.root)
     assert report.ok
     assert [citation.path for citation in report.citations] == ["docs/getting started/guide.md"]
+
+
+def test_citation_between_code_spans_keeps_its_path(project):
+    report = verify("Voir `option` puis ./app.py:1`.`", project.root)
+
+    assert report.ok
+    assert [citation.path for citation in report.citations] == ["app.py"]
+
+
+def test_quoted_path_does_not_supply_a_commit_citation(project):
+    (project.root / "commit deadbee.py").write_text("value = 1\n")
+    report = verify("Voir `commit deadbee.py:1`.", project.root)
+
+    assert report.ok
+    assert [citation.path for citation in report.citations] == ["commit deadbee.py"]
