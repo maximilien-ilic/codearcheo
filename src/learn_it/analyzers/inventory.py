@@ -6,6 +6,7 @@ import os
 import re
 import stat
 from collections import Counter
+from collections.abc import Iterable
 from fnmatch import translate
 from pathlib import Path, PurePosixPath
 
@@ -86,10 +87,10 @@ def list_files(root: Path) -> list[str]:
             dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
             rel = Path(dirpath).relative_to(root)
             paths.update((rel / name).as_posix() for name in filenames)
-    return sorted(_safe_regular_files(root, paths))
+    return sorted(safe_files(root, paths))
 
 
-def _safe_regular_files(root: Path, paths: set[str]) -> list[str]:
+def safe_files(root: Path, paths: Iterable[str]) -> list[str]:
     """`is_safe_path` and `is_file` for every path, with one lstat per directory instead of
     one per directory per file: listing golang/go drops from 0.86 s to a tenth of that."""
     safe_dirs: dict[PurePosixPath, bool] = {PurePosixPath("."): True}

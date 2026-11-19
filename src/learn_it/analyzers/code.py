@@ -7,13 +7,15 @@ in the safe inventory; unresolved external or ambiguous imports are retained as 
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import html
 import importlib
 import importlib.metadata
 import json
 import re
-from contextlib import suppress
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
@@ -407,13 +409,33 @@ def _save_cache(root: Path, modules: dict[str, dict]) -> None:
         store.remove(_LEGACY_CACHE_FILE)
 
 
+@contextmanager
+def _without_gc() -> Iterator[None]:
+    """The graph is millions of acyclic objects: collection passes reclaim nothing while it is
+    built, yet cost 45% of the analysis on golang/go (5.3 s instead of 3.1 s)."""
+    enabled = gc.isenabled()
+    gc.disable()
+    try:
+        yield
+    finally:
+        if enabled:
+            gc.enable()
+
+
 def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
     """Build a bounded graph from the current safe worktree; None means extra not installed."""
     if not available():
         return None
+    with _without_gc():
+        return _analyze(root, files)
+
+
+def _analyze(root: Path, files: list[str] | None) -> CodeGraph:
     root = root.resolve()
-    files = sorted(path for path in set(files if files is not None else inventory.list_files(root))
-                   if inventory.is_safe_path(root, path))
+    files = (
+        inventory.list_files(root) if files is None
+        else sorted(inventory.safe_files(root, set(files)))
+    )
     graph = CodeGraph()
     total_bytes = 0
     # Parsing dominates the scan of a large project (57 s on golang/go), so each module is

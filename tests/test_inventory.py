@@ -35,3 +35,18 @@ def test_listing_skips_symlinks_secrets_and_symlinked_folders(project, tmp_path,
 ])
 def test_secret_names(path, secret):
     assert inventory.is_secret(path) is secret
+
+
+def test_code_analysis_restores_the_garbage_collector(project):
+    import gc
+
+    from learn_it.analyzers import code
+
+    code.analyze(project.root)
+    assert gc.isenabled()
+    gc.disable()
+    try:
+        code.analyze(project.root)
+        assert not gc.isenabled()  # a caller's choice is kept
+    finally:
+        gc.enable()
