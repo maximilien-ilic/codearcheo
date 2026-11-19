@@ -42,7 +42,16 @@ class Store:
 
     def _write(self, name: str, content: str) -> Path:
         path = self._prepare_write(name)
-        path.write_text(content, encoding="utf-8")
+        descriptor, filename = tempfile.mkstemp(dir=path.parent, prefix=".write-")
+        temporary = Path(filename)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+                output.write(content)
+                output.flush()
+                os.fsync(output.fileno())
+            temporary.replace(self._path(name))
+        finally:
+            temporary.unlink(missing_ok=True)
         return path
 
     def save_profile(self, profile: ProjectProfile) -> Path:

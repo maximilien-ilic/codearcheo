@@ -9,6 +9,12 @@ ou hors du projet sont signalées sur stderr et dans les rapports enregistrés.
 Une réponse sans source est également signalée. En streaming, la vérification et
 le bilan arrivent à la fin : le texte reçu avant ce bilan reste provisoire.
 
+Les profils, décisions, recommandations et rapports courants sont écrits dans un fichier
+temporaire du même dossier, puis remplacés après écriture complète. Une erreur pendant
+l'écriture, la synchronisation ou le remplacement conserve le fichier précédent ; une
+première sauvegarde échouée ne laisse pas de document partiel. Chaque fichier est remplacé
+séparément : plusieurs rapports et leurs enregistrements ne forment pas une transaction.
+
 Les réponses non diffusées et les preuves structurées complètent localement les noms
 abrégés quand l'inventaire ou les chemins cités dans le texte permettent de les résoudre
 sans ambiguïté. Un chemin existant à la racine ou explicitement préfixé par `./` reste
