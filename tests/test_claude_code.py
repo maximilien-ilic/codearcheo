@@ -69,7 +69,8 @@ def test_ask_runs_on_the_subscription_with_learn_it_tools_only(project, fake_cla
     assert argv[argv.index("--max-turns") + 1] == str(Settings.max_iterations)
     assert argv[argv.index("--allowedTools") + 1] == "mcp__learn-it"
     server = logged["mcp"]["mcpServers"]["learn-it"]
-    assert server["args"] == ["-m", "learn_it", "serve", "-p", str(project.root)]
+    assert server["args"][:5] == ["-m", "learn_it", "serve", "-p", str(project.root)]
+    assert server["args"][5] == "--profile-file"  # the profile just computed, not a rescan
     assert "<project_profile>" in argv[argv.index("--system-prompt") + 1]
 
 
