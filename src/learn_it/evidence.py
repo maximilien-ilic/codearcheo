@@ -16,7 +16,9 @@ from learn_it.analyzers import inventory
 
 _FILE = re.compile(r"`(?P<path>[^`\r\n:]+):(?P<start>\d+)(?:\s*[-–]\s*(?P<end>\d+))?`")
 # Consume each run of backticks whole. Only a run of the opening width closes the span.
-_INLINE_CODE = re.compile(r"(?<!`)(`++)(?:[^`\r\n]++|(?!\1(?!`))`++)*+\1(?!`)")
+_INLINE_CODE = re.compile(
+    r"(?<!`)(`++)(?:[^`\r\n]++|(?!\1(?!`))`++|(?>\r\n?|\n)(?![ \t]*[\r\n]))*+\1(?!`)"
+)
 _BARE_FILE = re.compile(
     r"(?<![\w`/.@+-])(?P<path>(?:[\w.@+-]+/)+[\w.@+-]+|[\w@+-]+\.[\w.-]+"
     r"|\.[\w.-]+|Dockerfile|Makefile|README|LICENSE|Jenkinsfile)"
@@ -111,8 +113,15 @@ def fenced_spans(text: str) -> list[tuple[int, int]]:
 
 def find_matches(text: str) -> list[CitationMatch]:
     """Return original citation spans outside fenced source examples and diagrams."""
+    protected = fenced_spans(text)
+    # Match across soft line breaks, with each fence ending the preceding prose segment.
+    code_spans = []
+    offset = 0
+    for start, end in protected:
+        code_spans.extend(_INLINE_CODE.finditer(text, offset, start))
+        offset = end
+    code_spans.extend(_INLINE_CODE.finditer(text, offset))
     explicit = []
-    code_spans = list(_INLINE_CODE.finditer(text))
     for span in code_spans:
         # Match the citation within its paired delimiters. Keep one backtick at
         # each end so replacements preserve any surrounding backticks.
@@ -140,7 +149,6 @@ def find_matches(text: str) -> list[CitationMatch]:
         for m in _COMMIT.finditer(text)
         if not any(span.start() <= m.start() < span.end() for span in explicit)
     ]
-    protected = fenced_spans(text)
     return [
         match for match in matches
         if not any(match.start < end and match.end > start for start, end in protected)
