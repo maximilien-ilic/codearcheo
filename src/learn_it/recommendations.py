@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -43,7 +44,10 @@ def _markdown_items(items: list[str], *, checklist: bool = False) -> list[str]:
     rendered = []
     for item in items:
         content = evidence.close_open_fence(item)
-        if content.startswith((" ", "\t")):
+        if checklist and re.match(r" {0,3}(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)(?:\r?\n|$)", content):
+            # The task marker makes a fence on the same line ordinary paragraph text.
+            rendered.append(f"{prefix}Exemple\n{indent(content, '  ')}")
+        elif content.startswith((" ", "\t")):
             # Leading whitespace must not change the continuation indentation.
             rendered.append(f"{prefix.rstrip()}\n{indent(content, '  ')}")
         else:
