@@ -51,7 +51,8 @@ def _markdown_items(items: list[str], *, checklist: bool = False) -> list[str]:
         content = evidence.close_open_fence(item)
         if checklist and _LEADING_FENCE.match(content):
             # A task marker would turn the opening fence and its containers into text.
-            rendered.append(f"{prefix}Exemple\n{indent(content, '  ')}")
+            # A four-column offset preserves Markdown's tab stops inside the example.
+            rendered.append(f"-   [ ] Exemple\n{indent(content, '    ')}")
         elif content.startswith((" ", "\t")):
             # Leading whitespace must not change the continuation indentation.
             rendered.append(f"{prefix.rstrip()}\n{indent(content, '  ')}")
