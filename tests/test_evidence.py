@@ -159,11 +159,19 @@ def test_quoted_path_does_not_supply_a_commit_citation(project):
     assert [citation.path for citation in report.citations] == ["commit deadbee.py"]
 
 
-def test_inline_example_with_inner_backticks_does_not_supply_a_file_citation():
-    text = "Exemple : ``utiliser `app.py:1` ou lost.py:2``. Source : `src/main.py:3`."
+@pytest.mark.parametrize("separator", [" ", "\n", "\r\n"])
+def test_inline_example_with_inner_backticks_does_not_supply_a_file_citation(separator):
+    text = f"Exemple : ``utiliser{separator}`app.py:1` ou lost.py:2``. Source : `src/main.py:3`."
 
     assert [citation.path for citation in find_citations(text)] == ["src/main.py"]
 
 
 def test_double_backticks_can_delimit_a_file_citation():
     assert [citation.path for citation in find_citations("``app.py:1``")] == ["app.py"]
+
+
+@pytest.mark.parametrize("boundary", ["\n\n", "\r\n \r\n", "\n~~~text\nexemple\n~~~\n"])
+def test_unmatched_backticks_cannot_hide_citations_across_block_boundaries(boundary):
+    text = f"Des accents graves ``{boundary}Source : app.py:1 et deux accents graves ``."
+
+    assert [citation.path for citation in find_citations(text)] == ["app.py"]
