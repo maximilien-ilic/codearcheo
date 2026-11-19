@@ -38,6 +38,7 @@ from learn_it.store import Store
 
 CASES = Path(__file__).with_name("cases.toml")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
+REPAIR_COMMANDS = {"ask", "why"}
 
 
 def load_cases() -> list[dict[str, Any]]:
@@ -190,6 +191,29 @@ def citation_repair_available() -> bool:
     )
 
 
+def select_repair_cases(
+    specs: list[dict[str, Any]], *, explicit_cases: bool,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Only measure commands whose text repair is integrated; reject unsupported case IDs."""
+    skipped = [
+        case["id"] for spec in specs for case in spec["cases"]
+        if case["command"] not in REPAIR_COMMANDS
+    ]
+    if skipped and explicit_cases:
+        raise ValueError(
+            "Correction/comparaison indisponible pour : " + ", ".join(skipped)
+            + ". Utiliser --case avec des cas ask/why, ou retirer les options de correction."
+        )
+    selected = []
+    for spec in specs:
+        cases = [case for case in spec["cases"] if case["command"] in REPAIR_COMMANDS]
+        if cases:
+            selected.append({**spec, "cases": cases})
+    if not selected:
+        raise ValueError("Aucun cas ask/why disponible pour mesurer la correction des citations.")
+    return selected, skipped
+
+
 def main(
     names: list[str], *, repair_citations: bool = False, compare_citations: bool = False,
     max_requests: int | None = None, max_output_tokens: int | None = None,
@@ -209,11 +233,19 @@ def main(
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
+    skipped = []
     try:
         specs = select_cases(load_cases(), names, case_ids or [])
+        if repair_citations or compare_citations:
+            specs, skipped = select_repair_cases(specs, explicit_cases=bool(case_ids))
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
+    if skipped:
+        print(
+            "– Cas ignorés, correction non implémentée (decisions/review) : " + ", ".join(skipped),
+            file=sys.stderr,
+        )
     limits = (
         SessionLimits.from_settings(settings)
         if settings.max_requests is not None or settings.max_output_tokens != 16_000 else None
@@ -221,7 +253,6 @@ def main(
     workdir = settings.cache_dir / "evals"
     results = []
     measurements = []
-    skipped = []
     workdir.mkdir(parents=True, exist_ok=True)
     output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}.json"
     code_root = Path(__file__).resolve().parents[1]
@@ -287,7 +318,7 @@ def main(
                 checks = run_case(session, case, spec.get("canary"), capture=captured)
             comparison = None
             if ("error" not in captured and session.repair_citations
-                    and case["command"] in {"ask", "why"}):
+                    and case["command"] in REPAIR_COMMANDS):
                 metadata = getattr(session, "last_repair", None)
                 if compare_citations and metadata:
                     comparison = compare_citation_repair(
@@ -340,10 +371,12 @@ if __name__ == "__main__":
     parser.add_argument("--case", dest="case_ids", action="append", default=[],
                         help="Run only this case ID; repeat the option to select several.")
     parser.add_argument("--repair-citations", action="store_true",
-                        help="Opt into one bounded correction request for each text answer.")
+                        help="Correct ask/why citations; skip structured cases unless explicitly "
+                             "selected with --case (then reject them before generation).")
     parser.add_argument(
         "--compare-citations", action="store_true",
-        help="Save original/repaired scores from the same task (uses the real API).",
+        help="Compare original/repaired ask/why answers from the same task; other commands "
+             "follow --repair-citations selection rules (consumes API/subscription quota).",
     )
     parser.add_argument("--max-requests", type=int,
                         help="Generation HTTP attempt cap shared across the entire evaluation.")

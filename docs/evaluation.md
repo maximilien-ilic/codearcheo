@@ -312,6 +312,9 @@ API.
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
   `uv run --all-extras python -m evals.run --backend claude-code --compare-citations`.
+  Ce mode sélectionne les cas `ask` et `why` et consigne les autres dans `skipped` ;
+  demander explicitement une revue ou des décisions avec `--case` est refusé avant
+  tout appel IA, car ces commandes n'ont pas encore de correction intégrée (#34).
   Sur les cas actuels, elle n'aurait rien à corriger. Dans les 56 réponses obtenues de
   la mesure 10, une seule contient des citations invalides : la revue Go, une commande
   `review`, que `--repair-citations` ne couvre pas. Les 40 réponses `ask` et `why` sont
