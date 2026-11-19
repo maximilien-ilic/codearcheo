@@ -105,7 +105,8 @@ def run_claude_code(
         prompt += (
             f"\n\nThe tools {', '.join(names)} are not available here. Put each record you "
             "would have passed to them in the array of the same name in your structured "
-            "output, and your final synthesis in `synthesis`."
+            "output, and your final synthesis in `synthesis`. Only the structured output is "
+            "kept: do not write the answer as text first."
         )
 
     with tempfile.TemporaryDirectory(prefix="learn-it-claude-") as scratch:

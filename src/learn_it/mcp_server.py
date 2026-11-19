@@ -33,7 +33,7 @@ def build_server(session: Session) -> MCPServer:
         hotspots, docs and uncommitted work. Start here."""
         profile = analyzers.scan(session.project)
         session.store.save_profile(profile)
-        return profile.model_dump_json(indent=1)
+        return profile.model_dump_json(exclude_none=True)
 
     def project_decisions() -> str:
         """Technical decisions reconstructed by `learn-it decisions`, as ADR-shaped JSON."""

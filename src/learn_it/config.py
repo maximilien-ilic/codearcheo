@@ -19,7 +19,7 @@ def cache_dir_from_env() -> Path:
 class Settings:
     model: str = "claude-opus-5-5"
     # low | medium | high | xhigh | max. Empty to omit it, for models without effort support.
-    effort: str = "high"
+    effort: str = "medium"
     language: str = "French"  # language of generated reports; `ask` answers in the question's
     max_iterations: int = 40  # agent round-trips before giving up
     cache_dir: Path = field(default_factory=_default_cache_dir)  # where GitHub repos are cloned

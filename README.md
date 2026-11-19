@@ -127,7 +127,7 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | `ANTHROPIC_API_KEY` | — | clé API (ou un profil `ant auth login`) |
 | `LEARN_IT_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming ni `chat` |
 | `LEARN_IT_MODEL` | `claude-opus-5-5` | modèle Claude |
-| `LEARN_IT_EFFORT` | `high` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
+| `LEARN_IT_EFFORT` | `medium` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
 | `LEARN_IT_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
 | `LEARN_IT_MAX_ITERATIONS` | `40` | nombre maximal de tours de l'agent ; transmis à `--max-turns` avec Claude Code |
 | `LEARN_IT_CACHE_DIR` | `~/.cache/learn-it` | où sont clonés les dépôts GitHub |

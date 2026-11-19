@@ -195,3 +195,21 @@ def test_missing_mcp_extra_is_reported_before_running_claude(project, fake_claud
     monkeypatch.setattr("learn_it.agent.claude_code.find_spec", lambda _: None)
     with pytest.raises(AgentError, match="extra mcp"):
         features.ask(session(project), "?")
+
+
+def test_structured_tasks_ask_for_the_answer_only_once(project, fake_claude):
+    call = fake_claude(structured_output={"synthesis": "Rien.", "record_decision": []})
+
+    with pytest.raises(AgentError):  # no record: only the request matters here
+        features.decisions(session(project))
+
+    argv = call()["argv"]
+    assert "do not write the answer as text first" in argv[argv.index("-p") + 1]
+
+
+def test_the_profile_reaches_the_model_as_compact_json(project):
+    from learn_it.agent import prompts
+
+    system = prompts.system(scan(project))
+    profile = system.split("<project_profile>\n", 1)[1].split("\n</project_profile>", 1)[0]
+    assert "\n" not in profile and ": null" not in profile and json.loads(profile)["files"]

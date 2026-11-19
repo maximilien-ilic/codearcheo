@@ -102,7 +102,7 @@ def test_missing_usage_is_not_reported_as_zero_cost():
 def test_api_task_budget_has_validated_units_and_keeps_effort_and_fallback():
     options = _options(Settings(budget=30_000))
     assert options["output_config"] == {
-        "effort": "high",
+        "effort": "medium",
         "task_budget": {"type": "tokens", "total": 30_000},
     }
     assert BUDGET_BETA in options["betas"]

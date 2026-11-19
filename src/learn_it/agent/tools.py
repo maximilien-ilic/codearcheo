@@ -193,7 +193,7 @@ class ProjectTools(CodeTools):
         last = start + READ_WINDOW - 1
         end = min(end_line, last) if end_line >= start else last
         end = min(end, len(lines))
-        body = "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(start, end + 1))
+        body = "\n".join(f"{n}\t{lines[n - 1].rstrip()}" for n in range(start, end + 1))
         rest = len(lines) - end
         footer = f"\n… {rest} more lines: call again with start_line={end + 1}." if rest > 0 else ""
         return _clip(f"{rel}, lines {start}-{end} of {len(lines)}\n{body}{footer}")

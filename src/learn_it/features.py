@@ -106,7 +106,7 @@ class Session:
         buffer_text: bool = False,
     ) -> str:
         self._last_repair = None
-        system = prompts.SYSTEM.format(profile=self.profile.model_dump_json(indent=1))
+        system = prompts.system(self.profile)
         if self.settings.backend == "claude-code":
             return self._run_claude_code(system, task, extra_tools, check=check)
         tools = ProjectTools(self.project.root).exploration()
