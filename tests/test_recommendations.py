@@ -339,6 +339,10 @@ def test_scoped_review_completes_a_name_unique_within_its_scope(project, monkeyp
 
     def fake(system, task, tools, settings, on_tool=None):
         record = next(t for t in tools if getattr(t, "name", "") == "record_recommendation")
+        with pytest.raises(ToolError, match="verifiable citation"):
+            record.call(recommendation(
+                evidence=["Voir src_other/module.py:1. Dans ce fichier, voir module.py:1."],
+            ).model_dump())
         record.call(recommendation(evidence=["module.py:1"]).model_dump())
         return "Voir module.py:1."
 

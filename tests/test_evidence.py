@@ -135,6 +135,17 @@ def test_a_scope_settles_a_name_only_one_of_its_files_has():
     )
 
 
+@pytest.mark.parametrize("reference", ["helper.py:2", "pkg/helper.py:2"])
+def test_a_full_path_in_the_text_takes_precedence_over_the_scope(reference):
+    from learn_it.evidence import complete_paths
+
+    files = ["src/pkg/helper.py", "other/pkg/helper.py"]
+    text = f"Voir other/pkg/helper.py:1. Dans ce fichier, voir {reference}."
+    assert complete_paths(text, files, "src") == (
+        "Voir other/pkg/helper.py:1. Dans ce fichier, voir other/pkg/helper.py:2."
+    )
+
+
 @pytest.mark.parametrize("reference", ["../dist/test.go:1", "dist/../dist/test.go:1"])
 def test_a_suffix_that_leaves_its_folder_is_not_completed(reference):
     from learn_it.evidence import complete_paths
