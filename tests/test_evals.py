@@ -338,6 +338,56 @@ def test_requested_comparison_cannot_succeed_without_repair_metadata(monkeypatch
     assert "Métadonnées" in result["results"][0]["checks"][-1]["detail"]
 
 
+@pytest.mark.parametrize("option", ["repair_citations", "compare_citations"])
+@pytest.mark.parametrize("case_id", ["shop-decisions", "shop-review-decisions"])
+def test_unsupported_repair_case_is_rejected_before_preparation(
+    option, case_id, monkeypatch, tmp_path, capsys,
+):
+    cache = tmp_path / "cache"
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(cache))
+
+    def unexpected_preparation(*args):
+        pytest.fail("Unsupported repair must stop before checkout, scan or generation")
+
+    monkeypatch.setattr(run, "prepare", unexpected_preparation)
+    # A mixed explicit selection must also fail before spending tokens on a valid case.
+    assert run.main([], case_ids=["shop-framework", case_id], **{option: True}) == 2
+    assert case_id in capsys.readouterr().err
+    assert not cache.exists()
+
+
+def test_project_comparison_only_generates_supported_text_cases(monkeypatch, tmp_path):
+    cache = tmp_path / "cache"
+    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(cache))
+
+    def fake_ask(session, question):
+        answer = (DATABASE_ANSWER if question == shop_case("shop-database")["question"]
+                  else framework_answer(session.project.root))
+        return session.checked(answer, repair=True)
+
+    def unexpected_structured_task(*args, **kwargs):
+        pytest.fail("A text citation comparison cannot generate structured records")
+
+    monkeypatch.setattr(run.features, "ask", fake_ask)
+    monkeypatch.setattr(
+        run.features, "why",
+        lambda session, target: session.checked(
+            framework_answer(session.project.root), repair=True,
+        ),
+    )
+    monkeypatch.setattr(run.features, "decisions", unexpected_structured_task)
+    monkeypatch.setattr(run.features, "review", unexpected_structured_task)
+
+    assert run.main(["shop", "shop-workflows"], compare_citations=True) == 0
+    report = json.loads(next((cache / "evals").glob("results-*.json")).read_text())
+    assert set(report["skipped"]) == {"shop-decisions", "shop-review-decisions"}
+    expected = {"shop-framework", "shop-database", "shop-why-framework"}
+    assert set(report["selected_cases"]) == expected
+    assert {result["case"] for result in report["results"]} == expected
+    assert all(result["citation_repair_verified"] for result in report["results"])
+    assert all(result["citation_repair"] is not None for result in report["results"])
+
+
 def test_a_bare_path_line_citation_counts_as_citing_the_file(project):
     """Review reports list their evidence as `- app.py:1-3`, without backticks."""
     answer = "FastAPI tient l'API.\n\n### Preuves\n\n- app.py:1-3\n- docker-compose.yml:3\n"

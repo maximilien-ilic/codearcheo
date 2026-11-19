@@ -92,8 +92,14 @@ uv run --all-extras python -m evals.run --backend claude-code --compare-citation
 `--compare-citations` conserve les réponses initiale et retenue, les références invalides,
 les contrôles et les scores avant/après issus de la même analyse. Les tokens, le coût estimé
 et la durée sont enregistrés par cas. Il n'y a pas deux analyses de départ indépendantes.
-Les cas structurés `decisions` et `review` sont évalués normalement, sans réparation
-indépendante de leurs enregistrements.
+Les modes `--repair-citations` et `--compare-citations` ne sélectionnent que les cas
+`ask` et `why`. Sans `--case`, les cas structurés `decisions` et `review` sont ignorés :
+leurs identifiants apparaissent dans `skipped` et un message explique leur exclusion.
+Un `--case` explicite qui demande un cas non pris en charge arrête toute la sélection
+avant la préparation des projets et les appels IA, même avec un autre cas compatible.
+Retirer ces options permet d'évaluer normalement les commandes structurées ; leur
+correction reste suivie dans #34. Un cas réussi hors de ces modes ne mesure pas un
+gain de correction.
 
 Le plafond de requêtes est partagé par tous les cas et projets de l'exécution, pas
 réinitialisé à chaque cas. Une limite trop courte peut arrêter l'évaluation ; ce résultat
