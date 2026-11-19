@@ -89,7 +89,7 @@ def _source_shaped(path: str) -> bool:
     return PurePosixPath(path).suffix.lower() in _SOURCE_SUFFIXES
 
 
-def fenced_spans(text: str) -> list[tuple[int, int]]:
+def _fences(text: str) -> tuple[list[tuple[int, int]], str]:
     """Protect complete and unclosed Markdown fences, including nested list/quote examples.
 
     A shorter run of backticks inside a longer fence is code, not a closing fence. Treating
@@ -108,9 +108,24 @@ def fenced_spans(text: str) -> list[tuple[int, int]]:
             spans.append((start, offset + len(line)))
             start = None
         offset += len(line)
-    if start is not None:
-        spans.append((start, len(text)))
-    return spans
+    if start is None:
+        return spans, ""
+    # A quote or list can end a nested fence implicitly. Only repair top-level fences.
+    top_level = re.match(r" {0,3}[`~]", text[start:start + 4])
+    return [*spans, (start, len(text))], marker * width if top_level else ""
+
+
+def fenced_spans(text: str) -> list[tuple[int, int]]:
+    return _fences(text)[0]
+
+
+def close_open_fence(text: str) -> str:
+    """Terminate a field's code block before appending other Markdown sections."""
+    _, closing = _fences(text)
+    if not closing:
+        return text
+    separator = "" if text.endswith("\n") else "\n"
+    return text + separator + closing
 
 
 def find_matches(text: str) -> list[CitationMatch]:
