@@ -110,6 +110,12 @@ def export_decisions(
             raise OSError(f"Lien symbolique ou chemin interdit : {path}")
         if path.exists() and not force:
             raise FileExistsError(path)
+        # Check prose too, without treating its valid citations as declared evidence.
+        body_problems = evidence.verify(madr(decision, number), root).problems
+        report = evidence.EvidenceReport(
+            citations=list(dict.fromkeys([*report.citations, *body_problems])),
+            problems={**report.problems, **body_problems},
+        )
         plan.append((path, madr(decision, number, report)))
     # Validate the entire batch before touching existing files.
     if plan:

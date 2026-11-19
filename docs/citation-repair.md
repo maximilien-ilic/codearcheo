@@ -11,6 +11,12 @@ de `ask`, `why` et `overview` lorsque des références sont invalides. Une répo
 référence ne déclenche pas d'invention de sources. Les décisions et recommandations
 structurées sont vérifiées et signalées, sans correction indépendante de leurs enregistrements.
 
+L'export ADR vérifie aussi les citations du titre, du contexte, de la décision, de la
+justification, des alternatives et des conséquences. Les références invalides figurent
+dans « Preuves non vérifiées ». Une citation dans ce texte ne remplace pas la liste des
+preuves déclarées : sans preuve déclarée vérifiable, `--allow-unproven` reste nécessaire
+et l'ADR conserve son avertissement.
+
 Une complétion locale précède désormais cette étape pour les réponses non diffusées et
 les preuves structurées : `timed.py:170` devient le chemin complet si l'inventaire ou les
 chemins déjà cités lèvent l'ambiguïté. Elle préserve les chemins existants à la racine,
