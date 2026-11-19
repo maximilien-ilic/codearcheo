@@ -7,8 +7,9 @@ tools, prompts and project profile as the API runner. Recording tools (`record_d
 `record_recommendation`) live in this process and cannot cross the MCP boundary, so their
 records come back as structured output and are replayed here through the same validation.
 
-What differs from the API runner: no streaming, no local request limits, no citation
-repair, and the reported cost is an API-equivalent figure, not what the subscription bills.
+What differs from the API runner: no streaming, no local request limits, an uncapped
+output for the citation repair request, and the reported cost is an API-equivalent figure,
+not what the subscription bills.
 """
 
 from __future__ import annotations
@@ -79,9 +80,10 @@ def run_claude_code(
     *,
     root: Path,
     on_usage: Any = None,
+    exploration: bool = True,
 ) -> str:
     """Run one task with `claude -p`. `tools` are only the recording tools: the exploration
-    tools come from `learn-it serve`."""
+    tools come from `learn-it serve`, unless `exploration` is off (a tool-free request)."""
     executable = shutil.which("claude")
     if executable is None:
         raise AgentError(
@@ -91,7 +93,7 @@ def run_claude_code(
         raise AgentError("--max-requests ne s'applique pas au moteur claude-code.")
     if settings.max_output_tokens != Settings.max_output_tokens:
         raise AgentError("--max-output-tokens ne s'applique pas au moteur claude-code.")
-    if find_spec("mcp") is None:
+    if exploration and find_spec("mcp") is None:
         raise AgentError(
             "Le moteur claude-code exige l'extra mcp : uv tool install --editable '.[mcp]'"
         )
@@ -108,18 +110,21 @@ def run_claude_code(
 
     with tempfile.TemporaryDirectory(prefix="learn-it-claude-") as scratch:
         config = Path(scratch) / "mcp.json"
-        config.write_text(json.dumps({"mcpServers": {SERVER: {
+        servers = {SERVER: {
             "command": sys.executable,
             "args": ["-m", "learn_it", "serve", "-p", str(root)],
-        }}}), encoding="utf-8")
+        }} if exploration else {}
+        config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
         command = [
             executable, "-p", prompt, "--output-format", "json",
             "--system-prompt", system,
             "--tools", "", "--strict-mcp-config", "--mcp-config", str(config),
-            "--allowedTools", f"mcp__{SERVER}", "--setting-sources", "",
+            "--setting-sources", "",
             "--no-session-persistence", "--model", settings.model,
             "--max-turns", str(settings.max_iterations),
         ]
+        if exploration:
+            command += ["--allowedTools", f"mcp__{SERVER}"]
         if settings.effort:
             command += ["--effort", settings.effort]
         if schema is not None:

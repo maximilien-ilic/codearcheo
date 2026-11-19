@@ -125,7 +125,7 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | clé API (ou un profil `ant auth login`) |
-| `LEARN_IT_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming, sans `chat` ni `--repair-citations` |
+| `LEARN_IT_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming ni `chat` |
 | `LEARN_IT_MODEL` | `claude-opus-5-5` | modèle Claude |
 | `LEARN_IT_EFFORT` | `high` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
 | `LEARN_IT_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
@@ -157,7 +157,7 @@ ne peuvent pas appliquer.
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
 | 1 | Confirmer les corrections, mesurer variabilité, effort et moteur API | [#10] | quota Claude ; une clé pour le moteur API |
-| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | mesure du gain de la correction API (#10) |
+| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | mesure du gain de la correction des citations (#10), possible sur l'abonnement |
 | 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
 | 4 | Activer la revue côté serveur | [#25] | le secret `CLAUDE_CODE_OAUTH_TOKEN` |
 
