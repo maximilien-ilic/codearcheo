@@ -146,6 +146,28 @@ def test_a_full_path_in_the_text_takes_precedence_over_the_scope(reference):
     )
 
 
+@pytest.mark.parametrize("example", [
+    "``print('Voir `other/pkg/helper.py` ici')``",
+    "``print('Voir `other/pkg/helper.py:1` ici')``",
+])
+def test_paths_inside_inline_code_examples_do_not_override_scope(example):
+    from learn_it.evidence import complete_paths
+
+    files = ["src/pkg/helper.py", "other/pkg/helper.py"]
+    assert complete_paths(f"{example}. Voir helper.py:2.", files, "src") == (
+        f"{example}. Voir src/pkg/helper.py:2."
+    )
+
+
+def test_a_standalone_inline_path_takes_precedence_over_scope():
+    from learn_it.evidence import complete_paths
+
+    files = ["src/pkg/helper.py", "other/pkg/helper.py"]
+    assert complete_paths("Voir ``other/pkg/helper.py``. Puis helper.py:2.", files, "src") == (
+        "Voir ``other/pkg/helper.py``. Puis other/pkg/helper.py:2."
+    )
+
+
 @pytest.mark.parametrize("reference", ["../dist/test.go:1", "dist/../dist/test.go:1"])
 def test_a_suffix_that_leaves_its_folder_is_not_completed(reference):
     from learn_it.evidence import complete_paths
