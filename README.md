@@ -11,7 +11,7 @@ learn-it decisions                              # les décisions techniques, au 
 learn-it review                                 # garder, améliorer ou remplacer, et par où commencer
 ```
 
-> **Statut :** les neuf commandes fonctionnent et sont testées. La dernière mesure complète via Claude Code donne 12 cas réussis sur 14, dépôt Go compris ; la confirmation des dernières corrections reste partielle ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
+> **Statut :** les neuf commandes fonctionnent et sont testées. Quatre évaluations complètes via Claude Code donnent 13, 14, 14 et 14 cas réussis sur 14, dépôt Go compris, en effort `high` comme `medium` ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
 
 ## Le problème
 
@@ -139,7 +139,7 @@ ne peuvent pas appliquer.
 
 ## Où en est le projet
 
-*État au 18 novembre 2026.*
+*État au 19 novembre 2026.*
 
 **Ce qui marche.** Les neuf commandes sont en place, couvertes par des tests déterministes sous Python 3.11 et 3.14 à chaque PR.
 
@@ -150,13 +150,13 @@ ne peuvent pas appliquer.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`, et une revue Claude côté serveur est prête ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**Ce qui reste à prouver.** La dernière mesure complète donne 12/14, dépôt Go compris. La complétion locale des chemins abrégés fait passer les deux rapports ratés en rejeu hors ligne. La confirmation avec de nouvelles réponses reste partielle : 4/6, dont une revue Express sans le mot attendu « middleware » et une revue Go bloquée par le quota Claude. Il reste à confirmer ces corrections, mesurer la variabilité et comparer les efforts avec le prompt actuel, puis mesurer le moteur API.
+**Ce qui reste à prouver.** La variabilité est faible : sur quatre évaluations complètes (mesure 10), un seul cas sur 56 échoue, une revue Go qui abrégeait trois chemins. L'effort `medium` réussit tout, avec 32 % de coût en moins que `high`. Il reste à mesurer la correction des citations par le modèle, désormais possible sur l'abonnement, puis le moteur API.
 
 **Ce qu'il reste à faire.**
 
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
-| 1 | Confirmer les corrections, mesurer variabilité, effort et moteur API | [#10] | quota Claude ; une clé pour le moteur API |
+| 1 | Mesurer la correction des citations sur l'abonnement, puis le moteur API (variabilité et effort mesurés) | [#10] | quota Claude ; une clé pour le moteur API |
 | 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | mesure du gain de la correction des citations (#10), possible sur l'abonnement |
 | 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
 | 4 | Activer la revue côté serveur | [#25] | le secret `CLAUDE_CODE_OAUTH_TOKEN` |
