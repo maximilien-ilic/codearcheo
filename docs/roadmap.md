@@ -43,7 +43,7 @@ Avant d'ajouter des fonctionnalités, savoir ce que valent les réponses et ne p
 
 | Étape | Ticket | État |
 |---|---|---|
-| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | variabilité et effort mesurés ; gain de correction et moteur API à mesurer |
+| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | fait sur l'abonnement (mesures 1 à 11) ; moteur API abandonné |
 | Vérifier les citations de chaque réponse avant de l'afficher | [#11] | fait |
 | Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] | fait |
 | Afficher coût et durée, régler modèle et effort par commande | [#13] | fait |
