@@ -144,8 +144,6 @@ FILE_SIGNALS: dict[str, tuple[str, str]] = {
     "build.gradle": ("Gradle", "tooling"),
     "build.gradle.kts": ("Gradle", "tooling"),
     "Gemfile": ("Ruby", "language"),
-    "composer.json": ("PHP", "language"),
-    "*.php": ("PHP", "language"),  # plain PHP often has no composer.json
     "*.csproj": (".NET", "framework"),
 }
 
@@ -154,8 +152,17 @@ _PHP_DATABASES = {
     "mysql": "MySQL", "pgsql": "PostgreSQL", "sqlite": "SQLite", "sqlsrv": "SQL Server",
     "oci": "Oracle",
 }
-_PDO_DSN = re.compile(r"""new\s+\\?PDO\s*\(\s*['"](mysql|pgsql|sqlite|sqlsrv|oci):""")
-_MYSQLI = re.compile(r"\bmysqli_connect\s*\(|\bnew\s+\\?mysqli\s*\(")
+_PHP_CONNECTION = re.compile(
+    r"""
+    //[^\n]* | \#(?!\[)[^\n]* | /\*.*?(?:\*/|\Z)
+    | \bnew\s+\\?PDO\s*\(\s*
+        (?P<quote>['"])(?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):
+        (?:\\.|(?!(?P=quote))[^\\])*(?P=quote)
+    | (?P<mysqli>\bmysqli_connect\s*|\bnew\s+\\?mysqli\s*)\(
+    | "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' | `(?:\\.|[^`\\])*`
+    """,
+    re.VERBOSE | re.DOTALL,
+)
 MAX_PHP_FILES = 500
 
 CATEGORIES = [
@@ -184,9 +191,15 @@ _LEGACY_PROVIDER = re.compile(r'\bprovider\s+"([\w-]+)"\s*\{')
 def _php_databases(path: Path) -> list[tuple[str, str, str]]:
     """Databases a PHP file connects to, with the text that dates their adoption."""
     text = _read(path)
-    found = [(_PHP_DATABASES[driver], "data", f"{driver}:") for driver in _PDO_DSN.findall(text)]
-    if match := _MYSQLI.search(text):
-        found.append(("MySQL", "data", match.group(0).rstrip("( ")))
+    found = []
+    mysqli = None
+    for match in _PHP_CONNECTION.finditer(text):
+        if driver := match["driver"]:
+            found.append((_PHP_DATABASES[driver], "data", f"{driver}:"))
+        elif mysqli is None and match["mysqli"]:
+            mysqli = match["mysqli"].rstrip()
+    if mysqli:
+        found.append(("MySQL", "data", mysqli))
     return found
 
 
@@ -401,6 +414,12 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
     ordered = [
         f for f in sorted(files, key=_priority) if not _VENDORED & set(PurePosixPath(f).parts)
     ]
+    # Choose a manifest before falling back to source files in the same scope.
+    php_source = min(
+        (f for f in ordered if PurePosixPath(f).name == "composer.json" or f.endswith(".php")),
+        key=lambda f: (is_auxiliary_source(f), PurePosixPath(f).name != "composer.json"),
+        default=None,
+    )
     own = set()
     auxiliary_own = set()
     php_files = 0
@@ -462,6 +481,9 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
                     add(name, category, path, needle)
             except (OSError, ValueError):
                 pass  # oversized or non-UTF-8 source: no evidence rather than a guess
+
+        if path == php_source:
+            add("PHP", "language", path)
 
         for pattern, (name, category) in FILE_SIGNALS.items():
             if fnmatch(path if "/" in pattern else p.name, pattern):
