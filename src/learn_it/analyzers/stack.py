@@ -152,11 +152,15 @@ _PHP_DATABASES = {
     "mysql": "MySQL", "pgsql": "PostgreSQL", "sqlite": "SQLite", "sqlsrv": "SQL Server",
     "oci": "Oracle",
 }
-_PHP_OPEN = re.compile(r"<\?(?:php(?=\s|\Z)|=)", re.IGNORECASE)
+_PHP_OPEN = re.compile(r"<\?(?:php(?=[\ \t\r\n]|\Z)|=)", re.IGNORECASE)
 _PHP_CONNECTION = re.compile(
     r"""
-    (?P<close>\?>) | (?://|\#(?!\[))[^\n?]*(?:\?(?!>)[^\n?]*)*
+    (?P<close>\?>) | (?://|\#(?!\[))[^\r\n?]*(?:\?(?!>)[^\r\n?]*)*
     | /\*.*?(?:\*/|\Z)
+    | <<<[\ \t]*(?P<hq>['"]?)
+        (?P<label>[A-Za-z_\x80-\U0010ffff][A-Za-z_0-9\x80-\U0010ffff]*)
+        (?P=hq)(?:\r\n|[\r\n])
+        .*?(?:(?<=[\r\n])[\ \t]*(?P=label)(?![A-Za-z_0-9\x80-\U0010ffff])|\Z)
     | \bnew\s+\\?PDO\s*\(\s*
         (?P<quote>['"])(?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):
         (?:\\.|(?!(?P=quote))[^\\])*(?P=quote)
