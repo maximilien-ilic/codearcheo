@@ -282,8 +282,28 @@ def test_plain_php_without_manifest_reports_php_and_its_database(tmp_path):
     ("$db = new PDO( 'sqlite:/tmp/app.db' );", {"SQLite"}),
     ("$db = new mysqli('h', 'u', 'p');", {"MySQL"}),
     ("$dsn = 'mysql:host=db'; // passed to a factory", set()),
+    ("// $db = new PDO('pgsql:host=db');", set()),
+    ("# mysqli_connect('host');", set()),
+    ("/*\n$db = new mysqli('host');\n*/", set()),
+    ("$example = \"new PDO('sqlite:example.db')\";", set()),
+    ("$example = \"mysqli_connect('host')\";", set()),
+    ("// new PDO('pgsql:host=db');\n$db = new PDO('sqlite:app.db');", {"SQLite"}),
 ])
 def test_php_database_signals_need_an_actual_connection(tmp_path, code, expected):
     (tmp_path / "db.php").write_text(f"<?php\n{code}\n")
     found = {t.name for t in stack.detect(tmp_path, ["db.php"]) if t.category == "data"}
     assert found == expected
+
+
+@pytest.mark.parametrize("manifest,source", [
+    ("composer.json", "composer.json"),
+    ("examples/composer.json", "index.php"),
+])
+def test_php_source_prefers_a_main_manifest_over_a_php_file(tmp_path, manifest, source):
+    (tmp_path / manifest).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / manifest).write_text("{}")
+    (tmp_path / "index.php").write_text("<?php\n")
+
+    php = next(t for t in stack.detect(tmp_path, ["index.php", manifest]) if t.name == "PHP")
+
+    assert php.source == source
