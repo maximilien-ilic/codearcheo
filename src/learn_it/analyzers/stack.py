@@ -145,8 +145,18 @@ FILE_SIGNALS: dict[str, tuple[str, str]] = {
     "build.gradle.kts": ("Gradle", "tooling"),
     "Gemfile": ("Ruby", "language"),
     "composer.json": ("PHP", "language"),
+    "*.php": ("PHP", "language"),  # plain PHP often has no composer.json
     "*.csproj": (".NET", "framework"),
 }
+
+# Plain PHP declares its database in code, not in a manifest: the PDO driver or mysqli.
+_PHP_DATABASES = {
+    "mysql": "MySQL", "pgsql": "PostgreSQL", "sqlite": "SQLite", "sqlsrv": "SQL Server",
+    "oci": "Oracle",
+}
+_PDO_DSN = re.compile(r"""new\s+\\?PDO\s*\(\s*['"](mysql|pgsql|sqlite|sqlsrv|oci):""")
+_MYSQLI = re.compile(r"\bmysqli_connect\s*\(|\bnew\s+\\?mysqli\s*\(")
+MAX_PHP_FILES = 500
 
 CATEGORIES = [
     "language", "framework", "ui", "data", "api", "ai", "infra", "ci", "testing", "tooling",
@@ -169,6 +179,15 @@ _GRADLE_MAP = re.compile(
 _GEM = re.compile(r"^\s*gem\s*(?:\(\s*)?[\"']([\w.-]+)[\"']", re.MULTILINE)
 _PROVIDER = re.compile(r'\bsource\s*=\s*"([\w./-]+)"')
 _LEGACY_PROVIDER = re.compile(r'\bprovider\s+"([\w-]+)"\s*\{')
+
+
+def _php_databases(path: Path) -> list[tuple[str, str, str]]:
+    """Databases a PHP file connects to, with the text that dates their adoption."""
+    text = _read(path)
+    found = [(_PHP_DATABASES[driver], "data", f"{driver}:") for driver in _PDO_DSN.findall(text)]
+    if match := _MYSQLI.search(text):
+        found.append(("MySQL", "data", match.group(0).rstrip("( ")))
+    return found
 
 
 def _read(path: Path) -> str:
@@ -286,10 +305,11 @@ MANIFESTS: dict[str, Callable[[Path], list[str]]] = {
 }
 
 
-def _priority(path: str) -> tuple[bool, int, str]:
-    """Main manifests first: the root, then shallower paths, auxiliary folders last."""
+def _priority(path: str) -> tuple[bool, int, bool, str]:
+    """Main manifests first: the root, then shallower paths, auxiliary folders last. In a
+    folder, index.php comes first: a plain PHP project's entry point, usually its oldest file."""
     parts = PurePosixPath(path).parts
-    return is_auxiliary_source(path), len(parts), path
+    return is_auxiliary_source(path), len(parts), parts[-1] != "index.php", path
 
 
 def _key(parser: Callable[[Path], list[str]], name: str) -> tuple[Callable, str]:
@@ -383,6 +403,7 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
     ]
     own = set()
     auxiliary_own = set()
+    php_files = 0
     for path in ordered:
         if PurePosixPath(path).name in _SELF_DECLARING:
             try:
@@ -433,6 +454,14 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
                 base = image.rsplit("/", 1)[-1].split(":")[0]
                 if base in IMAGES:
                     add(*IMAGES[base], path, base)
+
+        if p.suffix == ".php" and php_files < MAX_PHP_FILES:
+            php_files += 1
+            try:
+                for name, category, needle in _php_databases(root / path):
+                    add(name, category, path, needle)
+            except (OSError, ValueError):
+                pass  # oversized or non-UTF-8 source: no evidence rather than a guess
 
         for pattern, (name, category) in FILE_SIGNALS.items():
             if fnmatch(path if "/" in pattern else p.name, pattern):
