@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
+from typing import Any
 
 import yaml
 
@@ -184,6 +185,21 @@ _PYTHON_IMPORTS = {
 }
 MAX_PYTHON_FILES = 500
 
+
+# Without package.json, the imports read by the syntax graph are the evidence (tree-sitter:
+# strings, comments and templates cannot fake one).
+_JS_LANGUAGES = {"javascript", "typescript", "tsx"}
+_JS_IMPORTS = {
+    **{package: NOTABLE[package] for package in (
+        "react", "vue", "svelte", "next", "nuxt", "@sveltejs/kit", "@angular/core", "express",
+        "fastify", "@nestjs/core", "hono", "prisma", "@prisma/client", "drizzle-orm", "typeorm",
+        "mongoose", "pg", "mysql2", "ioredis", "graphql", "@trpc/server",
+    )},
+    "mysql": ("MySQL", "data"), "sqlite3": ("SQLite", "data"),
+    "better-sqlite3": ("SQLite", "data"), "mongodb": ("MongoDB", "data"),
+    "redis": ("Redis", "data"), "koa": ("Koa", "framework"),
+}
+
 CATEGORIES = [
     "language", "framework", "ui", "data", "api", "ai", "infra", "ci", "testing", "tooling",
     "library",
@@ -305,6 +321,44 @@ def _python_imports(path: Path) -> list[tuple[str, str, str]]:
             if known := _PYTHON_IMPORTS.get(module.split(".", 1)[0]):
                 found.append((*known, lines[node.lineno - 1].strip()))
     return found
+
+
+def _js_package(specifier: str) -> str:
+    """`@scope/name/sub` → `@scope/name`, `express/lib/router` → `express`."""
+    parts = specifier.split("/")
+    return "/".join(parts[:2]) if specifier.startswith("@") else parts[0]
+
+
+def with_imports(
+    root: Path, files: list[str], technologies: list[Technology], graph: Any,
+) -> list[Technology]:
+    """Add the JS/TS frameworks and databases a project imports when it has no package.json,
+    from the syntax graph (None without the code extra), dated by their import line."""
+    if graph is None or any(
+        PurePosixPath(path).name == "package.json" and not _priority(path)[0]
+        for path in files
+    ):
+        return technologies
+    found = {t.name: t for t in technologies}
+    for path in sorted(graph.modules, key=_priority):
+        module = graph.modules[path]
+        if module.language not in _JS_LANGUAGES or _VENDORED & set(PurePosixPath(path).parts):
+            continue
+        lines = None
+        for item in module.imports:
+            known = _JS_IMPORTS.get(_js_package(item.module))
+            if known is None or known[0] in found:
+                continue
+            if lines is None:
+                try:
+                    lines = _read(root / path).splitlines()
+                except (OSError, ValueError):
+                    break
+            needle = lines[item.line - 1].strip() if 0 < item.line <= len(lines) else None
+            found[known[0]] = Technology(
+                name=known[0], category=known[1], source=path, needle=needle,
+            )
+    return sorted(found.values(), key=lambda t: (CATEGORIES.index(t.category), t.name.lower()))
 
 
 def _read(path: Path) -> str:

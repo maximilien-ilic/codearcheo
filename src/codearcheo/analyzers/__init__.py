@@ -14,6 +14,9 @@ def scan(project: Project) -> ProjectProfile:
     root = project.root
     files = inventory.list_files(root)
     technologies = stack.detect(root, files)
+    # Before the dating: without package.json, JS imports in the graph name the stack.
+    graph = code.analyze(root, files)
+    technologies = stack.with_imports(root, files, technologies, graph)
 
     facts: dict[str, Any] = {}
     if git.is_repo(root):
@@ -32,7 +35,6 @@ def scan(project: Project) -> ProjectProfile:
             "uncommitted": history.uncommitted(root),
         }
 
-    graph = code.analyze(root, files)
     return ProjectProfile(
         name=project.name,
         origin=project.origin or github_origin(root),

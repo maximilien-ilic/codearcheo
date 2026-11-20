@@ -399,3 +399,59 @@ def test_an_example_manifest_does_not_hide_the_project_imports(tmp_path):
     (tmp_path / "app.py").write_text("import flask\n")
     found = {t.name for t in stack.detect(tmp_path, ["examples/requirements.txt", "app.py"])}
     assert "Flask" in found
+
+
+def _js_stack(tmp_path, files):
+    pytest.importorskip("tree_sitter")
+    for name, content in files.items():
+        (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / name).write_text(content)
+    profile = scan(Project(tmp_path, "demo"))
+    return {t.name: t for t in profile.technologies}
+
+
+def test_javascript_without_package_json_reports_imports_and_their_dates(tmp_path):
+    pytest.importorskip("tree_sitter")
+    _git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "server.js").write_text('const express = require("express");\n')
+    _commit(tmp_path, "Serve the API", "2024-02-01T10:00:00+00:00")
+    (tmp_path / "db.ts").write_text(
+        'import { Pool } from "pg";\nconst m = await import("mongodb");\n'
+    )
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "cache.test.js").write_text('import Redis from "ioredis";\n')
+    _commit(tmp_path, "Store orders", "2024-02-03T10:00:00+00:00")
+
+    technologies = {t.name: t for t in scan(Project(tmp_path, "demo")).technologies}
+
+    assert technologies["Express"].source == "server.js"
+    assert technologies["Express"].adopted.subject == "Serve the API"
+    assert technologies["PostgreSQL"].adopted.subject == "Store orders"
+    assert technologies["MongoDB"].source == "db.ts"
+    assert technologies["Redis"].auxiliary  # only a test imports it
+
+
+@pytest.mark.parametrize("code", [
+    '// const db = require("pg");\n/* import mysql from "mysql2"; */\n',
+    'const doc = "require(\'mongoose\')";\nconst t = `import x from "express"`;\n',
+    'const local = require("./express");\nimport fs from "node:fs";\n',
+])
+def test_javascript_comments_strings_and_local_modules_are_not_imports(tmp_path, code):
+    technologies = _js_stack(tmp_path, {"app.js": code})
+    assert not {"PostgreSQL", "MySQL", "MongoDB", "Express"} & technologies.keys()
+
+
+def test_a_package_json_keeps_its_role_over_imports(tmp_path):
+    technologies = _js_stack(tmp_path, {
+        "package.json": '{"dependencies": {}}', "app.js": 'require("express");\n',
+    })
+    assert "Express" not in technologies
+
+
+def test_an_example_package_json_and_node_modules_do_not_change_the_project_stack(tmp_path):
+    technologies = _js_stack(tmp_path, {
+        "examples/package.json": "{}", "app.js": 'require("@prisma/client/edge");\n',
+        "vendor/lib.js": 'require("mongoose");\n',
+    })
+    assert technologies["Prisma"].source == "app.js"
+    assert "MongoDB" not in technologies
