@@ -340,6 +340,16 @@ Deux évaluations complètes en `medium` (`a0487c5`), comparées aux deux passes
 
 Rapports : `results-20261119-225657-5006f91b.json` et `results-20261119-231118-82323424.json`.
 
+## Mesure 12 : avant la version 0.2.0, 20 novembre 2026
+
+Une évaluation complète en `medium` sur `35070ba`, le code publié en 0.2.0, sans modification locale : **13/14**, 14,9 min, 3,78 $ en équivalent API. Aucune citation introuvable sur les 14 réponses.
+
+- **Le seul échec**, shop-database, est un échec de vocabulaire, pas de contenu. La réponse dit « aucune source n'explique pourquoi PostgreSQL a été choisi » et « Pas de réponse documentée », mais elle n'emploie aucun marqueur du barème (« déduit », « non documenté »…). Ce cas avait réussi aux six passes précédentes.
+- **Le barème n'est pas élargi** pour le faire passer. Le prompt demande d'annoncer une déduction en toutes lettres (changement 2), et la réponse ne le fait pas.
+- **Bilan sur l'abonnement depuis la mesure 10** : 7 évaluations complètes, 95 réponses sur 98 réussies. Les trois échecs sont deux noms de fichier ambigus et ce vocabulaire manquant.
+
+Rapport : `results-20261120-212809-ecb1087a.json`.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
