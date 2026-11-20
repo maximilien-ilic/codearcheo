@@ -186,6 +186,11 @@ def report(
                 "created_at": run["created_at"], "model_started": None,
                 "missing_token": False, "api_equivalent_usd": None,
             }
+            # Every direct push run in learn-it used an action that rejects push
+            # before calling Claude. Keep these runs in the trigger history.
+            legacy_push = repo.casefold() == REPO and run["event"] == "push"
+            if legacy_push:
+                sample.update(model_started=False, api_equivalent_usd=0.0)
             samples.append(sample)
             try:
                 jobs = request(
@@ -217,7 +222,7 @@ def report(
                 for step in steps
             )
             cost = None
-            if no_token or started is False:
+            if legacy_push or no_token or started is False:
                 started, cost = False, 0.0
             elif started:
                 usage = archived_usage(repo, run, request)

@@ -34,16 +34,17 @@ def archive(payload):
 
 
 class GitHub:
-    def __init__(self, *, costs=(None,), skipped=True):
+    def __init__(self, *, costs=(None,), skipped=True, repo=usage.REPO):
         self.costs = costs
         self.skipped = skipped
         self.visibility = "public"
         self.total_count = len(costs)
         self.sha = SHA
-        self.event = "push"
+        self.event = "workflow_run"
+        self.repo = repo
 
     def __call__(self, endpoint, **options):
-        if endpoint == f"repos/{usage.REPO}":
+        if endpoint == f"repos/{self.repo}":
             return {"visibility": self.visibility}
         if endpoint.endswith(f"/workflows/{usage.WORKFLOW}"):
             return {"created_at": (NOW - timedelta(days=2)).isoformat()}
@@ -71,7 +72,7 @@ class GitHub:
         if endpoint.endswith("/zip"):
             artifact_id = int(endpoint.split("/artifacts/")[1].split("/")[0])
             return archive({
-                "schema_version": 1, "repository": usage.REPO, "run_id": artifact_id,
+                "schema_version": 1, "repository": self.repo, "run_id": artifact_id,
                 "run_attempt": 1, "sha": self.sha, "metrics_available": True,
                 "api_equivalent_usd": self.costs[artifact_id - 1],
             })
@@ -240,18 +241,19 @@ def test_scenarios_are_explicitly_separate_from_measured_costs():
 
 
 def test_artifacts_from_a_different_commit_are_not_used():
-    github = GitHub(costs=(0.25,), skipped=False)
+    github = GitHub(costs=(0.25,), skipped=False, repo="example/other")
+    github.event = "push"
     github.sha = "2" * 40
-    measured = usage.report(usage.REPO, days=7, now=NOW, request=github)
+    measured = usage.report(github.repo, days=7, now=NOW, request=github)
     assert measured["usage_missing"] == 1
     assert measured["projected_30d_api_equivalent_usd"] is None
 
 
 @pytest.mark.parametrize("sha, expected", [("2" * 40, 0.75), ("invalid", None)])
 def test_report_keeps_push_history_and_accepts_the_upstream_ci_sha(sha, expected):
-    legacy = GitHub(costs=(0.25,), skipped=False)
+    legacy = GitHub(costs=(None,), skipped=False)
+    legacy.event = "push"
     current = GitHub(costs=(0.25, 0.75), skipped=False)
-    current.event = "workflow_run"
     current.sha = sha
 
     def request(endpoint, **options):
@@ -261,13 +263,19 @@ def test_report_keeps_push_history_and_accepts_the_upstream_ci_sha(sha, expected
                 return [{"total_count": 1, "workflow_runs": pages[0]["workflow_runs"][1:]}]
         if "/runs/2/" in endpoint or "/artifacts/2/" in endpoint:
             return current(endpoint, **options)
-        return legacy(endpoint, **options)
+        response = legacy(endpoint, **options)
+        if endpoint.endswith("/jobs"):
+            response["jobs"][0]["steps"][1]["conclusion"] = "failure"
+        return response
 
     measured = usage.report(usage.REPO, days=7, now=NOW, request=request)
     assert measured["push_triggers"] == 2
     assert {run["run_id"]: run["api_equivalent_usd"] for run in measured["runs"]} == {
-        1: 0.25, 2: expected,
+        1: 0.0, 2: expected,
     }
+    assert measured["model_reviews_started"] == 1
+    assert measured["usage_missing"] == int(expected is None)
+    assert measured["projection_basis"] == ("measured_reviews" if expected else "unavailable")
 
 
 def test_a_truncated_history_cannot_produce_a_monthly_projection():

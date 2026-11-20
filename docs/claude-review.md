@@ -55,6 +55,8 @@ Elle compte les déclenchements sur `master`, toutes les tentatives de ces décl
 les appels effectivement démarrés et les exécutions ignorées. Un relevé absent reste
 inconnu ; il n'est pas compté comme gratuit.
 L'historique inclut les anciens déclenchements directs et les revues lancées par la CI.
+Sur learn-it, l'action refusait les anciens déclenchements `push` avant tout appel
+à Claude. Ils comptent dans la cadence, avec une consommation Claude nulle.
 Les artefacts sont vérifiés contre le dépôt, le numéro d'exécution et sa tentative. Pour les
 revues lancées par la CI, le SHA enregistré désigne le commit de la CI. GitHub expose dans
 la liste des revues le SHA de la pointe de la branche par défaut au déclenchement.
