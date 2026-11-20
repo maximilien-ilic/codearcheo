@@ -271,7 +271,7 @@ def review(session: Session, *, path: str | None = None) -> str:
     known = session.store.load_decisions() if scope_label is None else []
     known_block = (
         prompts.KNOWN_DECISIONS.format(
-            decisions=json.dumps([d.model_dump() for d in known], ensure_ascii=False, indent=1)
+            decisions=json.dumps([d.model_dump() for d in known], ensure_ascii=False)
         )
         if known
         else ""

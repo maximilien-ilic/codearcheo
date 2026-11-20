@@ -11,7 +11,8 @@ from learn_it.analyzers import code, inventory
 
 
 def _result(value: dict) -> str:
-    text = json.dumps(value, ensure_ascii=False, indent=1)
+    # Compact: the model reads it as well, and more of a large result fits under the cap.
+    text = json.dumps(value, ensure_ascii=False)
     return text if len(text) <= 20_000 else text[:20_000] + "\n… narrow the symbol or module."
 
 
