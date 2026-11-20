@@ -65,18 +65,17 @@ n'ont pas cette permission. Ce job télécharge les archives vérifiées, puis l
 publie sans jeton PyPI stocké et produit les attestations. Le
 [guide PyPI](https://docs.pypi.org/trusted-publishers/using-a-publisher/) décrit cette identité.
 
-## Préparer la première version
+## Publier la première version
 
-Dans une PR dédiée, au moment choisi pour publier :
+La PR #131 a intégré la version `0.2.0`, le verrou actualisé et les notes datées.
+Une fois Trusted Publishing configuré et la date de publication décidée :
 
-1. Passer la version à `0.2.0` avec `uv version 0.2.0`, puis mettre `__version__` dans
-   `src/learn_it/__init__.py` à la même valeur. Inclure le verrou actualisé dans la PR.
-2. Déplacer les changements retenus sous `## [0.2.0] - AAAA-MM-JJ` dans le CHANGELOG,
-   avec la date réelle, et conserver une section `Unreleased` pour la suite.
-3. Refaire la construction et lancer
+1. Choisir sur `master` le commit validé par la CI qui doit porter le tag `v0.2.0`.
+   Vérifier que ses notes dans `CHANGELOG.md` décrivent les changements à publier.
+2. Depuis ce commit, refaire la construction avec `uv build --no-sources`, puis lancer
    `uv run python -m scripts.check_dist --tag v0.2.0 --smoke`.
-4. Fusionner cette PR avec une CI verte. Créer ensuite le tag `v0.2.0` sur ce commit de
-   `master`, puis publier la release GitHub stable avec les notes correspondantes.
+3. Créer le tag `v0.2.0` sur le commit vérifié, puis publier la release GitHub stable
+   avec les notes correspondantes.
 
 Le workflow reconstruit, teste les archives et vérifie que le commit appartient à
 l'historique de `master`. Une version différente du tag, des notes datées manquantes ou une
