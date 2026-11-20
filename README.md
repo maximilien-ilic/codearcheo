@@ -150,20 +150,18 @@ ne peuvent pas appliquer.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`. Une revue Claude côté serveur tourne aussi depuis le 20 novembre, sur l'abonnement, à la fin de la CI de chaque push ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**Ce qui reste à prouver.** Sur les 56 réponses de la mesure 10 et les 28 de la mesure 11, deux échouent au barème, sur des chemins abrégés. En rejeu de la mesure 10, la complétion locale résout une des trois citations invalides de la revue Go. La mesure 11 relève un nom ambigu dans une réponse `why` sur Go. Le gain de la correction par le modèle et les résultats du moteur API restent à mesurer.
+**Ce qui reste à prouver.** Sur les 56 réponses de la mesure 10 et les 28 de la mesure 11, deux échouent au barème, sur des chemins abrégés. En rejeu de la mesure 10, la complétion locale résout une des trois citations invalides de la revue Go. La mesure 11 relève un nom ambigu dans une réponse `why` sur Go. Le gain de la correction par le modèle reste à mesurer sur l'abonnement Claude.
 
 **Ce qu'il reste à faire.**
 
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
-| 1 | Mesurer la correction des citations et évaluer le moteur API | [#10] | des cas de comparaison et une clé pour le moteur API |
-| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | une amélioration mesurée de la correction des réponses texte (#10) |
-| 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
-| 4 | Estimer le coût mensuel de la revue serveur (active) | [#25] | une semaine d'historique ; autoriser Actions à ouvrir des PR |
+| 1 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faites) | [#34] | un gain mesuré avec et sans correction sur les réponses texte |
+| 2 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
+| 3 | Estimer le coût mensuel de la revue serveur (active) | [#25] | une semaine d'historique ; autoriser Actions à ouvrir des PR |
 
 Les jalons, l'historique du projet et le détail de chaque étape sont dans [docs/roadmap.md](docs/roadmap.md).
 
-[#10]: https://github.com/maximilien-ilic/learn-it/issues/10
 [#24]: https://github.com/maximilien-ilic/learn-it/issues/24
 [#25]: https://github.com/maximilien-ilic/learn-it/issues/25
 [#34]: https://github.com/maximilien-ilic/learn-it/issues/34

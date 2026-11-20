@@ -25,7 +25,7 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 ## Où on en est
 
-Il reste quatre étapes ouvertes. [#10] suit la mesure du gain de la correction des citations et l'évaluation du moteur API, qui demande une clé. La complétion locale résout certains chemins abrégés. [#34] attend une amélioration mesurée de la correction des réponses texte avant de l'étendre aux preuves structurées. [#24] attend la fin du projet. [#25] fonctionne : il reste à estimer son coût mensuel à partir d'une semaine d'historique.
+Il reste trois étapes ouvertes. [#10] est clos après les évaluations sur l'abonnement Claude. [#34] suit la comparaison des réponses texte avec et sans correction des citations. L'extension aux preuves structurées dépend d'un gain mesuré. [#24] attend la fin du projet. [#25] fonctionne : il reste à estimer son coût mensuel à partir d'une semaine d'historique.
 
 ## La suite
 
@@ -43,11 +43,11 @@ Avant d'ajouter des fonctionnalités, savoir ce que valent les réponses et ne p
 
 | Étape | Ticket | État |
 |---|---|---|
-| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | variabilité et effort mesurés ; gain de correction et moteur API à mesurer |
+| Mesurer les vraies réponses une première fois et régler les prompts | [#10] | clos ; variabilité et effort mesurés sur l'abonnement Claude |
 | Vérifier les citations de chaque réponse avant de l'afficher | [#11] | fait |
 | Étoffer les cas de référence : trois langages, une injection de prompt, un gros dépôt | [#12] | fait |
 | Afficher coût et durée, régler modèle et effort par commande | [#13] | fait |
-| Corriger aussi les preuves des décisions et recommandations | [#34] | complétion locale et garde ADR faits ; correction IA après #10 |
+| Corriger aussi les preuves des décisions et recommandations | [#34] | complétion locale et garde ADR en place ; extension après un gain mesuré sur les réponses texte |
 
 ### v0.3 — Retrouver le pourquoi
 
