@@ -4,7 +4,7 @@ from fnmatch import fnmatch
 
 import pytest
 
-from learn_it.analyzers import inventory
+from codearcheo.analyzers import inventory
 
 
 @pytest.mark.parametrize("git_repo", [True, False])
@@ -43,7 +43,7 @@ def test_secret_names(path, secret):
 def test_code_analysis_restores_the_garbage_collector(project):
     import gc
 
-    from learn_it.analyzers import code
+    from codearcheo.analyzers import code
 
     code.analyze(project.root)
     assert gc.isenabled()

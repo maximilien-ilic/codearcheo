@@ -4,7 +4,7 @@
     uv run python -m evals.run shop      # only the named ones
 
 Each generation consumes API credits or subscription quota; pytest and CI use fake agents.
-Answers, records and scores are checkpointed in `<LEARN_IT_CACHE_DIR>/evals/`.
+Answers, records and scores are checkpointed in `<CODEARCHEO_CACHE_DIR>/evals/`.
 Use `python -m evals.rescore REPORT.json` to regrade saved answers without generation.
 """
 
@@ -23,18 +23,18 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from codearcheo import evidence, features, git
+from codearcheo.agent.limits import SessionLimits
+from codearcheo.agent.runner import AgentError
+from codearcheo.agent.usage import UsageSummary
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.sources import Project, parse_github
+from codearcheo.store import Store
 from evals.artifacts import fingerprint, save_report
 from evals.fixtures import build_fixture
 from evals.scoring import Check, score_answer, score_decisions
-from learn_it import evidence, features, git
-from learn_it.agent.limits import SessionLimits
-from learn_it.agent.runner import AgentError
-from learn_it.agent.usage import UsageSummary
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.sources import Project, parse_github
-from learn_it.store import Store
 
 CASES = Path(__file__).with_name("cases.toml")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -275,7 +275,7 @@ def main(
     print(f"Résultats : {output}", flush=True)
     for spec in specs:
         if settings.backend == "claude-code" and spec["source"] == "synthetic-github":
-            # The GitHub replay patches this process; Claude Code's tools run in `learn-it serve`.
+            # The GitHub replay patches this process; Claude Code's tools run in `codearcheo serve`.
             skipped += [case["id"] for case in spec["cases"]]
             print(f"– {spec['name']} ignoré : son rejeu GitHub ne passe pas par Claude Code",
                   file=sys.stderr)

@@ -54,7 +54,7 @@ projet à 50 Mo / 10 000 fichiers analysés. Les dépassements et grammaires man
 sont signalés, jamais présentés comme une analyse exhaustive. Les fichiers malformés
 restent marqués `syntax_errors` dans l'export.
 
-Les modules analysés sont conservés dans `.learn-it/code-cache.json.gz`, par empreinte
+Les modules analysés sont conservés dans `.codearcheo/code-cache.json.gz`, par empreinte
 du contenu et version des grammaires. Le cache suit donc aussi les modifications non
 commitées. Les refus déterministes sont conservés avec leur motif. L'ancien
 `code-cache.json` est réutilisé puis remplacé après une écriture gzip réussie. Un cache

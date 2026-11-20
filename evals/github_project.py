@@ -7,10 +7,10 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
+from codearcheo import github
 from evals.shop import _commit, _git
-from learn_it import github
 
-REPOSITORY = "learn-it-fixtures/offline-store"
+REPOSITORY = "codearcheo-fixtures/offline-store"
 PR_URL = f"https://github.com/{REPOSITORY}/pull/42"
 FIXTURE = Path(__file__).with_name("fixtures") / "github_context.json"
 
@@ -47,5 +47,5 @@ class RecordedGitHubClient:
 @contextmanager
 def replay_github():
     """Use only around this synthetic evaluation; real repository clients remain unchanged."""
-    with patch("learn_it.github.GitHubClient", RecordedGitHubClient):
+    with patch("codearcheo.github.GitHubClient", RecordedGitHubClient):
         yield

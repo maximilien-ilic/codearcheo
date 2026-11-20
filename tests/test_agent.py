@@ -3,13 +3,13 @@ from types import SimpleNamespace
 import pytest
 from anthropic.lib.tools import ToolError
 
-from learn_it import features
-from learn_it.agent import runner
-from learn_it.agent.runner import AgentError, run_agent
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import features
+from codearcheo.agent import runner
+from codearcheo.agent.runner import AgentError, run_agent
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 
 def reply(stop_reason, *blocks):

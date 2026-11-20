@@ -4,7 +4,7 @@ import gzip
 
 import pytest
 
-from learn_it.analyzers import code
+from codearcheo.analyzers import code
 
 pytest.importorskip("tree_sitter")
 
@@ -58,7 +58,7 @@ def test_an_edited_file_is_parsed_again_and_others_are_not(project, parses):
 
 def test_a_corrupt_cache_is_ignored(project, parses):
     code.analyze(project.root)
-    (project.root / ".learn-it" / "code-cache.json.gz").write_bytes(b"not gzip")
+    (project.root / ".codearcheo" / "code-cache.json.gz").write_bytes(b"not gzip")
     parses.clear()
 
     graph = code.analyze(project.root)
@@ -95,8 +95,8 @@ def test_cache_keeps_symbol_and_reference_paths_after_a_rename(project, parses):
 
 def test_legacy_cache_is_migrated_without_reparsing_or_changing_the_graph(project, parses):
     first = code.analyze(project.root)
-    compressed = project.root / ".learn-it/code-cache.json.gz"
-    legacy = project.root / ".learn-it/code-cache.json"
+    compressed = project.root / ".codearcheo/code-cache.json.gz"
+    legacy = project.root / ".codearcheo/code-cache.json"
     legacy.write_bytes(gzip.decompress(compressed.read_bytes()))
     compressed.unlink()
     parses.clear()
@@ -121,7 +121,7 @@ def test_oversized_decompressed_cache_is_ignored(project, parses, monkeypatch):
 
 
 def test_a_broken_cached_record_is_repaired_for_the_next_scan(project, parses):
-    from learn_it.store import Store
+    from codearcheo.store import Store
 
     first = code.analyze(project.root)
     store = Store(project.root)
@@ -136,11 +136,11 @@ def test_a_broken_cached_record_is_repaired_for_the_next_scan(project, parses):
 
 
 def test_a_failed_migration_keeps_the_legacy_cache(project, monkeypatch):
-    from learn_it.store import Store
+    from codearcheo.store import Store
 
     first = code.analyze(project.root)
-    compressed = project.root / ".learn-it/code-cache.json.gz"
-    legacy = project.root / ".learn-it/code-cache.json"
+    compressed = project.root / ".codearcheo/code-cache.json.gz"
+    legacy = project.root / ".codearcheo/code-cache.json"
     legacy.write_bytes(gzip.decompress(compressed.read_bytes()))
     original = legacy.read_bytes()
     compressed.unlink()
@@ -155,7 +155,7 @@ def test_a_failed_migration_keeps_the_legacy_cache(project, monkeypatch):
 
 
 def test_oversized_replacement_keeps_usable_legacy_cache(project, parses, monkeypatch):
-    from learn_it.store import Store
+    from codearcheo.store import Store
 
     code.analyze(project.root)
     store = Store(project.root)

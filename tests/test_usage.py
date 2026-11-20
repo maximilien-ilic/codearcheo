@@ -3,10 +3,10 @@ from types import SimpleNamespace
 import pytest
 from typer.testing import CliRunner
 
-from learn_it import cli
-from learn_it.agent.runner import BUDGET_BETA, _options
-from learn_it.agent.usage import UsageSummary
-from learn_it.config import Settings
+from codearcheo import cli
+from codearcheo.agent.runner import BUDGET_BETA, _options
+from codearcheo.agent.usage import UsageSummary
+from codearcheo.config import Settings
 
 
 def message(*, model="claude-opus-5-5", tools=0, **usage):
@@ -112,9 +112,9 @@ def test_api_task_budget_has_validated_units_and_keeps_effort_and_fallback():
 
 
 def test_command_options_override_environment(project, monkeypatch):
-    monkeypatch.setenv("LEARN_IT_MODEL", "env-model")
-    monkeypatch.setenv("LEARN_IT_EFFORT", "low")
-    monkeypatch.setenv("LEARN_IT_BUDGET", "25000")
+    monkeypatch.setenv("CODEARCHEO_MODEL", "env-model")
+    monkeypatch.setenv("CODEARCHEO_EFFORT", "low")
+    monkeypatch.setenv("CODEARCHEO_BUDGET", "25000")
     session = cli._session(str(project.root), model="cli-model", effort="", budget=40_000)
     assert session.settings.model == "cli-model"
     assert session.settings.effort == ""
@@ -128,7 +128,7 @@ def test_command_options_override_environment(project, monkeypatch):
 def test_explicit_flags_can_override_invalid_environment_values():
     from unittest.mock import patch
 
-    with patch.dict("os.environ", {"LEARN_IT_BUDGET": "invalid", "LEARN_IT_EFFORT": "invalid"}):
+    with patch.dict("os.environ", {"CODEARCHEO_BUDGET": "invalid", "CODEARCHEO_EFFORT": "invalid"}):
         settings = Settings.from_env(effort="medium", budget=30_000)
     assert settings.effort == "medium"
     assert settings.budget == 30_000

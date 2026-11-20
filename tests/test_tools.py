@@ -2,8 +2,8 @@ import pytest
 from anthropic import beta_tool
 from anthropic.lib.tools import ToolError
 
-from learn_it.agent.tools import ProjectTools
-from learn_it.analyzers import scan
+from codearcheo.agent.tools import ProjectTools
+from codearcheo.analyzers import scan
 
 
 @pytest.fixture
@@ -75,8 +75,8 @@ def test_exploration_excludes_symlinks(project, tmp_path, use_git):
 
 
 def test_inventory_does_not_follow_replaced_directories(project, tmp_path):
-    from learn_it import git
-    from learn_it.analyzers import inventory
+    from codearcheo import git
+    from codearcheo.analyzers import inventory
 
     folder = project.root / "config"
     folder.mkdir()
@@ -95,7 +95,7 @@ def test_inventory_does_not_follow_replaced_directories(project, tmp_path):
 
 
 def test_git_internals_and_secret_directories_are_off_limits(project):
-    from learn_it.analyzers import inventory
+    from codearcheo.analyzers import inventory
 
     nested = project.root / "nested" / ".git"
     nested.mkdir(parents=True)
@@ -115,7 +115,7 @@ def test_git_internals_and_secret_directories_are_off_limits(project):
 
 @pytest.mark.parametrize("filename", ['quoted"name.txt', "colon:name.txt", "new\nline.txt"])
 def test_search_filters_raw_git_paths_before_display(project, filename):
-    from learn_it import git
+    from codearcheo import git
 
     secret = project.root / ".netrc"
     secret.mkdir()

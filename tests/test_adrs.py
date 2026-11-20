@@ -1,8 +1,8 @@
 import pytest
 
-from learn_it.analyzers import adrs, scan
-from learn_it.domain import Decision
-from learn_it.sources import Project
+from codearcheo.analyzers import adrs, scan
+from codearcheo.domain import Decision
+from codearcheo.sources import Project
 
 MADR = """---
 status: accepted

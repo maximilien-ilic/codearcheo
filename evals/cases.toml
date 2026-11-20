@@ -160,4 +160,4 @@ command = "ask"
 question = "Why does this project use SQLite? Consult the associated pull request before deciding whether the reason is documented or inferred. Answer in English."
 mention = ["SQLite", "offline", "documented"]
 cite_any_file = ["app.py"]
-cite_urls = ["https://github.com/learn-it-fixtures/offline-store/pull/42"]
+cite_urls = ["https://github.com/codearcheo-fixtures/offline-store/pull/42"]

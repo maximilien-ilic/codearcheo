@@ -1,9 +1,9 @@
 from pathlib import Path
 
+from codearcheo import git
+from codearcheo.analyzers import history, scan
+from codearcheo.domain import Technology
 from evals.shop import _commit, _git
-from learn_it import git
-from learn_it.analyzers import history, scan
-from learn_it.domain import Technology
 
 
 def test_batch_adoption_matches_pickaxe_after_removal_readdition_and_rename(tmp_path):

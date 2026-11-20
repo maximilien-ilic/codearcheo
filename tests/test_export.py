@@ -1,7 +1,7 @@
 import pytest
 
-from learn_it.domain import Decision
-from learn_it.export import export_decisions
+from codearcheo.domain import Decision
+from codearcheo.export import export_decisions
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def test_export_continues_existing_numbering_and_does_not_overwrite(tmp_path, de
     exported = export_decisions(tmp_path, [decision], directory)
     assert exported[0].name == "0008-une-base-postgresql.md"
     text = exported[0].read_text()
-    assert "Reconstituée par learn-it" in text
+    assert "Reconstituée par codearcheo" in text
     assert "justification documentée" in text
     assert "`database.py:1`" in text
     assert existing.read_text() == "untouched"

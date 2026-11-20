@@ -22,7 +22,7 @@ SEMVER = re.compile(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)")
 
 
 def source_version(root: Path) -> str:
-    tree = ast.parse((root / "src/learn_it/__init__.py").read_text(encoding="utf-8"))
+    tree = ast.parse((root / "src/codearcheo/__init__.py").read_text(encoding="utf-8"))
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets
@@ -87,8 +87,8 @@ def check_dist(root: Path, directory: Path, *, tag: str | None = None) -> list[P
 def smoke_install(artifacts: list[Path], version: str) -> None:
     """Exercise the installed package away from the checkout; no generation command is run."""
     env = {key: value for key, value in os.environ.items()
-           if not key.startswith("LEARN_IT_") and key not in {"PYTHONPATH", "PYTHONHOME"}}
-    with tempfile.TemporaryDirectory(prefix="learn-it-package-") as temporary:
+           if not key.startswith("CODEARCHEO_") and key not in {"PYTHONPATH", "PYTHONHOME"}}
+    with tempfile.TemporaryDirectory(prefix="codearcheo-package-") as temporary:
         directory = Path(temporary)
         project = directory / "project"
         project.mkdir()
@@ -101,15 +101,15 @@ def smoke_install(artifacts: list[Path], version: str) -> None:
                        "--with", str(artifact.resolve())]
             imported = subprocess.check_output(
                 [*command, "python", "-I", "-c",
-                 "import json, learn_it; "
-                 "print(json.dumps([learn_it.__version__, learn_it.__file__]))"],
+                 "import json, codearcheo; "
+                 "print(json.dumps([codearcheo.__version__, codearcheo.__file__]))"],
                 cwd=directory, env=env, text=True, timeout=300,
             )
             installed_version, location = json.loads(imported)
             if installed_version != version or Path(location).is_relative_to(ROOT):
                 raise ValueError(f"L'installation de {artifact.name} utilise le mauvais module.")
             output = subprocess.check_output(
-                [*command, "learn-it", "scan", str(project), "--json"],
+                [*command, "codearcheo", "scan", str(project), "--json"],
                 cwd=directory, env=env, text=True, timeout=300,
             )
             profile = json.loads(output)

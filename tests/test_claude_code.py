@@ -7,12 +7,12 @@ import sys
 
 import pytest
 
-from learn_it import features
-from learn_it.agent.limits import AgentError
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import features
+from codearcheo.agent.limits import AgentError
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 FAKE = """#!{python}
 import json, os, sys
@@ -29,7 +29,7 @@ print(json.dumps(outputs[min(len(calls), len(outputs)) - 1]))
 
 @pytest.fixture
 def fake_claude(tmp_path, monkeypatch):
-    monkeypatch.setattr("learn_it.agent.claude_code.find_spec", lambda _: object())
+    monkeypatch.setattr("codearcheo.agent.claude_code.find_spec", lambda _: object())
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     executable = bin_dir / "claude"
@@ -55,7 +55,7 @@ def session(project, **options):
     return Session(project, scan(project), Store(project.root), settings, on_usage=lambda u: None)
 
 
-def test_ask_runs_on_the_subscription_with_learn_it_tools_only(project, fake_claude):
+def test_ask_runs_on_the_subscription_with_codearcheo_tools_only(project, fake_claude):
     call = fake_claude(result="FastAPI depuis `app.py:3`.")
 
     answer = features.ask(session(project), "Quel framework ?")
@@ -67,9 +67,9 @@ def test_ask_runs_on_the_subscription_with_learn_it_tools_only(project, fake_cla
     assert argv[argv.index("--tools") + 1] == ""  # no built-in tools
     assert "--strict-mcp-config" in argv
     assert argv[argv.index("--max-turns") + 1] == str(Settings.max_iterations)
-    assert argv[argv.index("--allowedTools") + 1] == "mcp__learn-it"
-    server = logged["mcp"]["mcpServers"]["learn-it"]
-    assert server["args"][:5] == ["-m", "learn_it", "serve", "-p", str(project.root)]
+    assert argv[argv.index("--allowedTools") + 1] == "mcp__codearcheo"
+    server = logged["mcp"]["mcpServers"]["codearcheo"]
+    assert server["args"][:5] == ["-m", "codearcheo", "serve", "-p", str(project.root)]
     assert server["args"][5] == "--profile-file"  # the profile just computed, not a rescan
     assert "<project_profile>" in argv[argv.index("--system-prompt") + 1]
 
@@ -77,7 +77,7 @@ def test_ask_runs_on_the_subscription_with_learn_it_tools_only(project, fake_cla
 @pytest.mark.parametrize("max_iterations", [1, 7])
 def test_custom_iteration_limit_reaches_claude(project, fake_claude, monkeypatch, max_iterations):
     call = fake_claude(result="FastAPI depuis `app.py:3`.")
-    monkeypatch.setenv("LEARN_IT_MAX_ITERATIONS", str(max_iterations))
+    monkeypatch.setenv("CODEARCHEO_MAX_ITERATIONS", str(max_iterations))
     current = session(project)
     current.settings = Settings.from_env(backend="claude-code")
 
@@ -93,7 +93,7 @@ def test_turn_limit_reports_usage_and_stops_without_final_records(project, fake_
     usages = []
     current.on_usage = usages.append
 
-    with pytest.raises(AgentError, match="3 tours.*LEARN_IT_MAX_ITERATIONS"):
+    with pytest.raises(AgentError, match="3 tours.*CODEARCHEO_MAX_ITERATIONS"):
         features.decisions(current)
 
     assert len(usages) == 1
@@ -180,20 +180,20 @@ def test_no_repair_request_when_every_citation_is_valid(project, fake_claude, tm
 
 
 def test_unknown_backend_is_rejected():
-    with pytest.raises(ValueError, match="LEARN_IT_BACKEND"):
+    with pytest.raises(ValueError, match="CODEARCHEO_BACKEND"):
         Settings(backend="gemini")
 
 
 def test_output_limit_is_rejected_even_when_it_matches_the_default(monkeypatch):
     with pytest.raises(ValueError, match="max-output-tokens"):
         Settings.from_env(backend="claude-code", max_output_tokens=Settings.max_output_tokens)
-    monkeypatch.setenv("LEARN_IT_MAX_OUTPUT_TOKENS", "20")
+    monkeypatch.setenv("CODEARCHEO_MAX_OUTPUT_TOKENS", "20")
     with pytest.raises(ValueError, match="max-output-tokens"):
         Settings.from_env(backend="claude-code")
 
 
 def test_missing_mcp_extra_is_reported_before_running_claude(project, fake_claude, monkeypatch):
-    monkeypatch.setattr("learn_it.agent.claude_code.find_spec", lambda _: None)
+    monkeypatch.setattr("codearcheo.agent.claude_code.find_spec", lambda _: None)
     with pytest.raises(AgentError, match="extra mcp"):
         features.ask(session(project), "?")
 
@@ -209,7 +209,7 @@ def test_structured_tasks_ask_for_the_answer_only_once(project, fake_claude):
 
 
 def test_the_profile_reaches_the_model_as_compact_json(project):
-    from learn_it.agent import prompts
+    from codearcheo.agent import prompts
 
     system = prompts.system(scan(project))
     profile = system.split("<project_profile>\n", 1)[1].split("\n</project_profile>", 1)[0]
@@ -224,7 +224,7 @@ def test_a_waiting_indicator_shows_in_a_terminal_only(
 
     from rich.console import Console
 
-    from learn_it import render
+    from codearcheo import render
 
     stream = io.StringIO()
     monkeypatch.setattr(render, "err", Console(file=stream, force_terminal=terminal, width=80))

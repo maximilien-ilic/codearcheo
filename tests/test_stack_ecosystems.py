@@ -1,8 +1,8 @@
 import pytest
 
+from codearcheo.analyzers import scan, stack
+from codearcheo.sources import Project
 from evals.shop import _commit, _git
-from learn_it.analyzers import scan, stack
-from learn_it.sources import Project
 
 CASES = [
     ("pom.xml", '<project xmlns="http://maven.apache.org/POM/4.0.0"><dependencies><dependency>'

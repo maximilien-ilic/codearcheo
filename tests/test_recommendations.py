@@ -7,12 +7,12 @@ from anthropic.lib.tools import ToolError
 from markdown_it import MarkdownIt
 from typer.testing import CliRunner
 
-from learn_it import cli, features, recommendations
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.domain import Recommendation
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import cli, features, recommendations
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.domain import Recommendation
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 
 def recommendation(**updates):
@@ -139,7 +139,7 @@ def test_valid_published_evidence_does_not_raise_a_warning(publication):
     recommendations.publish(project, [recommendation()], confirmed=True)
 
     assert "Preuves non vérifiées" not in bodies[0]
-    assert "learn-it:recommendation:" in bodies[0]
+    assert "codearcheo:recommendation:" in bodies[0]
 
 
 @pytest.mark.parametrize("indentation", ["", "  "])
@@ -220,7 +220,7 @@ def test_review_cli_focuses_on_the_selected_directory(project, monkeypatch):
         "review", "-p", str(project.root), "--path", "./src/",
     ])
     assert result.exit_code == 0, result.output
-    report = (project.root / ".learn-it/review.md").read_text()
+    report = (project.root / ".codearcheo/review.md").read_text()
     assert '    "src"' in report
     assert "src/app.py:1" in report
 
@@ -305,7 +305,7 @@ def test_an_improvement_must_have_an_actionable_first_step():
 
 
 def test_a_prose_only_review_never_erases_previous_recommendations(project, monkeypatch):
-    from learn_it.agent.runner import AgentError
+    from codearcheo.agent.runner import AgentError
 
     store = Store(project.root)
     store.save_recommendations([recommendation()])

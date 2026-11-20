@@ -14,9 +14,9 @@ from datetime import datetime
 from pathlib import Path
 from time import perf_counter
 
-from learn_it import git
-from learn_it.analyzers import code, history, inventory, scan, stack
-from learn_it.sources import Project
+from codearcheo import git
+from codearcheo.analyzers import code, history, inventory, scan, stack
+from codearcheo.sources import Project
 
 
 def reference_dates(root, technologies):
@@ -73,11 +73,11 @@ def measure(project: Project, *, reference: bool = False):
     wrap(history, "uncommitted")
     wrap(code, "analyze")
     # Keep the harness usable both before and after optional profile enrichments.
-    analyzer_package = importlib.import_module("learn_it.analyzers")
+    analyzer_package = importlib.import_module("codearcheo.analyzers")
     if hasattr(analyzer_package, "github_origin"):
         wrap(analyzer_package, "github_origin", label="github_origin")
     try:
-        adrs = importlib.import_module("learn_it.analyzers.adrs")
+        adrs = importlib.import_module("codearcheo.analyzers.adrs")
     except ImportError:
         pass
     else:

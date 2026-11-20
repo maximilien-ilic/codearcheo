@@ -3,13 +3,13 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from learn_it import features, git, recommendations
-from learn_it.analyzers import scan
-from learn_it.cli import app
-from learn_it.config import Settings
-from learn_it.domain import Decision
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import features, git, recommendations
+from codearcheo.analyzers import scan
+from codearcheo.cli import app
+from codearcheo.config import Settings
+from codearcheo.domain import Decision
+from codearcheo.features import Session
+from codearcheo.store import Store
 from tests.test_recommendations import recommendation
 
 
@@ -58,18 +58,18 @@ def test_diff_cli_outputs_json_without_model_calls(project):
 
 @pytest.mark.parametrize("command", ["scan", "diff", "serve"])
 def test_offline_commands_work_with_a_claude_code_output_limit(project, monkeypatch, command):
-    monkeypatch.setenv("LEARN_IT_BACKEND", "claude-code")
-    monkeypatch.setenv("LEARN_IT_MAX_OUTPUT_TOKENS", "20")
+    monkeypatch.setenv("CODEARCHEO_BACKEND", "claude-code")
+    monkeypatch.setenv("CODEARCHEO_MAX_OUTPUT_TOKENS", "20")
     if command == "scan":
         args = ["scan", str(project.root), "--json"]
     elif command == "diff":
         args = ["diff", "HEAD", "-p", str(project.root), "--json"]
     else:
-        from learn_it import mcp_server
+        from codearcheo import mcp_server
 
         served = []
         monkeypatch.setattr(mcp_server, "serve", served.append)
-        monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(project.root / "cache"))
+        monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(project.root / "cache"))
         args = ["serve", "-p", str(project.root)]
     result = CliRunner().invoke(app, args)
     assert result.exit_code == 0, result.output
@@ -116,7 +116,7 @@ def test_analysis_changed_during_agent_run_is_not_archived_under_old_sha(project
 
 
 def test_a_prose_only_analysis_never_erases_previous_decisions(project, monkeypatch):
-    from learn_it.agent.runner import AgentError
+    from codearcheo.agent.runner import AgentError
 
     store = Store(project.root)
     store.save_decisions([record()])

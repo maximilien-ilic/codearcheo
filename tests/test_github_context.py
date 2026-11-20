@@ -7,17 +7,17 @@ from types import SimpleNamespace
 import pytest
 from anthropic.lib.tools import ToolError
 
+from codearcheo import git, github
+from codearcheo.agent.tools import ProjectTools
+from codearcheo.analyzers import scan
+from codearcheo.sources import Project, resolve
 from evals.github_project import PR_URL, build_github_project, replay_github
-from learn_it import git, github
-from learn_it.agent.tools import ProjectTools
-from learn_it.analyzers import scan
-from learn_it.sources import Project, resolve
 
 
 def test_origin_and_pr_only_rationale_are_available_without_network(tmp_path):
     root = build_github_project(tmp_path / "offline")
     project = resolve(str(root), tmp_path / "cache")
-    assert project.origin == "https://github.com/learn-it-fixtures/offline-store"
+    assert project.origin == "https://github.com/codearcheo-fixtures/offline-store"
     assert scan(Project(root, "offline")).origin == project.origin
     assert "operate offline" not in git.run(root, "log", "--format=%B")
     tools = ProjectTools(root)

@@ -5,14 +5,14 @@
 
 ## Contexte
 
-learn-it doit tourner sur n'importe quel projet, y compris un projet privé en cours de développement, sans infrastructure à déployer. Le travail combine des appels à git, de l'analyse de fichiers et un LLM qui utilise des outils.
+codearcheo doit tourner sur n'importe quel projet, y compris un projet privé en cours de développement, sans infrastructure à déployer. Le travail combine des appels à git, de l'analyse de fichiers et un LLM qui utilise des outils.
 
 ## Décision
 
 - Python 3.11+, distribué comme une commande (`uv tool install`).
 - Typer pour la CLI, Rich pour l'affichage, Pydantic pour le modèle de données.
-- Le SDK officiel Anthropic pour l'agent, le SDK MCP officiel pour `learn-it serve`.
-- Tout ce que l'outil produit reste dans `.learn-it/`, à la racine du projet analysé.
+- Le SDK officiel Anthropic pour l'agent, le SDK MCP officiel pour `codearcheo serve`.
+- Tout ce que l'outil produit reste dans `.codearcheo/`, à la racine du projet analysé.
 
 ## Alternatives envisagées
 

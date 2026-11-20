@@ -5,9 +5,9 @@ Les commandes IA (`ask`, `overview`, `decisions`, `why`, `review`, `chat`) accep
 d'environnement. Le modèle par défaut reste `claude-opus-5-5`, effort `medium`.
 
 ```bash
-learn-it ask "Où sont stockées les sessions ?" --effort medium --budget 40000
-learn-it ask "Pourquoi Redis ?" --model claude-sonnet-5-5 --no-stream
-learn-it chat -p ./mon-projet --effort medium
+codearcheo ask "Où sont stockées les sessions ?" --effort medium --budget 40000
+codearcheo ask "Pourquoi Redis ?" --model claude-sonnet-5-5 --no-stream
+codearcheo chat -p ./mon-projet --effort medium
 ```
 
 ## Mesures et coût
@@ -29,7 +29,7 @@ Source : [tarifs Claude API](https://platform.claude.com/docs/en/about-claude/pr
 
 ## Budget de tâche
 
-`--budget` et `LEARN_IT_BUDGET` désignent un **nombre de tokens**, avec un minimum
+`--budget` et `CODEARCHEO_BUDGET` désignent un **nombre de tokens**, avec un minimum
 de 20 000 imposé par l'API. Le réglage est envoyé dans `output_config.task_budget`
 avec le bêta `task-budgets-2026-03-13` ; le même budget est gardé entre les requêtes
 d'un tour sans décrémenter manuellement les tokens déjà présents dans l'historique.
@@ -52,7 +52,7 @@ pour ces appels bornés.
 
 ## Limites locales appliquées avant l'envoi
 
-`--max-requests N` (ou `LEARN_IT_MAX_REQUESTS`) limite le nombre de tentatives HTTP
+`--max-requests N` (ou `CODEARCHEO_MAX_REQUESTS`) limite le nombre de tentatives HTTP
 de génération pour la session. La valeur doit être positive ; sans option, aucune
 limite supplémentaire n'est ajoutée. La même instance de limite est réutilisée
 pour une réponse et sa réparation, et pour toutes les questions d'un `chat`.
@@ -63,17 +63,17 @@ et les demandes de compaction. Quand il n'y a plus de place, la tentative suivan
 est refusée avant l'envoi. Ce nombre n'est pas celui des opérations internes que
 le fournisseur peut effectuer derrière une requête HTTP.
 
-`--max-output-tokens N` (ou `LEARN_IT_MAX_OUTPUT_TOKENS`) fixe le `max_tokens` de
+`--max-output-tokens N` (ou `CODEARCHEO_MAX_OUTPUT_TOKENS`) fixe le `max_tokens` de
 **chaque requête**, avec 16 000 par défaut. Le réglage vaut aussi pour une synthèse
 de compaction. Il ne plafonne ni les tokens d'entrée ni le total de la session.
 Les valeurs explicites de ces deux options priment sur les variables d'environnement.
 
 ```bash
-learn-it ask "Pourquoi Redis ?" --max-requests 5 --max-output-tokens 4000
-learn-it chat --max-requests 20 --max-output-tokens 4000
+codearcheo ask "Pourquoi Redis ?" --max-requests 5 --max-output-tokens 4000
+codearcheo chat --max-requests 20 --max-output-tokens 4000
 ```
 
-`LEARN_IT_MAX_ITERATIONS` reste une limite de réponses ordinaires par boucle,
+`CODEARCHEO_MAX_ITERATIONS` reste une limite de réponses ordinaires par boucle,
 distincte du nombre de tentatives HTTP. Elle ne remplace pas `--max-requests` :
 une réponse peut être précédée de retries et suivie d'une compaction.
 
@@ -110,13 +110,13 @@ le thread, le SDK renvoie l'historique complet au lieu de perdre le contexte.
 L'agent peut réutiliser les faits déjà lus ; il garde ses outils pour vérifier
 les changements éventuels du projet.
 
-- `/save` écrit la conversation lisible complète dans `.learn-it/chat-<identifiant>.md`.
+- `/save` écrit la conversation lisible complète dans `.codearcheo/chat-<identifiant>.md`.
 - `/exit`, `/quit`, Ctrl-D ou Ctrl-C à l'invite terminent la conversation.
 
 Après un tour complet dont le contexte mesuré atteint 100 000 tokens, le runner
 demande une compaction au serveur (`compact-2026-09-04`). Le résumé remplace
 l'ancien contexte envoyé au modèle ; l'export `/save` conserve les questions et
-réponses originales. `LEARN_IT_COMPACT_THRESHOLD` règle ce seuil (0 désactive la
+réponses originales. `CODEARCHEO_COMPACT_THRESHOLD` règle ce seuil (0 désactive la
 compaction automatique). Cette opération peut consommer des tokens supplémentaires
 et dépend de la prise en charge du modèle et de la plateforme.
 Sources : [tool runner SDK](https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-runner),

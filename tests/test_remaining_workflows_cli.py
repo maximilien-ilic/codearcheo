@@ -4,12 +4,12 @@ import httpx2
 import pytest
 from typer.testing import CliRunner
 
-from learn_it import chat, cli, features
-from learn_it.agent.limits import SessionLimitError
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import chat, cli, features
+from codearcheo.agent.limits import SessionLimitError
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 
 @pytest.mark.parametrize("command,args", [
@@ -17,7 +17,7 @@ from learn_it.store import Store
     ("decisions", []), ("review", []),
 ])
 def test_every_ai_command_forwards_local_limits(project, monkeypatch, command, args):
-    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
+    monkeypatch.setenv("CODEARCHEO_BACKEND", "api")
     seen = []
 
     def fake(session, *arguments, **options):
@@ -39,7 +39,7 @@ def test_every_ai_command_forwards_local_limits(project, monkeypatch, command, a
 
 
 def test_chat_receives_one_session_limit_for_the_whole_conversation(project, monkeypatch):
-    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
+    monkeypatch.setenv("CODEARCHEO_BACKEND", "api")
     sessions = []
     monkeypatch.setattr(chat, "interactive", sessions.append)
     result = CliRunner().invoke(cli.app, [

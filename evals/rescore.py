@@ -1,6 +1,6 @@
 """Regrade saved generations locally, without preparing projects or calling a model.
 
-    uv run python -m evals.rescore ~/.cache/learn-it/evals/results-....json
+    uv run python -m evals.rescore ~/.cache/codearcheo/evals/results-....json
 
 The reference checkouts must still be present at their recorded commits. The saved case
 definitions and outputs are reused; this measures the grader, never a new model response.
@@ -18,10 +18,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from codearcheo import git
+from codearcheo.domain import Decision
 from evals.artifacts import fingerprint, save_report
 from evals.scoring import score_answer, score_decisions
-from learn_it import git
-from learn_it.domain import Decision
 
 
 def rescore(report: dict[str, Any], projects_dir: Path) -> dict[str, Any]:

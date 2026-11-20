@@ -3,10 +3,10 @@ import json
 import pytest
 from anthropic.lib.tools import ToolError
 
-from learn_it.agent.code_tools import CodeTools
-from learn_it.analyzers import code, scan
-from learn_it.domain import Hotspot
-from learn_it.sources import Project
+from codearcheo.agent.code_tools import CodeTools
+from codearcheo.analyzers import code, scan
+from codearcheo.domain import Hotspot
+from codearcheo.sources import Project
 
 pytest.importorskip("tree_sitter")
 pytest.importorskip("tree_sitter_python")

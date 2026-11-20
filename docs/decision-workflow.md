@@ -31,9 +31,9 @@ mode de comparaison sont testés hors ligne ; le gain réel reste à mesurer dan
 ## Exporter des ADR
 
 ```bash
-learn-it decisions -p ./projet --export docs/adr
-learn-it decisions -p ./projet --export docs/adr --force
-learn-it decisions -p ./projet --export docs/adr --allow-unproven
+codearcheo decisions -p ./projet --export docs/adr
+codearcheo decisions -p ./projet --export docs/adr --force
+codearcheo decisions -p ./projet --export docs/adr --allow-unproven
 ```
 
 Les fichiers MADR portent une mention de reconstruction, le statut proposé, la
@@ -56,9 +56,9 @@ demandent de vérifier si le code suit encore ces documents.
 ## Recommandations et tickets
 
 ```bash
-learn-it review -p ./projet
-learn-it review -p ./projet --path src/api
-learn-it review -p ./projet --issues
+codearcheo review -p ./projet
+codearcheo review -p ./projet --path src/api
+codearcheo review -p ./projet --issues
 ```
 
 `--path` cible un fichier ou un dossier visible dans le projet. Le chemin est relatif à
@@ -68,7 +68,7 @@ Une citation dont le chemin contient des espaces s'écrit entre accents graves,
 par exemple `docs/guide de démarrage.md:12`.
 Le périmètre est indiqué dans le rapport.
 
-Le rapport est écrit dans `.learn-it/review.md` et les recommandations dans
+Le rapport est écrit dans `.codearcheo/review.md` et les recommandations dans
 `review.json`, triées par impact décroissant puis effort croissant. Elles portent
 le verdict, les raisons, la proposition, les compromis, les étapes et les preuves.
 `--issues` affiche d'abord le rapport puis exige une confirmation interactive.
@@ -77,7 +77,7 @@ utilise `gh` et l'origine GitHub du projet ; une empreinte dans le corps évite 
 recréer un ticket déjà publié, même fermé. Au-delà de la limite de recherche de
 1 000 tickets, la publication s'arrête pour éviter une déduplication incomplète.
 
-Avant de créer chaque ticket, learn-it vérifie de nouveau les preuves déclarées et les
+Avant de créer chaque ticket, codearcheo vérifie de nouveau les preuves déclarées et les
 citations de tous les champs de la recommandation dans le projet courant. Une source
 introuvable, des lignes invalides ou une preuve dont le format n'est pas reconnu figurent
 dans une section « Preuves non vérifiées » du ticket. Les champs et les éléments de
@@ -87,13 +87,13 @@ délimiteurs ne peuvent pas masquer les avertissements du champ suivant.
 ## Comparer deux états
 
 ```bash
-learn-it scan ./projet
-learn-it diff HEAD~1 -p ./projet
-learn-it diff v0.1.0 -p ./projet --json
+codearcheo scan ./projet
+codearcheo diff HEAD~1 -p ./projet
+codearcheo diff v0.1.0 -p ./projet --json
 ```
 
 Les profils et décisions d'un arbre Git propre sont conservés par SHA complet dans
-`.learn-it/history/`. Le premier résultat complet pour ce SHA reste immuable. Un
+`.codearcheo/history/`. Le premier résultat complet pour ce SHA reste immuable. Un
 arbre sale, un HEAD modifié ou un changement pendant l'analyse empêche l'archivage
 des décisions comme faits de ce SHA. Les rapports courants restent disponibles.
 La vérification de stabilité se fait en début et fin d'analyse : elle n'isole pas
@@ -114,9 +114,9 @@ fork ne reçoivent pas de commentaire avec leur jeton limité en lecture.
 
 ## Structure du code
 
-Installer `learn-it[code]` active tree-sitter pour Python, JavaScript/TypeScript,
+Installer `codearcheo[code]` active tree-sitter pour Python, JavaScript/TypeScript,
 Go et Rust. Le profil contient les modules centraux, points d'entrée et zones
 combinant dépendances et fréquence de modification. `overview` utilise le diagramme
-des imports réellement résolus, et `learn-it scan ./projet --graph-json` exporte
+des imports réellement résolus, et `codearcheo scan ./projet --graph-json` exporte
 le graphe complet. Les limites de résolution et de volume sont détaillées dans
 [`code-structure.md`](code-structure.md).

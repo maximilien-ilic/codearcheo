@@ -71,7 +71,7 @@ jobs:
 
   publish:
     if: >-
-      github.repository == 'maximilien-ilic/learn-it' &&
+      github.repository == 'maximilien-ilic/codearcheo' &&
       github.event_name == 'release' &&
       !github.event.release.prerelease && !github.event.release.draft
     needs: verify-artifacts
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: pypi
-      url: https://pypi.org/project/learn-it/
+      url: https://pypi.org/project/codearcheo/
     permissions:
       id-token: write
     steps:
