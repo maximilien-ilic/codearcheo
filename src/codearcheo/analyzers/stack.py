@@ -308,7 +308,7 @@ def _python_imports(path: Path) -> list[tuple[str, str, str]]:
         tree = ast.parse(text)
     except (SyntaxError, ValueError, RecursionError, MemoryError):
         return []  # Python 2 or broken source: no evidence rather than a guess
-    lines = text.splitlines()
+    lines = re.split(r"\r\n|\r|\n", text)  # ast's line breaks; splitlines also cuts at \f
     found = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):

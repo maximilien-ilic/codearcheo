@@ -386,6 +386,12 @@ def test_python_imports_are_read_with_ast(tmp_path, code, expected):
     assert found == expected
 
 
+def test_python_import_line_survives_form_feeds(tmp_path):
+    (tmp_path / "app.py").write_text("x = 1\n\x0c\n\x0c\n\x0c\nimport flask\n")
+    (flask,) = stack.detect(tmp_path, ["app.py"])
+    assert flask.needle == "import flask"
+
+
 @pytest.mark.parametrize("manifest", ["requirements.txt", "pyproject.toml", "setup.py"])
 def test_a_python_manifest_keeps_its_role_over_imports(tmp_path, manifest):
     (tmp_path / manifest).write_text("")
