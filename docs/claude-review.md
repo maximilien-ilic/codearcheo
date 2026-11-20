@@ -109,8 +109,10 @@ qu'une, mets l'automatisation Orca en pause (`orca automations edit <id> --disab
 
 ## Limites
 
-- Les PR ouvertes avec le jeton du workflow ne déclenchent pas la CI : c'est une règle de
-  GitHub. Relance la CI depuis la PR, ou pousse un commit, avant de fusionner.
+- Quand la revue ouvre ou met à jour une PR avec `GITHUB_TOKEN`, la CI de la PR
+  attend une approbation. Une personne ayant un accès en écriture peut la démarrer
+  depuis la PR avec « Approve workflows to run ». Attends que la CI passe avant de
+  fusionner. [Règle de déclenchement de GitHub](https://docs.github.com/en/actions/concepts/security/github_token#when-github_token-triggers-workflow-runs)
 - La revue consomme l'abonnement ou les crédits d'usage configurés sur le compte Claude.
 - Le relecteur peut lancer `git`, `gh` et `uv` (donc les tests) sur le code déjà fusionné ;
   rien d'autre ne s'exécute.
