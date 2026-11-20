@@ -159,7 +159,7 @@ def report(
     query = urlencode(
         {
             "branch": "master",
-            "event": "push",
+            "event": "workflow_run",
             "per_page": 100,
             "created": f"{start.isoformat()}..{now.isoformat()}",
         }
