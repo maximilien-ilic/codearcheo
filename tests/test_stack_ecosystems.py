@@ -287,6 +287,12 @@ def test_plain_php_without_manifest_reports_php_and_its_database(tmp_path):
     ("/*\n$db = new mysqli('host');\n*/", set()),
     ("$example = \"new PDO('sqlite:example.db')\";", set()),
     ("$example = \"mysqli_connect('host')\";", set()),
+    (
+        "?>\n<p>Don't panic</p>\n<?php\n$db = new PDO('pgsql:host=db'); ?>\n<p>it's</p>",
+        {"PostgreSQL"},
+    ),
+    ("$db = new PDO('pgsql:host=db'); // it's fine ?>", {"PostgreSQL"}),
+    ("$s = <<<EOT\nnew PDO('pgsql:x')\nEOT;", set()),
     ("// new PDO('pgsql:host=db');\n$db = new PDO('sqlite:app.db');", {"SQLite"}),
 ])
 def test_php_database_signals_need_an_actual_connection(tmp_path, code, expected):

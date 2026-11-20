@@ -154,7 +154,9 @@ _PHP_DATABASES = {
 }
 _PHP_CONNECTION = re.compile(
     r"""
-    //[^\n]* | \#(?!\[)[^\n]* | /\*.*?(?:\*/|\Z)
+    //(?:(?!\?>)[^\n])* | \#(?!\[)(?:(?!\?>)[^\n])* | /\*.*?(?:\*/|\Z)
+    | \?>.*?(?:<\?php|<\?=|\Z)  # inline HTML: its apostrophes are not PHP strings
+    | <<<[ \t]*(?P<hq>['"]?)(?P<hd>\w+)(?P=hq)\n.*?\n[ \t]*(?P=hd)\b
     | \bnew\s+\\?PDO\s*\(\s*
         (?P<quote>['"])(?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):
         (?:\\.|(?!(?P=quote))[^\\])*(?P=quote)
@@ -193,7 +195,7 @@ def _php_databases(path: Path) -> list[tuple[str, str, str]]:
     text = _read(path)
     found = []
     mysqli = None
-    for match in _PHP_CONNECTION.finditer(text):
+    for match in _PHP_CONNECTION.finditer("?>" + text):  # a file starts as inline HTML
         if driver := match["driver"]:
             found.append((_PHP_DATABASES[driver], "data", f"{driver}:"))
         elif mysqli is None and match["mysqli"]:
