@@ -4,6 +4,12 @@ Le workflow `.github/workflows/claude-review.yml` relit chaque push sur `master`
 GitHub Actions, avec Claude Code et le jeton d'abonnement du propriétaire. Aucune clé API
 Anthropic n'est nécessaire, et la machine n'a pas besoin d'être allumée (#25).
 
+La revue démarre à la fin de la CI de ce push (`workflow_run`), car `claude-code-action`
+refuse l'événement `push`. Les trois premières revues ont échoué pour cette raison le
+20 novembre (« Unsupported event type: push »). Une CI annulée par un push plus récent ne
+lance pas de revue : la suivante couvre aussi ce commit. On peut aussi lancer une revue à
+la main avec `gh workflow run claude-review.yml`.
+
 ## Activer la revue
 
 ```bash

@@ -46,3 +46,20 @@ def test_review_range_covers_skipped_push(project, tmp_path, has_reviewed_ancest
         check=True,
     )
     assert output.read_text() == f"base={reviewed if has_reviewed_ancestor else ''}\n"
+
+
+def test_review_follows_master_ci_because_the_action_rejects_push_events():
+    workflow = yaml.safe_load(WORKFLOW.read_text())
+    triggers = workflow[True]  # PyYAML reads the `on` key as a boolean
+    ci = yaml.safe_load((WORKFLOW.parent / "ci.yml").read_text())
+
+    assert "push" not in triggers and "workflow_dispatch" in triggers
+    assert triggers["workflow_run"] == {
+        "workflows": [ci["name"]], "types": ["completed"], "branches": ["master"],
+    }
+    job = workflow["jobs"]["review"]
+    assert "workflow_run.event == 'push'" in job["if"]
+    assert "conclusion != 'cancelled'" in job["if"]
+    assert job["env"]["SHA"] == "${{ github.event.workflow_run.head_sha || github.sha }}"
+    checkout = next(s for s in job["steps"] if s.get("uses", "").startswith("actions/checkout"))
+    assert checkout["with"]["ref"] == "${{ env.SHA }}"
