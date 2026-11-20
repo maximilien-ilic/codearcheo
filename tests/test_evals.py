@@ -273,7 +273,7 @@ def test_recorded_github_rationale_case_runs_offline(monkeypatch, tmp_path, caps
                 f"with no database service to maintain. `app.py:1` [PR]({fixture.PR_URL}).")
 
     monkeypatch.setattr(run.features, "ask", answer)
-    assert run.main(["github-rationale"]) == 0
+    assert run.main(["github-rationale"], backend="api") == 0
     assert "1/1 cas réussis" in capsys.readouterr().out
 
 
@@ -309,7 +309,7 @@ def test_evaluation_uses_one_shared_limit_across_projects(monkeypatch, tmp_path)
         return []
 
     monkeypatch.setattr(run, "run_case", fake_case)
-    assert run.main([], max_requests=3, max_output_tokens=512) == 0
+    assert run.main([], backend="api", max_requests=3, max_output_tokens=512) == 0
     assert len(seen) == 2
     assert seen[0] is seen[1]
     assert seen[0].max_requests == 3

@@ -6,6 +6,9 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 
 ## [Unreleased]
 
+- Les tests des limites API et du rejeu GitHub passent aussi lorsque
+  `LEARN_IT_BACKEND=claude-code` est exporté.
+
 ## [0.2.0] - 2026-11-20
 
 ### Ajouts
