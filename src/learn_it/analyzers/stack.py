@@ -153,22 +153,22 @@ _PHP_DATABASES = {
     "oci": "Oracle",
 }
 _PHP_OPEN = re.compile(r"<\?(?:php(?=[\ \t\r\n]|\Z)|=)", re.IGNORECASE)
-_PHP_CONNECTION = re.compile(
-    r"""
-    (?P<close>\?>) | (?://|\#(?!\[))[^\r\n?]*(?:\?(?!>)[^\r\n?]*)*
-    | /\*.*?(?:\*/|\Z)
-    | <<<[\ \t]*(?P<hq>['"]?)
-        (?P<label>[A-Za-z_\x80-\U0010ffff][A-Za-z_0-9\x80-\U0010ffff]*)
-        (?P=hq)(?:\r\n|[\r\n])
-        .*?(?:(?<=[\r\n])[\ \t]*(?P=label)(?![A-Za-z_0-9\x80-\U0010ffff])|\Z)
-    | \bnew\s+\\?PDO\s*\(\s*
-        (?P<quote>['"])(?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):
-        (?:\\.|(?!(?P=quote))[^\\])*(?P=quote)
+_PHP_IDENTIFIER = r"[A-Za-z_\x80-\U0010ffff][A-Za-z_0-9\x80-\U0010ffff]*"
+# What can change the lexical state in PHP code, or reveal a database connection.
+_PHP_CODE = re.compile(
+    rf"""
+    (?P<close>\?>) | (?P<line>//|\#(?!\[)) | (?P<block>/\*)
+    | (?P<string>['"`])
+    | <<<[\ \t]*(?P<hq>['"]?)(?P<label>{_PHP_IDENTIFIER})(?P=hq)(?:\r\n|[\r\n])
+    | (?P<open>\{{) | (?P<shut>\}})
+    | \bnew\s+\\?PDO\s*\(\s*(?=['"](?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):)
     | (?P<mysqli>\bmysqli_connect\s*|\bnew\s+\\?mysqli\s*)\(
-    | "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*' | `(?:\\.|[^`\\])*`
     """,
-    re.VERBOSE | re.DOTALL,
+    re.VERBOSE,
 )
+_PHP_LINE_COMMENT = re.compile(r"[^\r\n?]*(?:\?(?!>)[^\r\n?]*)*")
+_PHP_SINGLE_QUOTED = re.compile(r"(?:\\.|[^'\\])*'", re.DOTALL)
+_PHP_INTERPOLATION = r"\\.|\{\$|\$\{"
 MAX_PHP_FILES = 500
 
 CATEGORIES = [
@@ -197,28 +197,78 @@ _LEGACY_PROVIDER = re.compile(r'\bprovider\s+"([\w-]+)"\s*\{')
 def _php_databases(path: Path) -> list[tuple[str, str, str]]:
     """Databases a PHP file connects to, with the text that dates their adoption.
 
-    A heuristic over PHP blocks, strings, comments and heredocs, not a PHP lexer. Out of
-    scope: short `<?` tags, connections built at runtime, and a heredoc nested in an
-    interpolation that reuses the outer label (#126). A miss there only adds or drops one
-    database in the profile: the agent checks the code before citing it."""
+    A small lexer over PHP blocks: comments, strings, heredocs and nowdocs are skipped, and
+    an interpolation (`{$…}`, `${…}`) is code again, so a heredoc nested in it, even with
+    the outer label, closes before the outer one. Out of scope: short `<?` tags and
+    connections built at runtime."""
     text = _read(path)
-    found = []
+    found: list[tuple[str, str, str]] = []
     mysqli = None
-    offset = 0
-    while opening := _PHP_OPEN.search(text, offset):
-        for match in _PHP_CONNECTION.finditer(text, opening.end()):
+    position = 0
+    while opening := _PHP_OPEN.search(text, position):
+        position = opening.end()
+        # Innermost context last: ["code", unmatched braces], ["string", end pattern].
+        stack: list[list] = [["code", 0]]
+        while stack:
+            top = stack[-1]
+            if top[0] == "string":
+                match = top[1].search(text, position)
+                if match is None:
+                    return _with_mysqli(found, mysqli)  # unterminated: the file ends here
+                position = match.end()
+                if match["end"] is not None:
+                    stack.pop()
+                elif match.group() in ("{$", "${"):
+                    position -= 1 if match.group() == "{$" else 0  # `$` starts the code
+                    stack.append(["code", 0])
+                continue
+            match = _PHP_CODE.search(text, position)
+            if match is None:
+                return _with_mysqli(found, mysqli)  # the last PHP block runs to the end
+            position = match.end()
             if match["close"]:
-                offset = match.end()
-                break
-            if driver := match["driver"]:
+                if len(stack) == 1:
+                    break  # back to HTML until the next opening tag
+            elif match["line"]:
+                position = _PHP_LINE_COMMENT.match(text, position).end()
+            elif match["block"]:
+                close = text.find("*/", position)
+                position = len(text) if close < 0 else close + 2
+            elif match["string"] == "'":
+                quoted = _PHP_SINGLE_QUOTED.match(text, position)
+                position = len(text) if quoted is None else quoted.end()
+            elif match["string"]:
+                ending = re.escape(match["string"])
+                stack.append(["string", re.compile(
+                    rf"(?P<end>{ending})|{_PHP_INTERPOLATION}", re.DOTALL,
+                )])
+            elif match["label"]:
+                label = re.escape(match["label"])
+                closing = rf"(?P<end>(?<=[\r\n])[\ \t]*{label}(?![A-Za-z_0-9\x80-\U0010ffff]))"
+                nowdoc = match["hq"] == "'"
+                stack.append(["string", re.compile(
+                    closing if nowdoc else rf"{closing}|{_PHP_INTERPOLATION}", re.DOTALL,
+                )])
+            elif match["open"]:
+                top[1] += 1
+            elif match["shut"]:
+                if top[1]:
+                    top[1] -= 1
+                elif len(stack) > 1:
+                    stack.pop()  # end of an interpolation: back into its string
+            elif driver := match["driver"]:
                 found.append((_PHP_DATABASES[driver], "data", f"{driver}:"))
             elif mysqli is None and match["mysqli"]:
                 mysqli = match["mysqli"].rstrip()
-        else:
-            break  # The last PHP block runs to the end of the file.
-    if mysqli:
-        found.append(("MySQL", "data", mysqli))
-    return found
+        if not stack:
+            break
+    return _with_mysqli(found, mysqli)
+
+
+def _with_mysqli(
+    found: list[tuple[str, str, str]], mysqli: str | None,
+) -> list[tuple[str, str, str]]:
+    return [*found, ("MySQL", "data", mysqli)] if mysqli else found
 
 
 def _read(path: Path) -> str:

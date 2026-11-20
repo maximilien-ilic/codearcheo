@@ -329,7 +329,6 @@ def test_php_source_prefers_a_main_manifest_over_a_php_file(tmp_path, manifest, 
     assert php.source == source
 
 
-@pytest.mark.xfail(strict=True, reason="heuristic limit (#126): needs a PHP lexer")
 def test_a_heredoc_nested_in_an_interpolation_with_the_same_label(tmp_path):
     (tmp_path / "db.php").write_text(
         "<?php\n$x = <<<EOT\n{$obj->method(<<<EOT\ninner\nEOT\n)}\n"
@@ -337,3 +336,20 @@ def test_a_heredoc_nested_in_an_interpolation_with_the_same_label(tmp_path):
     )
     found = {t.name for t in stack.detect(tmp_path, ["db.php"]) if t.category == "data"}
     assert found == {"SQLite"}
+
+
+@pytest.mark.parametrize("code,expected", [
+    ('$s = "${x} new PDO(\'pgsql:x\')";\nnew PDO(\'sqlite:x\');', {"SQLite"}),
+    ('$s = "{$f(new PDO(\'sqlite:x\'))}";', {"SQLite"}),  # interpolated code runs
+    ('$s = "{$a[\'}\']} new PDO(\'pgsql:x\')";', set()),
+    ("$s = <<<A\n{$f(<<<B\nnew PDO('pgsql:x')\nB)}\nA;\nnew mysqli('h');", {"MySQL"}),
+])
+def test_php_interpolations_are_code_and_their_strings_are_not(tmp_path, code, expected):
+    (tmp_path / "db.php").write_text(f"<?php\n{code}\n")
+    found = {t.name for t in stack.detect(tmp_path, ["db.php"]) if t.category == "data"}
+    assert found == expected
+
+
+def test_deeply_nested_interpolations_do_not_recurse(tmp_path):
+    (tmp_path / "db.php").write_text("<?php\n" + '"{$' * 50_000 + "\nnew PDO('pgsql:x');")
+    stack.detect(tmp_path, ["db.php"])  # no RecursionError; an unterminated file just ends
