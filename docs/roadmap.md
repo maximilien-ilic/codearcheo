@@ -27,7 +27,7 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 ## Où on en est
 
-La version 0.2.0 est publiée sur GitHub le 20 novembre, et sa publication sur PyPI reste à finaliser après l'annulation du premier job de publication ([#24]). Les tickets de suivi sont clos : [#10] (évaluations sur l'abonnement, 95 réponses réussies sur 98 depuis la mesure 10), [#25] (revue serveur active, environ 0,10 $ par revue en équivalent API) et [#34] (non planifié : les erreurs mesurées ne sont pas corrigeables par le modèle). Les jalons ci-dessous restent des pistes pour faire évoluer le projet.
+La version 0.2.0 est publiée le 20 novembre sur [GitHub](https://github.com/maximilien-ilic/codearcheo/releases/tag/v0.2.0) et [PyPI](https://pypi.org/project/codearcheo/0.2.0/) ([#24]). Les tickets de suivi sont clos : [#10] (évaluations sur l'abonnement, 95 réponses réussies sur 98 depuis la mesure 10), [#25] (revue serveur active, environ 0,10 $ par revue en équivalent API) et [#34] (non planifié : les erreurs mesurées ne sont pas corrigeables par le modèle). Les jalons ci-dessous restent des pistes pour faire évoluer le projet.
 
 ## La suite
 
@@ -90,7 +90,7 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 | Étape | Ticket | État |
 |---|---|---|
 | Mode conversation `codearcheo chat`, réponses en streaming | [#23] | fait |
-| Licence, versions et publication sur PyPI | [#24] | licence, release GitHub et contrôles du paquet faits. Publication PyPI à finaliser |
+| Licence, versions et publication sur PyPI | [#24] | licence MIT, contrôles du paquet et publication sur GitHub et PyPI terminés |
 | Lancer la revue automatique côté serveur, sans Orca | [#25] | prête, secret à créer |
 
 ## Comment on avance

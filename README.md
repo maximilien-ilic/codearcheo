@@ -101,20 +101,24 @@ $ codearcheo scan https://github.com/maximilien-ilic/Crud-security-formula1
 ### Installation
 
 1. Installer la commande depuis PyPI
-```sh
-uv tool install 'codearcheo[mcp,code]'
-```
 
-2. Choisir le moteur : l'abonnement Claude, via Claude Code
-```sh
-export CODEARCHEO_BACKEND=claude-code     # fish : set -Ux CODEARCHEO_BACKEND claude-code
-```
-   ou une clé API : `export ANTHROPIC_API_KEY=sk-ant-...`
+   ```sh
+   uv tool install 'codearcheo[mcp,code]'
+   ```
 
-3. Vérifier sur un projet, sans IA et gratuitement
-```sh
-codearcheo scan https://github.com/maximilien-ilic/Crud-security-formula1
-```
+2. Pour les commandes IA, choisir l'abonnement Claude via Claude Code
+
+   ```sh
+   export CODEARCHEO_BACKEND=claude-code     # fish : set -Ux CODEARCHEO_BACKEND claude-code
+   ```
+
+   Ou utiliser une clé API avec le moteur `api` (par défaut) : `export ANTHROPIC_API_KEY=sk-ant-...`.
+
+3. Vérifier l'installation sur un projet, sans IA et gratuitement
+
+   ```sh
+   codearcheo scan https://github.com/maximilien-ilic/Crud-security-formula1
+   ```
 
 Pour passer à une nouvelle version : `uv tool upgrade codearcheo`.
 
