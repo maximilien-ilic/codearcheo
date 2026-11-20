@@ -7,6 +7,16 @@ import pytest
 from codearcheo.analyzers import inventory
 
 
+def test_plain_directory_inventory_ignores_old_and_new_report_stores(tmp_path):
+    (tmp_path / "app.py").write_text("x = 1\n")
+    for name in (".learn-it", ".codearcheo"):
+        store = tmp_path / name
+        store.mkdir()
+        (store / "decisions.json").write_text("[]")
+
+    assert inventory.list_files(tmp_path) == ["app.py"]
+
+
 @pytest.mark.parametrize("git_repo", [True, False])
 def test_listing_skips_symlinks_secrets_and_symlinked_folders(project, tmp_path, git_repo):
     root = project.root

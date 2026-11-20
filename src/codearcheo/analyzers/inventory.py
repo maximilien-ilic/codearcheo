@@ -22,8 +22,8 @@ SECRET_EXCEPTIONS = (".env.example", ".env.sample", ".env.template", ".env.dist"
 
 # Outside git there is no .gitignore to trust: skip the usual dependency and build directories.
 SKIP_DIRS = {
-    ".git", ".hg", ".svn", ".codearcheo", "node_modules", ".venv", "venv", "__pycache__",
-    "dist", "build", "target", ".idea", ".vscode",
+    ".git", ".hg", ".svn", ".codearcheo", ".learn-it", "node_modules", ".venv", "venv",
+    "__pycache__", "dist", "build", "target", ".idea", ".vscode",
 }
 
 LANGUAGES = {

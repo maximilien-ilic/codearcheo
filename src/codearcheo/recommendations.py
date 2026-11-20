@@ -97,10 +97,10 @@ def markdown(items: list[Recommendation], synthesis: str) -> str:
     ])
 
 
-def _marker(item: Recommendation) -> str:
+def _marker(item: Recommendation, *, namespace: str = "codearcheo") -> str:
     identity = f"{item.decision.strip().casefold()}\n{item.title.strip().casefold()}"
     key = hashlib.sha256(identity.encode()).hexdigest()[:20]
-    return f"<!-- codearcheo:recommendation:{key} -->"
+    return f"<!-- {namespace}:recommendation:{key} -->"
 
 
 def _gh(*args: str) -> str:
@@ -134,7 +134,14 @@ def publish(project: Project, items: list[Recommendation], *, confirmed: bool = 
     with tempfile.TemporaryDirectory(prefix="codearcheo-issues-") as temporary:
         for item in candidates:
             marker = _marker(item)
-            previous = next((x for x in existing if marker in (x.get("body") or "")), None)
+            legacy_marker = _marker(item, namespace="learn-it")
+            previous = next(
+                (issue for issue in existing if any(
+                    candidate in (issue.get("body") or "")
+                    for candidate in (marker, legacy_marker)
+                )),
+                None,
+            )
             if previous:
                 urls.append(previous["url"])
                 continue

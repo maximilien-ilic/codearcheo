@@ -212,7 +212,7 @@ API, environ 9 minutes.
 Les citations de la nouvelle revue Express passent, mais cela ne suffit pas à faire réussir
 le cas entier. La nouvelle revue Go n'a pas pu être évaluée. On ne peut donc annoncer ni
 14/14, ni une confirmation complète du changement 3. Les résultats bruts sont conservés
-localement dans `~/.cache/codearcheo/evals/results-20261118-095401.json` (mesure 7) et
+localement dans `~/.cache/learn-it/evals/results-20261118-095401.json` (mesure 7) et
 `results-20261118-100523.json` (mesure 8).
 
 ## Changement 4 : la revue commence par l'architecture
@@ -291,7 +291,7 @@ permettent de vérifier les totaux. Un recalcul hors ligne des cinq rapports con
 des réponses, au code `bdbabd7`, vérifie les SHA et empreintes des projets et conserve
 tous les résultats. Il ne produit aucune nouvelle réponse du modèle.
 
-Les rapports bruts sont dans `~/.cache/codearcheo/evals/` :
+Les rapports bruts de cette mesure antérieure au renommage sont dans `~/.cache/learn-it/evals/` :
 `results-20261119-095644-f7586208.json` et `results-20261119-101538-287a78b1.json` (+
 `results-20261119-141040-e57ca2de.json` pour go-review-http) en `high`,
 `results-20261119-141438-b531f15a.json` et `results-20261119-142752-bfa9158d.json` en
