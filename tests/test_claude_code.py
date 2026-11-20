@@ -214,3 +214,21 @@ def test_the_profile_reaches_the_model_as_compact_json(project):
     system = prompts.system(scan(project))
     profile = system.split("<project_profile>\n", 1)[1].split("\n</project_profile>", 1)[0]
     assert "\n" not in profile and ": null" not in profile and json.loads(profile)["files"]
+
+
+@pytest.mark.parametrize("terminal", [True, False])
+def test_a_waiting_indicator_shows_in_a_terminal_only(project, fake_claude, monkeypatch, terminal):
+    import io
+
+    from rich.console import Console
+
+    from learn_it import render
+
+    stream = io.StringIO()
+    monkeypatch.setattr(render, "err", Console(file=stream, force_terminal=terminal, width=80))
+    fake_claude(result="FastAPI depuis `app.py:3`.")
+
+    answer = features.ask(session(project), "Quel framework ?")
+
+    assert answer.startswith("FastAPI depuis `app.py:3`.")
+    assert ("Claude Code explore le projet" in stream.getvalue()) is terminal
