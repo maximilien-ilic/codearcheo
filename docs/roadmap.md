@@ -23,11 +23,11 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 - **19 et 20 novembre : variabilité, tokens, vitesse et revue serveur.** Six évaluations complètes donnent de 13 à 14 cas réussis sur 14. L'effort `medium` devient le réglage par défaut : la mesure 10 donne un coût moyen des réponses inférieur de 32 % à `high` en équivalent API. Le profil et les résultats d'outils passent en JSON compact. La mesure 11 relève une baisse de 14 % des tokens lus dans le cache après plusieurs changements du prompt et du rendu. Sur golang/go, le scan à chaud passe de 7,8 à 6,5 s, `find_symbol` de 3,5 à 0,45 s, et le démarrage de `learn-it serve` de 9,5 à 1 s ([mesures de la PR #98](https://github.com/maximilien-ilic/learn-it/pull/98)). Cinq régressions introduites par ces optimisations ont été trouvées par la revue Codex et corrigées (#104). La revue Claude côté serveur tourne depuis le 20 novembre, à la fin de la CI de chaque push (#25). Ses deux premières exécutions ont déjà trouvé un défaut (#107).
 
-- **20 novembre, soir : la version 0.2.0.** Version, CHANGELOG daté, archives vérifiées (#131), tag et release GitHub. Un analyseur à pile remplace la regex de détection PHP et suit les interpolations (#132). Un guide de contribution explique comment faire évoluer le projet (#134). La mesure 12 donne 13/14 sur le code publié.
+- **20 novembre, soir : la version 0.2.0.** Version, CHANGELOG daté, archives vérifiées (#131), tag et release GitHub. Un analyseur à pile remplace la regex de détection PHP et suit les interpolations (#132). Un guide de contribution explique comment faire évoluer le projet (#134). La mesure 12 donne 13/14 sur `35070ba`, un commit antérieur au tag.
 
 ## Où on en est
 
-La version 0.2.0 est publiée sur GitHub le 20 novembre, et sa publication sur PyPI attend l'approbation du propriétaire ([#24]). Les tickets de suivi sont clos : [#10] (évaluations sur l'abonnement, 95 réponses réussies sur 98 depuis la mesure 10), [#25] (revue serveur active, environ 0,10 $ par revue en équivalent API) et [#34] (non planifié : les erreurs mesurées ne sont pas corrigeables par le modèle). Les jalons ci-dessous restent des pistes pour faire évoluer le projet.
+La version 0.2.0 est publiée sur GitHub le 20 novembre, et sa publication sur PyPI reste à finaliser après l'annulation du premier job de publication ([#24]). Les tickets de suivi sont clos : [#10] (évaluations sur l'abonnement, 95 réponses réussies sur 98 depuis la mesure 10), [#25] (revue serveur active, environ 0,10 $ par revue en équivalent API) et [#34] (non planifié : les erreurs mesurées ne sont pas corrigeables par le modèle). Les jalons ci-dessous restent des pistes pour faire évoluer le projet.
 
 ## La suite
 
@@ -90,7 +90,7 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 | Étape | Ticket | État |
 |---|---|---|
 | Mode conversation `learn-it chat`, réponses en streaming | [#23] | fait |
-| Licence, versions et publication sur PyPI | [#24] | licence faite ; préparation et contrôles du paquet, PyPI à la fin |
+| Licence, versions et publication sur PyPI | [#24] | licence, release GitHub et contrôles du paquet faits. Publication PyPI à finaliser |
 | Lancer la revue automatique côté serveur, sans Orca | [#25] | prête, secret à créer |
 
 ## Comment on avance

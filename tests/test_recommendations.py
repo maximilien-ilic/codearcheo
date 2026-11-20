@@ -204,6 +204,7 @@ def test_review_records_json_and_sorts_plan(project, monkeypatch):
 
 
 def test_review_cli_focuses_on_the_selected_directory(project, monkeypatch):
+    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
     (project.root / "src").mkdir()
     (project.root / "src/app.py").write_text("app = None\n")
 

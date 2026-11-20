@@ -342,7 +342,7 @@ Rapports : `results-20261119-225657-5006f91b.json` et `results-20261119-231118-8
 
 ## Mesure 12 : avant la version 0.2.0, 20 novembre 2026
 
-Une évaluation complète en `medium` sur `35070ba`, le code publié en 0.2.0, sans modification locale : **13/14**, 14,9 min, 3,78 $ en équivalent API. Aucune citation introuvable sur les 14 réponses.
+Une évaluation complète en `medium` sur `35070ba`, sans modification locale. Ce commit précède le tag `v0.2.0` (`f6379bd57800`), qui inclut notamment le nouvel analyseur PHP. Résultat de la mesure : **13/14**, 14,9 min, 3,78 $ en équivalent API. Aucune citation introuvable sur les 14 réponses.
 
 - **Le seul échec**, shop-database, est un échec de vocabulaire, pas de contenu. La réponse dit « aucune source n'explique pourquoi PostgreSQL a été choisi » et « Pas de réponse documentée », mais elle n'emploie aucun marqueur du barème (« déduit », « non documenté »…). Ce cas avait réussi aux six passes précédentes.
 - **Le barème n'est pas élargi** pour le faire passer. Le prompt demande d'annoncer une déduction en toutes lettres (changement 2), et la réponse ne le fait pas.
