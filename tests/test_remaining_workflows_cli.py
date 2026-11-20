@@ -17,6 +17,7 @@ from learn_it.store import Store
     ("decisions", []), ("review", []),
 ])
 def test_every_ai_command_forwards_local_limits(project, monkeypatch, command, args):
+    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
     seen = []
 
     def fake(session, *arguments, **options):
@@ -38,6 +39,7 @@ def test_every_ai_command_forwards_local_limits(project, monkeypatch, command, a
 
 
 def test_chat_receives_one_session_limit_for_the_whole_conversation(project, monkeypatch):
+    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
     sessions = []
     monkeypatch.setattr(chat, "interactive", sessions.append)
     result = CliRunner().invoke(cli.app, [
