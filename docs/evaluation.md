@@ -353,5 +353,5 @@ Rapports : `results-20261119-225657-5006f91b.json` et `results-20261119-231118-8
   correction reste à faire pour mesurer son effet sur les réponses.
 - **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur l'autre
   moteur.
-- **L'effort par défaut** : la mesure 10 plaide pour `medium`. Une troisième passe par
-  effort consoliderait ce choix.
+- **L'effort**. Une troisième passe en `high` sur la même version compléterait la
+  comparaison. Le changement 6 fixe déjà le défaut à `medium`.
