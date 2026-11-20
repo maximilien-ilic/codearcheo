@@ -3,14 +3,14 @@ import json
 
 import pytest
 
-from learn_it.analyzers import code, scan
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo.analyzers import code, scan
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 pytest.importorskip("mcp")
 
-from learn_it.mcp_server import build_server  # noqa: E402
+from codearcheo.mcp_server import build_server  # noqa: E402
 
 
 def test_server_exposes_profile_decisions_and_exploration_tools(project):
@@ -38,7 +38,7 @@ def test_profile_tool_follows_work_in_progress(project):
 def test_serve_reuses_the_profile_its_parent_just_computed(project, tmp_path, monkeypatch):
     from typer.testing import CliRunner
 
-    from learn_it import analyzers, cli, mcp_server
+    from codearcheo import analyzers, cli, mcp_server
 
     profile = scan(project)
     path = tmp_path / "profile.json"

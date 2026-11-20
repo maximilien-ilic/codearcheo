@@ -1,14 +1,16 @@
-# learn-it
+# codearcheo
 
 **Interroge n'importe quel projet. Comprends chaque décision technique. Améliore-les.**
 
-learn-it analyse un projet (celui sur lequel tu travailles, ou n'importe quel dépôt GitHub) pour répondre à tes questions, reconstituer les décisions techniques qui l'ont façonné, puis dire lesquelles mériteraient d'être revues.
+*Anciennement `learn-it`, renommé le 20 novembre 2026.*
+
+codearcheo analyse un projet (celui sur lequel tu travailles, ou n'importe quel dépôt GitHub) pour répondre à tes questions, reconstituer les décisions techniques qui l'ont façonné, puis dire lesquelles mériteraient d'être revues.
 
 ```bash
-learn-it scan https://github.com/owner/repo     # la carte du projet, sans IA
-learn-it ask "Comment fonctionne l'authentification ?"
-learn-it decisions                              # les décisions techniques, au format ADR
-learn-it review                                 # garder, améliorer ou remplacer, et par où commencer
+codearcheo scan https://github.com/owner/repo     # la carte du projet, sans IA
+codearcheo ask "Comment fonctionne l'authentification ?"
+codearcheo decisions                              # les décisions techniques, au format ADR
+codearcheo review                                 # garder, améliorer ou remplacer, et par où commencer
 ```
 
 > **Statut :** les neuf commandes fonctionnent et sont testées. Six évaluations complètes via Claude Code donnent de 13 à 14 cas réussis sur 14, dépôt Go compris ; l'effort `medium`, désormais par défaut, a réduit de 32 % le coût moyen des réponses en équivalent API lors de la comparaison avec `high` ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
@@ -19,7 +21,7 @@ Le code dit **quoi**. Presque jamais **pourquoi**.
 
 Pourquoi PostgreSQL plutôt que MongoDB ? Pourquoi ce monorepo, pourquoi ce service à part ? La réponse est éparpillée dans l'historique git, les messages de commit, des docs à moitié à jour et la tête de gens partis depuis. Comprendre un projet en profondeur prend des semaines. Le modifier sans comprendre ses choix, c'est risquer de casser ce qui tenait pour une bonne raison.
 
-learn-it rassemble ces indices et les fait parler.
+codearcheo rassemble ces indices et les fait parler.
 
 ## Ce que ça fait
 
@@ -35,31 +37,31 @@ learn-it rassemble ces indices et les fait parler.
 | `diff [REF]` | Quelles technos et décisions ont changé depuis une révision Git ? | non |
 | `serve` | Les mêmes outils, pour ton agent (Claude Code, Cursor…) via MCP. | — |
 
-La cible est un dossier local (par défaut le dossier courant) ou une URL GitHub : en argument pour `scan`, avec `-p/--project` pour les autres commandes. Un dépôt GitHub est cloné une fois, historique complet compris, dans `~/.cache/learn-it/`.
+La cible est un dossier local (par défaut le dossier courant) ou une URL GitHub : en argument pour `scan`, avec `-p/--project` pour les autres commandes. Un dépôt GitHub est cloné une fois, historique complet compris, dans `~/.cache/codearcheo/`.
 
 ## Démarrage rapide
 
 Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/), et, pour les commandes IA, soit une clé API Anthropic, soit [Claude Code](https://code.claude.com) connecté à un abonnement Claude.
 
 ```bash
-git clone https://github.com/maximilien-ilic/learn-it && cd learn-it
+git clone https://github.com/maximilien-ilic/codearcheo && cd codearcheo
 uv tool install --editable .          # utilise '.[mcp]' pour serve ou le moteur claude-code
 export ANTHROPIC_API_KEY=sk-ant-...   # ou : ant auth login
-# ou, sans clé, avec ton abonnement Claude : export LEARN_IT_BACKEND=claude-code
+# ou, sans clé, avec ton abonnement Claude : export CODEARCHEO_BACKEND=claude-code
 
 cd ~/code/mon-projet
-learn-it scan                         # gratuit, quelques secondes
-learn-it ask "Par où passe une commande, de l'API jusqu'à la base ?"
-learn-it decisions
-learn-it review
+codearcheo scan                         # gratuit, quelques secondes
+codearcheo ask "Par où passe une commande, de l'API jusqu'à la base ?"
+codearcheo decisions
+codearcheo review
 ```
 
-Les résultats sont enregistrés dans `.learn-it/` à la racine du projet analysé (`profile.json`, `overview.md`, `decisions.md` et `.json`, `review.md`). Ce dossier s'exclut lui-même de git. Le profil est recalculé à chaque commande, donc il suit le travail non commité ; un scan prend moins d'une seconde sur des dépôts de plusieurs milliers de commits.
+Les résultats sont enregistrés dans `.codearcheo/` à la racine du projet analysé (`profile.json`, `overview.md`, `decisions.md` et `.json`, `review.md`). Ce dossier s'exclut lui-même de git. Le profil est recalculé à chaque commande, donc il suit le travail non commité ; un scan prend moins d'une seconde sur des dépôts de plusieurs milliers de commits.
 
 ### Depuis ton agent, via MCP
 
 ```bash
-claude mcp add learn-it -- learn-it serve -p /chemin/vers/mon-projet
+claude mcp add codearcheo -- codearcheo serve -p /chemin/vers/mon-projet
 ```
 
 Ton agent dispose alors du profil du projet, des décisions reconstituées et des outils de recherche dans le code et l'historique.
@@ -70,7 +72,7 @@ Ton agent dispose alors du profil du projet, des décisions reconstituées et de
 flowchart LR
     T["dossier local<br/>ou URL GitHub"] --> S[sources]
     S --> A["analyzers<br/>fichiers · stack · historique git"]
-    A --> P[("profil<br/>.learn-it/profile.json")]
+    A --> P[("profil<br/>.codearcheo/profile.json")]
     P --> G["agent Claude<br/>+ outils en lecture seule"]
     S --> G
     G --> F["ask · overview · decisions · why · review"]
@@ -84,14 +86,14 @@ flowchart LR
 Principes :
 
 - **Recherche agentique plutôt que RAG vectoriel.** Pas d'index à reconstruire : l'agent voit toujours l'état actuel du code, y compris le travail non commité d'un projet en cours ([ADR 0002](docs/adr/0002-recherche-agentique.md)).
-- **Outils d'enquête en lecture seule.** L'analyse lit le code et l'historique ; elle exclut les fichiers ignorés par git (`.env`…), les fichiers sensibles connus (`*.pem`, `id_rsa`…) et les internes Git. Les rapports vont dans `.learn-it/`. L'export ADR est explicite ; la publication de recommandations en tickets exige une confirmation.
-- Les liens symboliques (fichiers et dossiers) sont exclus de l'analyse. Les sorties dans `.learn-it/` et les chemins du cache GitHub refusent également les liens symboliques.
+- **Outils d'enquête en lecture seule.** L'analyse lit le code et l'historique ; elle exclut les fichiers ignorés par git (`.env`…), les fichiers sensibles connus (`*.pem`, `id_rsa`…) et les internes Git. Les rapports vont dans `.codearcheo/`. L'export ADR est explicite ; la publication de recommandations en tickets exige une confirmation.
+- Les liens symboliques (fichiers et dossiers) sont exclus de l'analyse. Les sorties dans `.codearcheo/` et les chemins du cache GitHub refusent également les liens symboliques.
 - **Local d'abord.** L'analyse tourne sur ta machine ; seuls le profil et les extraits lus par l'agent partent vers l'API Claude.
 
 ## Structure du code
 
 ```
-src/learn_it/
+src/codearcheo/
 ├── cli.py            commandes (Typer)
 ├── config.py         réglages lus dans l'environnement
 ├── domain.py         modèle de données : ProjectProfile, Technology, Decision…
@@ -107,9 +109,9 @@ src/learn_it/
 │   └── runner.py       boucle d'outils Claude
 ├── features.py       ask · overview · decisions · why · review
 ├── evidence.py       vérification des citations : fichier:ligne et commits
-├── store.py          persistance dans .learn-it/
+├── store.py          persistance dans .codearcheo/
 ├── render.py         affichage terminal et rapports Markdown
-└── mcp_server.py     learn-it serve
+└── mcp_server.py     codearcheo serve
 
 evals/                évaluation des réponses IA
 ├── cases.toml        projets de référence, questions et preuves attendues
@@ -125,12 +127,12 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | — | clé API (ou un profil `ant auth login`) |
-| `LEARN_IT_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming ni `chat` |
-| `LEARN_IT_MODEL` | `claude-opus-5-5` | modèle Claude |
-| `LEARN_IT_EFFORT` | `medium` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
-| `LEARN_IT_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
-| `LEARN_IT_MAX_ITERATIONS` | `40` | nombre maximal de tours de l'agent ; transmis à `--max-turns` avec Claude Code |
-| `LEARN_IT_CACHE_DIR` | `~/.cache/learn-it` | où sont clonés les dépôts GitHub |
+| `CODEARCHEO_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming ni `chat` |
+| `CODEARCHEO_MODEL` | `claude-opus-5-5` | modèle Claude |
+| `CODEARCHEO_EFFORT` | `medium` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
+| `CODEARCHEO_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
+| `CODEARCHEO_MAX_ITERATIONS` | `40` | nombre maximal de tours de l'agent ; transmis à `--max-turns` avec Claude Code |
+| `CODEARCHEO_CACHE_DIR` | `~/.cache/codearcheo` | où sont clonés les dépôts GitHub |
 
 `scan`, `diff` et `serve` chargent le projet sans valider les réglages de génération.
 Une limite réservée au moteur API ne bloque donc pas ces commandes lorsque le moteur
@@ -143,16 +145,16 @@ ne peuvent pas appliquer.
 
 **Ce qui marche.** Les neuf commandes sont en place, couvertes par des tests déterministes sous Python 3.11 et 3.14 à chaque PR.
 
-- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Un projet PHP sans `composer.json` est aussi reconnu : la base de données est déduite de sa connexion PDO ou mysqli. Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter. Sur golang/go, le cache syntaxique passe de 225 à 14 Mio, avec le même graphe. Le scan à chaud prend 6,5 s au lieu de 7,8 s, et `find_symbol` 0,45 s au lieu de 3,5 s par appel ; les [mesures de la PR #98](https://github.com/maximilien-ilic/learn-it/pull/98) détaillent ces gains de vitesse. Les [mesures du cache](docs/scan-performance.md) séparent les passages avec cache chaud et vide.
+- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Un projet PHP sans `composer.json` est aussi reconnu : la base de données est déduite de sa connexion PDO ou mysqli. Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter. Sur golang/go, le cache syntaxique passe de 225 à 14 Mio, avec le même graphe. Le scan à chaud prend 6,5 s au lieu de 7,8 s, et `find_symbol` 0,45 s au lieu de 3,5 s par appel ; les [mesures de la PR #98](https://github.com/maximilien-ilic/codearcheo/pull/98) détaillent ces gains de vitesse. Les [mesures du cache](docs/scan-performance.md) séparent les passages avec cache chaud et vide.
 - **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
 - **Les décisions.** Elles s'exportent en ADR (`decisions --export`), avec refus si aucune preuve n'est vérifiable et avertissement pour chaque référence invalide. Les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
-- **Le moteur.** learn-it tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`LEARN_IT_BACKEND=claude-code`), correction des citations comprise. L'effort par défaut est `medium`. Le profil et les résultats d'outils sont envoyés en JSON compact. Avec le profil compact, le prompt système mesuré est 22 à 35 % plus court sur Express et Go.
+- **Le moteur.** codearcheo tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`CODEARCHEO_BACKEND=claude-code`), correction des citations comprise. L'effort par défaut est `medium`. Le profil et les résultats d'outils sont envoyés en JSON compact. Avec le profil compact, le prompt système mesuré est 22 à 35 % plus court sur Express et Go.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`. Une revue Claude côté serveur tourne aussi depuis le 20 novembre, sur l'abonnement, à la fin de la CI de chaque push ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**La version 0.2.0** est publiée sur GitHub ([release](https://github.com/maximilien-ilic/learn-it/releases/tag/v0.2.0)). Le premier lancement du workflow a vérifié les archives, puis le job PyPI a été annulé. La publication reste à finaliser via Trusted Publishing ([#24](https://github.com/maximilien-ilic/learn-it/issues/24)).
+**La version 0.2.0** est publiée sur GitHub ([release](https://github.com/maximilien-ilic/codearcheo/releases/tag/v0.2.0)). Le premier lancement du workflow a vérifié les archives, puis le job PyPI a été annulé. La publication reste à finaliser via Trusted Publishing ([#24](https://github.com/maximilien-ilic/codearcheo/issues/24)).
 
-**La qualité mesurée.** Depuis la mesure 10, sept évaluations complètes sur l'abonnement donnent 95 réponses réussies sur 98. Les trois échecs : deux noms de fichier ambigus, que learn-it refuse de deviner, et une réponse qui dit qu'un choix n'est pas documenté sans employer le mot attendu ([docs/evaluation.md](docs/evaluation.md)).
+**La qualité mesurée.** Depuis la mesure 10, sept évaluations complètes sur l'abonnement donnent 95 réponses réussies sur 98. Les trois échecs : deux noms de fichier ambigus, que codearcheo refuse de deviner, et une réponse qui dit qu'un choix n'est pas documenté sans employer le mot attendu ([docs/evaluation.md](docs/evaluation.md)).
 
 **Ce qui pourrait suivre.** Aucun ticket bloquant n'est ouvert. Les pistes sont décrites dans [docs/roadmap.md](docs/roadmap.md), et [CONTRIBUTING.md](CONTRIBUTING.md) explique comment faire évoluer le projet. Une correction des preuves structurées par l'IA (#34, clos) ne serait utile que si une mesure fait apparaître des erreurs que le modèle sait corriger.
 
@@ -165,7 +167,7 @@ Pour faire évoluer le projet (où ajouter du code, comment le mesurer et le liv
 
 Les [commandes de suivi des décisions](docs/decision-workflow.md) décrivent la
 vérification des citations, l'export ADR, les recommandations en JSON, les tickets
-sur confirmation et `learn-it diff`. Voir aussi les
+sur confirmation et `codearcheo diff`. Voir aussi les
 [sources GitHub et ADR](docs/project-sources.md), le
 [graphe des imports](docs/code-structure.md) et le
 [chat, streaming et bilan d'usage](docs/agent-experience.md).
@@ -201,7 +203,7 @@ les attentes, pour conserver les résultats même en cas d'interruption. `--case
 mesure précise ; `python -m evals.rescore RAPPORT.json` permet ensuite de renoter les mêmes
 réponses hors ligne. Voir le [protocole et les limites](docs/evaluation.md).
 
-Les décisions techniques de learn-it sont elles-mêmes documentées dans [`docs/adr/`](docs/adr/), au format ADR que l'outil vise à produire.
+Les décisions techniques de codearcheo sont elles-mêmes documentées dans [`docs/adr/`](docs/adr/), au format ADR que l'outil vise à produire.
 
 ## Licence
 

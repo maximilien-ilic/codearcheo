@@ -1,4 +1,4 @@
-# Faire évoluer learn-it
+# Faire évoluer codearcheo
 
 Ce guide résume comment le projet se développe : où ajouter du code, comment le vérifier
 et comment il arrive sur `master`. La documentation et les tickets sont en français ; le
@@ -7,14 +7,14 @@ code, les commentaires et les messages de commit sont en anglais.
 ## Mettre en place
 
 ```bash
-git clone https://github.com/maximilien-ilic/learn-it && cd learn-it
+git clone https://github.com/maximilien-ilic/codearcheo && cd codearcheo
 uv sync --all-extras
 uv run ruff check .
 uv run pytest
 ```
 
 Pour essayer la CLI depuis ce clone : `uv tool install --editable '.[mcp,code]'`. Les
-commandes IA passent par l'abonnement Claude avec `LEARN_IT_BACKEND=claude-code` (Claude
+commandes IA passent par l'abonnement Claude avec `CODEARCHEO_BACKEND=claude-code` (Claude
 Code doit être connecté), ou par une clé `ANTHROPIC_API_KEY`.
 
 ## Où ajouter du code
@@ -25,7 +25,7 @@ Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore to
 |---|---|
 | une nouvelle question posée à Claude | un prompt dans `agent/prompts.py`, une fonction dans `features.py`, une commande dans `cli.py` |
 | reconnaître une techno | `analyzers/stack.py` : un manifeste dans `MANIFESTS`, un fichier dans `FILE_SIGNALS`, ou un signal dans le code avec une preuve fichier:ligne |
-| un nouvel outil de l'agent | une méthode de `agent/tools.py` avec docstring et `Args:` : elle sert aussi au serveur MCP (`learn-it serve`) |
+| un nouvel outil de l'agent | une méthode de `agent/tools.py` avec docstring et `Args:` : elle sert aussi au serveur MCP (`codearcheo serve`) |
 | une règle de vérification des citations | `evidence.py` |
 
 Trois règles tiennent le projet ([ADR](docs/adr/)) :
@@ -51,7 +51,7 @@ Trois règles tiennent le projet ([ADR](docs/adr/)) :
   uv run --all-extras python -m evals.run --backend claude-code --case ID  # un seul cas
   ```
 
-  Les rapports vont dans `~/.cache/learn-it/evals/`. Consigner le résultat dans
+  Les rapports vont dans `~/.cache/codearcheo/evals/`. Consigner le résultat dans
   [`docs/evaluation.md`](docs/evaluation.md). Ne jamais modifier un cas d'évaluation pour
   le faire passer. Un score varie d'une passe à l'autre : comparer au moins deux passes.
 - **Coût.** Chaque commande affiche ses tokens et son coût en équivalent API. Une

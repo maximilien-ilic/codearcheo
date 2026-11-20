@@ -1,9 +1,9 @@
 import pytest
 
-from learn_it import git
-from learn_it.analyzers import scan
-from learn_it.store import Store
-from learn_it.timeline import compare
+from codearcheo import git
+from codearcheo.analyzers import scan
+from codearcheo.store import Store
+from codearcheo.timeline import compare
 
 
 def test_diff_reads_historical_techs_without_changing_checkout(project):
@@ -48,9 +48,9 @@ def test_corrupt_historical_json_is_unavailable_instead_of_breaking_diff(project
 
 
 def test_historical_subdirectory_links_are_not_followed(tmp_path):
+    from codearcheo.sources import Project
+    from codearcheo.timeline import profile_at
     from evals.shop import _commit, _git
-    from learn_it.sources import Project
-    from learn_it.timeline import profile_at
 
     root = tmp_path / "repo"
     root.mkdir()
@@ -70,8 +70,8 @@ def test_historical_subdirectory_links_are_not_followed(tmp_path):
 
 
 def test_historical_checkout_does_not_execute_global_filters(project, tmp_path, monkeypatch):
+    from codearcheo.timeline import profile_at
     from evals.shop import _commit
-    from learn_it.timeline import profile_at
 
     marker = tmp_path / "FILTER_EXECUTED"
     config = tmp_path / "gitconfig"
@@ -84,8 +84,8 @@ def test_historical_checkout_does_not_execute_global_filters(project, tmp_path, 
 
 
 def test_decision_diff_distinguishes_add_remove_change_and_missing_analysis(project):
-    from learn_it.domain import Decision
-    from learn_it.timeline import compare_profiles
+    from codearcheo.domain import Decision
+    from codearcheo.timeline import compare_profiles
 
     profile = scan(project)
     initial = Decision(
@@ -120,8 +120,8 @@ def test_snapshot_refuses_linked_history_and_revision_paths(project, tmp_path):
 
 
 def test_an_example_only_technology_is_not_a_stack_change():
-    from learn_it.domain import ProjectProfile, Technology
-    from learn_it.timeline import compare_profiles
+    from codearcheo.domain import ProjectProfile, Technology
+    from codearcheo.timeline import compare_profiles
 
     def profile(*technologies):
         return ProjectProfile(name="p", files=1, languages={}, docs=[],
@@ -137,8 +137,8 @@ def test_an_example_only_technology_is_not_a_stack_change():
 
 
 def test_legacy_snapshot_does_not_report_an_auxiliary_technology_as_removed():
-    from learn_it.domain import ProjectProfile
-    from learn_it.timeline import compare_profiles
+    from codearcheo.domain import ProjectProfile
+    from codearcheo.timeline import compare_profiles
 
     fields = {"name": "p", "files": 1, "languages": {}, "docs": []}
     redis = {"name": "Redis", "category": "data", "source": "Examples/demo/requirements.txt"}

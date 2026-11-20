@@ -7,9 +7,14 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 ## [Unreleased]
 
 - Les tests des limites API et du rejeu GitHub passent aussi lorsque
-  `LEARN_IT_BACKEND=claude-code` est exporté.
+  `CODEARCHEO_BACKEND=claude-code` est exporté.
 
 ## [0.2.0] - 2026-11-20
+
+Le projet s'appelait `learn-it` jusqu'au 20 novembre 2026 : ce nom ressemblait trop à d'autres
+projets et `learnit` est déjà pris sur PyPI. La commande, le paquet, le module, le dossier
+`.codearcheo/` et les variables `CODEARCHEO_*` portent le nouveau nom. Les anciennes variables
+`LEARN_IT_*` restent lues quand les nouvelles sont absentes.
 
 ### Ajouts
 
@@ -49,4 +54,4 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 - Effort `medium` par défaut : 32 % de coût en moins que `high`, sans perte mesurée.
 - Profil et résultats d'outils en JSON compact : prompt système plus court de 22 à 35 %.
 - Sur golang/go : scan à chaud de 7,8 à 6,5 s, `find_symbol` de 3,5 à 0,45 s par appel,
-  démarrage de `learn-it serve` de 9,5 à 1 s.
+  démarrage de `codearcheo serve` de 9,5 à 1 s.

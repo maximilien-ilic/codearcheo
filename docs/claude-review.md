@@ -14,7 +14,7 @@ la main avec `gh workflow run claude-review.yml`.
 
 ```bash
 claude setup-token                                                # affiche un jeton d'abonnement
-gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo maximilien-ilic/learn-it   # le colle dans GitHub
+gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo maximilien-ilic/codearcheo   # le colle dans GitHub
 ```
 
 `gh secret set` demande la valeur sans l'afficher : le jeton ne passe ni par un fichier ni
@@ -64,7 +64,7 @@ Elle compte les déclenchements sur `master`, toutes les tentatives de ces décl
 les appels effectivement démarrés et les exécutions ignorées. Un relevé absent reste
 inconnu ; il n'est pas compté comme gratuit.
 L'historique inclut les anciens déclenchements directs et les revues lancées par la CI.
-Sur learn-it, l'action refusait les anciens déclenchements `push` avant tout appel
+Sur codearcheo, l'action refusait les anciens déclenchements `push` avant tout appel
 à Claude. Ils comptent dans la cadence, avec une consommation Claude nulle.
 Les artefacts sont vérifiés contre le dépôt, le numéro d'exécution et sa tentative. Pour les
 revues lancées par la CI, le SHA enregistré désigne le commit de la CI. GitHub expose dans

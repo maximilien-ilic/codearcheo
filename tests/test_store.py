@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from learn_it.domain import Decision, ProjectProfile, Recommendation
-from learn_it.store import Store
+from codearcheo.domain import Decision, ProjectProfile, Recommendation
+from codearcheo.store import Store
 
 
 @pytest.fixture(params=["profile", "decisions", "recommendations", "report", "json"])
@@ -134,7 +134,7 @@ def test_store_refuses_a_linked_output_directory(tmp_path):
     root.mkdir()
     outside = tmp_path / "outside"
     outside.mkdir()
-    (root / ".learn-it").symlink_to(outside, target_is_directory=True)
+    (root / ".codearcheo").symlink_to(outside, target_is_directory=True)
 
     with pytest.raises(OSError):
         Store(root).save_report("review", "must stay in the project")
@@ -142,7 +142,7 @@ def test_store_refuses_a_linked_output_directory(tmp_path):
 
 
 def test_store_refuses_a_linked_output_file(tmp_path):
-    output = tmp_path / ".learn-it"
+    output = tmp_path / ".codearcheo"
     output.mkdir()
     private = tmp_path / "private.txt"
     private.write_text("unchanged")
@@ -154,7 +154,7 @@ def test_store_refuses_a_linked_output_file(tmp_path):
 
 
 def test_existing_store_is_self_ignored(tmp_path):
-    (tmp_path / ".learn-it").mkdir()
+    (tmp_path / ".codearcheo").mkdir()
     store = Store(tmp_path)
     store.save_report("review", "report")
 
@@ -165,7 +165,7 @@ def test_existing_store_is_self_ignored(tmp_path):
 @pytest.mark.parametrize("name,load", [("profile.json", "load_profile"),
                                        ("decisions.json", "load_decisions")])
 def test_store_refuses_linked_input_files(tmp_path, name, load):
-    output = tmp_path / ".learn-it"
+    output = tmp_path / ".codearcheo"
     output.mkdir()
     private = tmp_path / "private.json"
     private.write_text("{}")

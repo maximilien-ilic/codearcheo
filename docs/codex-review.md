@@ -1,6 +1,6 @@
 # Revues du code de Claude et Codex
 
-La revue locale surveille `master` de `maximilien-ilic/learn-it` toutes les cinq
+La revue locale surveille `master` de `maximilien-ilic/codearcheo` toutes les cinq
 minutes avec une automatisation Orca. Elle utilise les connexions locales Codex et
 `gh`, sans clé API ajoutée aux secrets GitHub. Un worktree distinct est créé à
 chaque exécution utile ; le checkout principal de travail reste disponible.
@@ -42,7 +42,7 @@ cp scripts/review_gate.py docs/codex-review-prompt.md ~/.local/share/learn-it-re
 ```
 
 Créer ensuite une automatisation Orca via `orca automations create` : fournisseur
-`codex`, dépôt `learn-it`, nouveaux worktrees par exécution, cron `*/5 * * * *`,
+`codex`, dépôt `codearcheo`, nouveaux worktrees par exécution, cron `*/5 * * * *`,
 précontrôle `python3 ~/.local/share/learn-it-review/review_gate.py check`, et prompt
 demandant de lire `~/.local/share/learn-it-review/codex-review-prompt.md`. Créer
 d'abord désactivé, vérifier le précontrôle et les fichiers, puis activer. Consulter

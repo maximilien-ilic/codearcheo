@@ -2,7 +2,7 @@
 
 import pytest
 
-from learn_it.cli import _session
+from codearcheo.cli import _session
 
 
 @pytest.fixture(params=["git", "no-git"])

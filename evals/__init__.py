@@ -1,1 +1,1 @@
-"""Reference cases and scoring for learn-it's answers (see evals/run.py)."""
+"""Reference cases and scoring for codearcheo's answers (see evals/run.py)."""

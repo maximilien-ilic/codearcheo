@@ -1,6 +1,6 @@
 import pytest
 
-from learn_it.sources import parse_github, resolve
+from codearcheo.sources import parse_github, resolve
 
 
 @pytest.mark.parametrize(
@@ -37,7 +37,7 @@ def test_resolve_missing_directory(tmp_path):
 @pytest.mark.parametrize("owner,repo", [("..", ".."), ("owner", "."), ("owner", ".."),
                                         ("owner", "--bare"), ("-owner", "repo")])
 def test_invalid_github_names_do_not_reach_git(tmp_path, monkeypatch, owner, repo):
-    from learn_it import git
+    from codearcheo import git
 
     calls = []
     monkeypatch.setattr(git, "run", lambda *args, **kwargs: calls.append(args) or "")
@@ -51,7 +51,7 @@ def test_invalid_github_names_do_not_reach_git(tmp_path, monkeypatch, owner, rep
 
 
 def test_resolve_does_not_follow_a_linked_cache(tmp_path, monkeypatch):
-    from learn_it import git
+    from codearcheo import git
 
     cache = tmp_path / "cache"
     cache.mkdir()

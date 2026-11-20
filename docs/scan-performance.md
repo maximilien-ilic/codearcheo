@@ -25,9 +25,9 @@ Les profils sérialisés sont **strictement identiques sur les trois paires**. L
 mesure détaillée est conservée dans `benchmarks/git-eacee88.json`. Pour reproduire :
 
 ```bash
-git clone https://github.com/git/git /tmp/learn-it-benchmark-git
-git -C /tmp/learn-it-benchmark-git checkout --detach eacee88cf8a27cb141c64433465da2542806facf
-uv run python scripts/benchmark_scan.py /tmp/learn-it-benchmark-git --compare --runs 3
+git clone https://github.com/git/git /tmp/codearcheo-benchmark-git
+git -C /tmp/codearcheo-benchmark-git checkout --detach eacee88cf8a27cb141c64433465da2542806facf
+uv run python scripts/benchmark_scan.py /tmp/codearcheo-benchmark-git --compare --runs 3
 ```
 
 Les choix qui réduisent le coût :
@@ -60,7 +60,7 @@ Les profils optimisés et de référence restent strictement identiques :
 Le JSON brut est `benchmarks/git-eacee88-code.json`. Commande de reproduction :
 
 ```bash
-uv run --all-extras python scripts/benchmark_scan.py /tmp/learn-it-benchmark-git --compare --runs 3
+uv run --all-extras python scripts/benchmark_scan.py /tmp/codearcheo-benchmark-git --compare --runs 3
 ```
 
 ## Vérification après intégration des sources et ADR
@@ -131,8 +131,8 @@ uv run --all-extras python - <<'PY'
 import hashlib
 import time
 from pathlib import Path
-from learn_it.analyzers import code
-root = Path.home() / ".cache/learn-it/evals/go"
+from codearcheo.analyzers import code
+root = Path.home() / ".cache/codearcheo/evals/go"
 started = time.perf_counter()
 graph = code.analyze(root)
 print("secondes", time.perf_counter() - started)

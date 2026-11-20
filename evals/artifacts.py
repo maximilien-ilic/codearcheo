@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from learn_it.analyzers import inventory
+from codearcheo.analyzers import inventory
 
 
 def fingerprint(root: Path) -> str:

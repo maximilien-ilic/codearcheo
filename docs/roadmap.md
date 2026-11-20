@@ -4,7 +4,7 @@ Mise à jour le 19 novembre 2026. Chaque étape a son ticket GitHub, et les [jal
 
 ## Ce qui a été fait récemment
 
-En deux jours, learn-it est passé d'une idée à une v0 testée et relue en continu.
+En deux jours, codearcheo est passé d'une idée à une v0 testée et relue en continu.
 
 - **15 novembre : le squelette.** La CLI Python et ses sept commandes (`scan`, `ask`, `overview`, `decisions`, `why`, `review`, `serve`) sont en place. Le scan déterministe relève la stack, les dates d'adoption, les zones chaudes et le travail non commité. L'agent Claude dispose d'outils en lecture seule, et le serveur MCP les expose. Le README et trois ADR complètent l'ensemble.
 - **16 novembre : une revue indépendante.** Une automatisation Codex relit chaque nouveau commit de `master` toutes les cinq minutes. Elle ouvre des PR correctives et tient son journal dans [#4] ([#7]).
@@ -17,11 +17,11 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 - **Nuit du 16 au 17 novembre : la roadmap presque entière.** La PR [#29] a livré les étapes #11 à #23 : citations contrôlées, cas de référence étendus, coût et conversation, sources GitHub et ADR, nouveaux écosystèmes, export et recommandations, historique, graphe des imports. La PR [#31] a ajouté la correction des citations et les limites de requêtes, et les revues Codex ont corrigé deux défauts au passage ([#28], [#30]). Le projet compte maintenant 288 tests, tous sans appel IA réel.
 - **17 novembre : la stack lue au bon endroit.** Sur pallets/flask, la stack était datée à partir d'un exemple (`examples/celery/`) plutôt que du `pyproject.toml` racine, et Flask figurait parmi ses propres dépendances. Corrigé ; trois limites trouvées en testant l'outil sur de vrais dépôts sont devenues les tickets [#32], [#33] et [#34].
 
-- **17 novembre, après-midi : les décisions du propriétaire et une première mesure réelle.** Licence MIT (#24, la publication sur PyPI attendra la fin du projet), revue côté serveur sur l'abonnement Claude (#25, prête dès que le secret existe), et un moteur `claude-code` qui fait tourner learn-it sur l'abonnement. La première évaluation réelle est passée de 6 à 11 cas réussis sur 11 hors dépôt Go, après deux corrections : des chemins complets dans les citations et le barème ([docs/evaluation.md](evaluation.md)).
+- **17 novembre, après-midi : les décisions du propriétaire et une première mesure réelle.** Licence MIT (#24, la publication sur PyPI attendra la fin du projet), revue côté serveur sur l'abonnement Claude (#25, prête dès que le secret existe), et un moteur `claude-code` qui fait tourner codearcheo sur l'abonnement. La première évaluation réelle est passée de 6 à 11 cas réussis sur 11 hors dépôt Go, après deux corrections : des chemins complets dans les citations et le barème ([docs/evaluation.md](evaluation.md)).
 
 - **18 novembre : Go mesuré et premières protections de #34.** La mesure complète atteint 12/14, Go compris. Les deux échecs concernent des chemins abrégés : une complétion locale les résout en rejeu hors ligne. Une confirmation donne 4/6, avec un échec de contenu sur Express et une revue Go bloquée par le quota. L'export ADR refuse désormais une décision sans preuve vérifiable, sauf option explicite, et signale chaque citation invalide. Le cache de l'analyse syntaxique évite aussi de reparcourir les fichiers déjà refusés ; l'analyse Go à chaud descend à 8,4 s ([mesures](scan-performance.md)).
 
-- **19 et 20 novembre : variabilité, tokens, vitesse et revue serveur.** Six évaluations complètes donnent de 13 à 14 cas réussis sur 14. L'effort `medium` devient le réglage par défaut : la mesure 10 donne un coût moyen des réponses inférieur de 32 % à `high` en équivalent API. Le profil et les résultats d'outils passent en JSON compact. La mesure 11 relève une baisse de 14 % des tokens lus dans le cache après plusieurs changements du prompt et du rendu. Sur golang/go, le scan à chaud passe de 7,8 à 6,5 s, `find_symbol` de 3,5 à 0,45 s, et le démarrage de `learn-it serve` de 9,5 à 1 s ([mesures de la PR #98](https://github.com/maximilien-ilic/learn-it/pull/98)). Cinq régressions introduites par ces optimisations ont été trouvées par la revue Codex et corrigées (#104). La revue Claude côté serveur tourne depuis le 20 novembre, à la fin de la CI de chaque push (#25). Ses deux premières exécutions ont déjà trouvé un défaut (#107).
+- **19 et 20 novembre : variabilité, tokens, vitesse et revue serveur.** Six évaluations complètes donnent de 13 à 14 cas réussis sur 14. L'effort `medium` devient le réglage par défaut : la mesure 10 donne un coût moyen des réponses inférieur de 32 % à `high` en équivalent API. Le profil et les résultats d'outils passent en JSON compact. La mesure 11 relève une baisse de 14 % des tokens lus dans le cache après plusieurs changements du prompt et du rendu. Sur golang/go, le scan à chaud passe de 7,8 à 6,5 s, `find_symbol` de 3,5 à 0,45 s, et le démarrage de `codearcheo serve` de 9,5 à 1 s ([mesures de la PR #98](https://github.com/maximilien-ilic/codearcheo/pull/98)). Cinq régressions introduites par ces optimisations ont été trouvées par la revue Codex et corrigées (#104). La revue Claude côté serveur tourne depuis le 20 novembre, à la fin de la CI de chaque push (#25). Ses deux premières exécutions ont déjà trouvé un défaut (#107).
 
 - **20 novembre, soir : la version 0.2.0.** Version, CHANGELOG daté, archives vérifiées (#131), tag et release GitHub. Un analyseur à pile remplace la regex de détection PHP et suit les interpolations (#132). Un guide de contribution explique comment faire évoluer le projet (#134). La mesure 12 donne 13/14 sur `35070ba`, un commit antérieur au tag.
 
@@ -71,7 +71,7 @@ Des décisions et des recommandations qu'une équipe peut versionner, trier et s
 |---|---|---|
 | Exporter les décisions en fichiers ADR dans le projet | [#17] | fait |
 | Recommandations structurées et plan d'action exportable en tickets | [#18] | fait |
-| Suivre l'évolution des décisions dans le temps (`learn-it diff`) | [#19] | fait |
+| Suivre l'évolution des décisions dans le temps (`codearcheo diff`) | [#19] | fait |
 
 ### v0.5 — Comprendre la structure
 
@@ -89,7 +89,7 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 
 | Étape | Ticket | État |
 |---|---|---|
-| Mode conversation `learn-it chat`, réponses en streaming | [#23] | fait |
+| Mode conversation `codearcheo chat`, réponses en streaming | [#23] | fait |
 | Licence, versions et publication sur PyPI | [#24] | licence, release GitHub et contrôles du paquet faits. Publication PyPI à finaliser |
 | Lancer la revue automatique côté serveur, sans Orca | [#25] | prête, secret à créer |
 
@@ -100,36 +100,36 @@ Un outil agréable au quotidien, installable par d'autres, et relu même machine
 - Une étape est finie quand son ticket est fermé par une PR fusionnée. Les tâches détaillées vivent dans les tickets ; ce document donne l'ordre et la raison.
 - Les tickets [#24] et [#25] portent l'étiquette `question` : chacun contient une décision qui revient au propriétaire du projet (la licence, les identifiants d'une revue côté serveur).
 
-[milestones]: https://github.com/maximilien-ilic/learn-it/milestones
-[#1]: https://github.com/maximilien-ilic/learn-it/issues/1
-[#2]: https://github.com/maximilien-ilic/learn-it/issues/2
-[#3]: https://github.com/maximilien-ilic/learn-it/issues/3
-[#4]: https://github.com/maximilien-ilic/learn-it/issues/4
-[#5]: https://github.com/maximilien-ilic/learn-it/issues/5
-[#6]: https://github.com/maximilien-ilic/learn-it/pull/6
-[#7]: https://github.com/maximilien-ilic/learn-it/pull/7
-[#8]: https://github.com/maximilien-ilic/learn-it/pull/8
-[#9]: https://github.com/maximilien-ilic/learn-it/pull/9
-[#10]: https://github.com/maximilien-ilic/learn-it/issues/10
-[#11]: https://github.com/maximilien-ilic/learn-it/issues/11
-[#12]: https://github.com/maximilien-ilic/learn-it/issues/12
-[#13]: https://github.com/maximilien-ilic/learn-it/issues/13
-[#14]: https://github.com/maximilien-ilic/learn-it/issues/14
-[#15]: https://github.com/maximilien-ilic/learn-it/issues/15
-[#16]: https://github.com/maximilien-ilic/learn-it/issues/16
-[#17]: https://github.com/maximilien-ilic/learn-it/issues/17
-[#18]: https://github.com/maximilien-ilic/learn-it/issues/18
-[#19]: https://github.com/maximilien-ilic/learn-it/issues/19
-[#20]: https://github.com/maximilien-ilic/learn-it/issues/20
-[#21]: https://github.com/maximilien-ilic/learn-it/issues/21
-[#22]: https://github.com/maximilien-ilic/learn-it/issues/22
-[#23]: https://github.com/maximilien-ilic/learn-it/issues/23
-[#24]: https://github.com/maximilien-ilic/learn-it/issues/24
-[#25]: https://github.com/maximilien-ilic/learn-it/issues/25
-[#29]: https://github.com/maximilien-ilic/learn-it/pull/29
-[#28]: https://github.com/maximilien-ilic/learn-it/pull/28
-[#30]: https://github.com/maximilien-ilic/learn-it/pull/30
-[#31]: https://github.com/maximilien-ilic/learn-it/pull/31
-[#32]: https://github.com/maximilien-ilic/learn-it/issues/32
-[#33]: https://github.com/maximilien-ilic/learn-it/issues/33
-[#34]: https://github.com/maximilien-ilic/learn-it/issues/34
+[milestones]: https://github.com/maximilien-ilic/codearcheo/milestones
+[#1]: https://github.com/maximilien-ilic/codearcheo/issues/1
+[#2]: https://github.com/maximilien-ilic/codearcheo/issues/2
+[#3]: https://github.com/maximilien-ilic/codearcheo/issues/3
+[#4]: https://github.com/maximilien-ilic/codearcheo/issues/4
+[#5]: https://github.com/maximilien-ilic/codearcheo/issues/5
+[#6]: https://github.com/maximilien-ilic/codearcheo/pull/6
+[#7]: https://github.com/maximilien-ilic/codearcheo/pull/7
+[#8]: https://github.com/maximilien-ilic/codearcheo/pull/8
+[#9]: https://github.com/maximilien-ilic/codearcheo/pull/9
+[#10]: https://github.com/maximilien-ilic/codearcheo/issues/10
+[#11]: https://github.com/maximilien-ilic/codearcheo/issues/11
+[#12]: https://github.com/maximilien-ilic/codearcheo/issues/12
+[#13]: https://github.com/maximilien-ilic/codearcheo/issues/13
+[#14]: https://github.com/maximilien-ilic/codearcheo/issues/14
+[#15]: https://github.com/maximilien-ilic/codearcheo/issues/15
+[#16]: https://github.com/maximilien-ilic/codearcheo/issues/16
+[#17]: https://github.com/maximilien-ilic/codearcheo/issues/17
+[#18]: https://github.com/maximilien-ilic/codearcheo/issues/18
+[#19]: https://github.com/maximilien-ilic/codearcheo/issues/19
+[#20]: https://github.com/maximilien-ilic/codearcheo/issues/20
+[#21]: https://github.com/maximilien-ilic/codearcheo/issues/21
+[#22]: https://github.com/maximilien-ilic/codearcheo/issues/22
+[#23]: https://github.com/maximilien-ilic/codearcheo/issues/23
+[#24]: https://github.com/maximilien-ilic/codearcheo/issues/24
+[#25]: https://github.com/maximilien-ilic/codearcheo/issues/25
+[#29]: https://github.com/maximilien-ilic/codearcheo/pull/29
+[#28]: https://github.com/maximilien-ilic/codearcheo/pull/28
+[#30]: https://github.com/maximilien-ilic/codearcheo/pull/30
+[#31]: https://github.com/maximilien-ilic/codearcheo/pull/31
+[#32]: https://github.com/maximilien-ilic/codearcheo/issues/32
+[#33]: https://github.com/maximilien-ilic/codearcheo/issues/33
+[#34]: https://github.com/maximilien-ilic/codearcheo/issues/34

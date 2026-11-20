@@ -1,8 +1,8 @@
 # Correction facultative des citations
 
 ```bash
-learn-it ask "Comment fonctionne le stockage ?" --repair-citations --max-requests 4
-learn-it why src/storage.py --repair-citations --max-output-tokens 2048
+codearcheo ask "Comment fonctionne le stockage ?" --repair-citations --max-requests 4
+codearcheo why src/storage.py --repair-citations --max-output-tokens 2048
 ```
 
 La vérification des références reste locale et sans appel IA supplémentaire par défaut.
@@ -45,7 +45,7 @@ de sortie choisie si elle est inférieure. Cette option peut consommer un appel 
 La même limite globale de session couvre l'analyse et la correction. Si le quota est épuisé,
 la réponse initiale et ses avertissements sont conservés.
 
-Avec `LEARN_IT_BACKEND=claude-code`, la correction passe aussi par l'abonnement : un appel
+Avec `CODEARCHEO_BACKEND=claude-code`, la correction passe aussi par l'abonnement : un appel
 `claude -p` d'un seul tour, sans outil intégré ni serveur MCP, avec le même prompt système
 et la même acceptation locale. `claude -p` ne permet pas de borner la sortie, et ce moteur
 n'a pas de limite locale de requêtes : la seule garantie est l'unique tour.
@@ -83,7 +83,7 @@ caractères ; le contenu complet des fichiers n'est pas envoyé.
 En mode correction, le texte est mis en mémoire avant affichage pour éviter de mélanger une
 première réponse et sa version corrigée. Le rapport indique les comptes mécaniques avant et
 après. `Session.last_repair` expose une copie de ces métriques, la réponse initiale exacte et
-la réponse retenue pour des comparaisons hors réseau. Le dossier `.learn-it/` conserve aussi
+la réponse retenue pour des comparaisons hors réseau. Le dossier `.codearcheo/` conserve aussi
 un rapport `overview-initial-<empreinte>.md` lorsqu'une correction d'overview est retenue.
 
 Les tests avec client simulé mesurent les références existantes, les refus et la conservation

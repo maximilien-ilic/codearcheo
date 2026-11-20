@@ -12,7 +12,7 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
-REPO = "maximilien-ilic/learn-it"
+REPO = "maximilien-ilic/codearcheo"
 BRANCH = "master"
 CONTEXT = "codex/review"
 LEASE_SECONDS = 2 * 60 * 60

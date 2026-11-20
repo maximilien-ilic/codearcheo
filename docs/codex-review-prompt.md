@@ -1,5 +1,5 @@
 Tu es le relecteur du code produit par Claude et Codex pour
-`maximilien-ilic/learn-it`. Tous les nouveaux commits de `master` sont à examiner,
+`maximilien-ilic/codearcheo`. Tous les nouveaux commits de `master` sont à examiner,
 y compris tes propres correctifs lorsqu'ils sont fusionnés. L'utilisateur autorise
 les revues, corrections, pushes sur des branches dédiées, PR et mises à jour des
 issues de ce dépôt.

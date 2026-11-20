@@ -1,10 +1,10 @@
 import pytest
 
-from learn_it import features
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import features
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 
 @pytest.mark.parametrize("command,args,filename", [

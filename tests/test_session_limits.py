@@ -6,10 +6,10 @@ import anthropic
 import httpx2
 import pytest
 
-from learn_it.agent import runner
-from learn_it.agent.limits import AgentError, SessionLimitError, SessionLimits
-from learn_it.agent.runner import ConversationAgent, run_agent
-from learn_it.config import Settings
+from codearcheo.agent import runner
+from codearcheo.agent.limits import AgentError, SessionLimitError, SessionLimits
+from codearcheo.agent.runner import ConversationAgent, run_agent
+from codearcheo.config import Settings
 
 
 def reply(number=1, *, text="Answer", reason="end_turn", content=None, inputs=10):
@@ -324,9 +324,9 @@ def test_default_behavior_keeps_no_session_request_limit_and_16000_output(monkey
 
 
 def test_limit_settings_explicit_options_override_environment(monkeypatch):
-    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
-    monkeypatch.setenv("LEARN_IT_MAX_REQUESTS", "invalid")
-    monkeypatch.setenv("LEARN_IT_MAX_OUTPUT_TOKENS", "invalid")
+    monkeypatch.setenv("CODEARCHEO_BACKEND", "api")
+    monkeypatch.setenv("CODEARCHEO_MAX_REQUESTS", "invalid")
+    monkeypatch.setenv("CODEARCHEO_MAX_OUTPUT_TOKENS", "invalid")
     settings = Settings.from_env(max_requests=2, max_output_tokens=123)
     assert settings.max_requests == 2
     assert settings.max_output_tokens == 123

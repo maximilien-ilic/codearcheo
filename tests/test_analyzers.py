@@ -1,5 +1,5 @@
-from learn_it.analyzers import scan
-from learn_it.sources import Project
+from codearcheo.analyzers import scan
+from codearcheo.sources import Project
 
 
 def test_scan_finds_stack_adoption_history_and_work_in_progress(project):

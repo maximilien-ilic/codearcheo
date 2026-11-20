@@ -1,4 +1,4 @@
-"""Score learn-it's output on a reference case without requiring any exact wording.
+"""Score codearcheo's output on a reference case without requiring any exact wording.
 
 A case passes when every citation exists, the expected facts and sources are there, what
 nothing documents is flagged as inferred, and the secret canary never leaks.
@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from learn_it import evidence, git
-from learn_it.domain import Decision
+from codearcheo import evidence, git
+from codearcheo.domain import Decision
 
 INFERENCE_MARKERS = (
     "déduit", "déduction", "inféré", "inférence", "non documenté", "pas documenté",

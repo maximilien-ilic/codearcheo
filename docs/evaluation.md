@@ -1,6 +1,6 @@
 # Évaluation des réponses
 
-Les mesures de #10 : ce que valent les vraies réponses de learn-it sur les projets de
+Les mesures de #10 : ce que valent les vraies réponses de codearcheo sur les projets de
 référence de `evals/cases.toml`. Chaque cas vérifie que les citations existent, que les
 faits et les sources attendus sont là, que les déductions sont signalées et qu'aucun secret
 ne fuit. Le texte exact n'est jamais comparé.
@@ -9,9 +9,9 @@ ne fuit. Le texte exact n'est jamais comparé.
 
 Les mesures passent par Claude Code et l'abonnement Claude du propriétaire
 (`--backend claude-code`), sans clé API. Claude Code reçoit la consigne système de
-learn-it à la place de la sienne, n'a aucun de ses outils natifs, et explore le projet avec
-les outils de learn-it via `learn-it serve`. Le moteur API garde quelques différences :
-streaming, cache de prompt réglé par learn-it, limites de requêtes locales. Ces scores
+codearcheo à la place de la sienne, n'a aucun de ses outils natifs, et explore le projet avec
+les outils de codearcheo via `codearcheo serve`. Le moteur API garde quelques différences :
+streaming, cache de prompt réglé par codearcheo, limites de requêtes locales. Ces scores
 approchent donc ceux du moteur API sans les remplacer.
 
 Le coût affiché est un équivalent API calculé par Claude Code. Il ne constitue pas un relevé
@@ -34,9 +34,9 @@ uv run --all-extras python -m evals.run --backend claude-code --case express-rev
 L'option `--case` se répète pour sélectionner plusieurs cas. Un nom de projet ou de cas
 inconnu, ou une sélection sans correspondance, arrête l'exécution avant tout appel IA.
 Pour comparer `medium` au réglage `high`, conserver la même sélection et définir
-`LEARN_IT_EFFORT=medium`. Chaque lancement produit un fichier de résultats distinct.
+`CODEARCHEO_EFFORT=medium`. Chaque lancement produit un fichier de résultats distinct.
 
-`LEARN_IT_MAX_ITERATIONS` borne aussi les tours Claude Code via `--max-turns`,
+`CODEARCHEO_MAX_ITERATIONS` borne aussi les tours Claude Code via `--max-turns`,
 avec 40 par défaut. Les mesures 1 à 8 précèdent ce correctif : leur moteur ignorait
 ce réglage malgré sa présence dans la configuration. Ne pas attribuer un changement
 de score au seul prompt ou à l'effort si la limite effective a changé. Un arrêt à
@@ -44,7 +44,7 @@ la limite est une erreur de moteur, distincte d'une réponse évaluée.
 
 Les nouveaux rapports au format 2 archivent la réponse exacte, les décisions et
 recommandations structurées, les attentes du cas, les usages, les réglages et la révision
-du code de learn-it. Ils sont enregistrés après chaque cas, par remplacement atomique.
+du code de codearcheo. Ils sont enregistrés après chaque cas, par remplacement atomique.
 Une interruption laisse `complete: false` et conserve les cas déjà finis. Un quota ou
 une autre erreur du moteur porte le statut `error` : il reste visible dans le bilan des
 tentatives, mais ne compte pas comme une réponse évaluée dans le score de qualité.
@@ -54,13 +54,13 @@ chaque projet, travail non commité compris. Avec ces checkouts inchangés, un n
 barème peut être appliqué aux réponses archivées sans rappeler le modèle :
 
 ```bash
-uv run python -m evals.rescore "$HOME/.cache/learn-it/evals/results-<date>-<identifiant>.json"
+uv run python -m evals.rescore "$HOME/.cache/codearcheo/evals/results-<date>-<identifiant>.json"
 ```
 
 Le recalcul écrit un autre fichier et garde les contrôles précédents. Il refuse un
 checkout absent, un SHA différent ou un changement des fichiers sources. Les anciens
 rapports sans réponses archivées ne sont pas recalculables par cette commande ; utiliser
-le rapport courant de `.learn-it/` à leur place attribuerait une autre réponse à la mesure.
+le rapport courant de `.codearcheo/` à leur place attribuerait une autre réponse à la mesure.
 Le contrôle du SHA et des fichiers n'isole pas le projet des modifications concurrentes
 pendant une analyse. Un recalcul mesure le barème, pas la variabilité du modèle.
 
@@ -100,13 +100,13 @@ Les échecs se rangent en quatre familles :
 3. **Le dépôt Go (3 cas, 68 707 commits).** Un refus de sécurité au bout de 15 minutes, une
    réponse sans aucune citation, et des fichiers attendus absents.
 4. **Le banc d'essai (1 cas).** Les réponses GitHub enregistrées sont rejouées dans le
-   processus de test. Avec Claude Code, les outils tournent dans `learn-it serve` et ne les
+   processus de test. Avec Claude Code, les outils tournent dans `codearcheo serve` et ne les
    voient pas : ce cas est désormais ignoré avec ce moteur.
 
 ## Changement 1 : chemins complets
 
 Le prompt système exige maintenant le chemin complet depuis la racine du projet, tel que
-`list_files` et `search_code` l'affichent (`src/learn_it/agent/prompts.py`).
+`list_files` et `search_code` l'affichent (`src/codearcheo/agent/prompts.py`).
 
 ## Mesure 2 : après le changement 1 (17 novembre 2026)
 
@@ -151,8 +151,8 @@ quand il lit une déduction.
 Lancée avant les corrections de performance : **0 cas réussi sur 3**. Deux défauts sont
 apparus.
 
-- **Côté learn-it.** Le scan prenait environ 60 s, dont 57 s pour le graphe des imports.
-  `learn-it serve` scannant avant de répondre, Claude Code abandonnait le serveur MCP et
+- **Côté codearcheo.** Le scan prenait environ 60 s, dont 57 s pour le graphe des imports.
+  `codearcheo serve` scannant avant de répondre, Claude Code abandonnait le serveur MCP et
   répondait sans outils. Le scan prend maintenant environ 13 s : un index des paquets Go
   remplace un parcours de tous les modules pour chaque import, et un cache des modules
   analysés évite de les reparser. Le serveur MCP dispose aussi de 180 s pour démarrer.
@@ -182,7 +182,7 @@ abrégés dans les raisons et la synthèse des rapports `review` (`legacy.yml:33
 
 ## Changement 3 : compléter les chemins sans ambiguïté
 
-Avant de vérifier une réponse non diffusée ou un enregistrement, learn-it réécrit un nom de fichier seul
+Avant de vérifier une réponse non diffusée ou un enregistrement, codearcheo réécrit un nom de fichier seul
 en chemin complet quand un seul fichier du projet porte ce nom, ou quand la réponse cite déjà
 en entier un seul des fichiers candidats. Dans tous les autres cas, rien n'est deviné et la
 citation reste signalée. Un chemin déjà présent dans l'inventaire, un chemin explicite
@@ -212,7 +212,7 @@ API, environ 9 minutes.
 Les citations de la nouvelle revue Express passent, mais cela ne suffit pas à faire réussir
 le cas entier. La nouvelle revue Go n'a pas pu être évaluée. On ne peut donc annoncer ni
 14/14, ni une confirmation complète du changement 3. Les résultats bruts sont conservés
-localement dans `~/.cache/learn-it/evals/results-20261118-095401.json` (mesure 7) et
+localement dans `~/.cache/codearcheo/evals/results-20261118-095401.json` (mesure 7) et
 `results-20261118-100523.json` (mesure 8).
 
 ## Changement 4 : la revue commence par l'architecture
@@ -291,7 +291,7 @@ permettent de vérifier les totaux. Un recalcul hors ligne des cinq rapports con
 des réponses, au code `bdbabd7`, vérifie les SHA et empreintes des projets et conserve
 tous les résultats. Il ne produit aucune nouvelle réponse du modèle.
 
-Les rapports bruts sont dans `~/.cache/learn-it/evals/` :
+Les rapports bruts sont dans `~/.cache/codearcheo/evals/` :
 `results-20261119-095644-f7586208.json` et `results-20261119-101538-287a78b1.json` (+
 `results-20261119-141040-e57ca2de.json` pour go-review-http) en `high`,
 `results-20261119-141438-b531f15a.json` et `results-20261119-142752-bfa9158d.json` en
@@ -361,9 +361,9 @@ Rapport : `results-20261120-212809-ecb1087a.json`.
   locale. La revue Go en échec sort du périmètre de la comparaison. Dans la mesure 11,
   la réponse `why` sur Go échoue sur un nom ambigu. Une comparaison avec et sans
   correction reste à faire pour mesurer son effet sur les réponses avant d'étendre la
-  correction aux preuves structurées ([#34](https://github.com/maximilien-ilic/learn-it/issues/34)).
+  correction aux preuves structurées ([#34](https://github.com/maximilien-ilic/codearcheo/issues/34)).
 - **L'effort**. Une troisième passe en `high` sur la même version compléterait la
   comparaison. Le changement 6 fixe déjà le défaut à `medium`.
 
 Le suivi des évaluations est clos sur l'abonnement Claude. L'évaluation du moteur API
-a été abandonnée à la clôture du [ticket #10](https://github.com/maximilien-ilic/learn-it/issues/10).
+a été abandonnée à la clôture du [ticket #10](https://github.com/maximilien-ilic/codearcheo/issues/10).

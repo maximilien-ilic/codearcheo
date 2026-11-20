@@ -4,13 +4,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from learn_it import citation_repair, evidence, features
-from learn_it.agent import runner
-from learn_it.analyzers import scan
-from learn_it.config import Settings
-from learn_it.domain import Decision
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import citation_repair, evidence, features
+from codearcheo.agent import runner
+from codearcheo.analyzers import scan
+from codearcheo.config import Settings
+from codearcheo.domain import Decision
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 ORIGINAL = "L'API utilise FastAPI (`app.py:3`) ; le module crée l'application (`app.py:999`)."
 CORRECTED = ORIGINAL.replace("`app.py:999`", "`app.py:1-3`")

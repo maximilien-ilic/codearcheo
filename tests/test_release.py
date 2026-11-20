@@ -23,9 +23,9 @@ def packages(tmp_path_factory):
 def release_tree(tmp_path, packages):
     for name in ("pyproject.toml", "LICENSE"):
         shutil.copyfile(ROOT / name, tmp_path / name)
-    init = tmp_path / "src/learn_it/__init__.py"
+    init = tmp_path / "src/codearcheo/__init__.py"
     init.parent.mkdir(parents=True)
-    shutil.copyfile(ROOT / "src/learn_it/__init__.py", init)
+    shutil.copyfile(ROOT / "src/codearcheo/__init__.py", init)
     version = tomllib.loads((tmp_path / "pyproject.toml").read_text())["project"]["version"]
     (tmp_path / "CHANGELOG.md").write_text(f"# Changelog\n\n## [{version}] - 2026-11-18\n")
     shutil.copytree(packages, tmp_path / "dist")
@@ -45,7 +45,7 @@ def test_release_tag_must_match_the_packaged_version(release_tree):
 
 def test_source_version_must_match_package_metadata(release_tree):
     root, _ = release_tree
-    (root / "src/learn_it/__init__.py").write_text('__version__ = "99.0.0"\n')
+    (root / "src/codearcheo/__init__.py").write_text('__version__ = "99.0.0"\n')
     with pytest.raises(ValueError, match="versions"):
         check_dist(root, root / "dist")
 

@@ -3,13 +3,13 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from learn_it import features
-from learn_it.agent.tools import ProjectTools
-from learn_it.analyzers import code, scan
-from learn_it.cli import app
-from learn_it.config import Settings
-from learn_it.features import Session
-from learn_it.store import Store
+from codearcheo import features
+from codearcheo.agent.tools import ProjectTools
+from codearcheo.analyzers import code, scan
+from codearcheo.cli import app
+from codearcheo.config import Settings
+from codearcheo.features import Session
+from codearcheo.store import Store
 
 pytestmark = pytest.mark.skipif(not code.available(), reason="optional code extra")
 

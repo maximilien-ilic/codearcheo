@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-REPO = "maximilien-ilic/learn-it"
+REPO = "maximilien-ilic/codearcheo"
 WORKFLOW = "claude-review.yml"
 MAX_EXECUTION_BYTES = 64 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 1024 * 1024
@@ -186,7 +186,7 @@ def report(
                 "created_at": run["created_at"], "model_started": None,
                 "missing_token": False, "api_equivalent_usd": None,
             }
-            # Every direct push run in learn-it used an action that rejects push
+            # Every direct push run in codearcheo used an action that rejects push
             # before calling Claude. Keep these runs in the trigger history.
             legacy_push = repo.casefold() == REPO and run["event"] == "push"
             if legacy_push:

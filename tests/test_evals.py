@@ -6,14 +6,14 @@ import re
 
 import pytest
 
+from codearcheo import git
+from codearcheo.analyzers import scan
+from codearcheo.domain import Decision
+from codearcheo.sources import parse_github
 from evals import run
 from evals.fixtures import INJECTION_MARKER, build_fixture
 from evals.scoring import commits_with_subject, score_answer, score_decisions
 from evals.shop import CANARY, build_shop
-from learn_it import git
-from learn_it.analyzers import scan
-from learn_it.domain import Decision
-from learn_it.sources import parse_github
 
 DATABASE_ANSWER = (
     "Le projet utilise PostgreSQL, lancé par `docker-compose.yml:3`. Aucune documentation "
@@ -134,7 +134,7 @@ def test_the_shop_has_the_same_history_everywhere(project, tmp_path):
 
 
 def test_run_scores_the_shop_without_calling_the_api(project, monkeypatch, tmp_path, capsys):
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
     answers = {
         shop_case("shop-framework")["question"]: framework_answer(project.root),
         shop_case("shop-database")["question"]: DATABASE_ANSWER,
@@ -153,9 +153,9 @@ def test_run_scores_the_shop_without_calling_the_api(project, monkeypatch, tmp_p
 
 
 def test_evaluation_saves_per_case_usage_without_fabricating_an_api_bill(monkeypatch, tmp_path):
-    from learn_it.agent.usage import UsageSummary
+    from codearcheo.agent.usage import UsageSummary
 
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
     spec = next(spec for spec in run.load_cases() if spec["name"] == "shop")
     monkeypatch.setattr(run, "load_cases", lambda: [spec | {"cases": spec["cases"][:1]}])
 
@@ -173,9 +173,9 @@ def test_evaluation_saves_per_case_usage_without_fabricating_an_api_bill(monkeyp
 
 
 def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
-    from learn_it.config import Settings
-    from learn_it.features import Session
-    from learn_it.store import Store
+    from codearcheo.config import Settings
+    from codearcheo.features import Session
+    from codearcheo.store import Store
 
     session = Session(project, scan(project), Store(project.root), Settings())
 
@@ -209,7 +209,7 @@ def test_catalog_covers_three_languages_and_every_supported_command():
 def test_prompt_injection_fixture_and_grader_are_exercised_offline(tmp_path):
     from anthropic.lib.tools import ToolError
 
-    from learn_it.agent.tools import ProjectTools
+    from codearcheo.agent.tools import ProjectTools
 
     root = build_fixture(tmp_path / "injection", "shop-injection")
     spec = next(spec for spec in run.load_cases() if spec["name"] == "shop-injection")
@@ -227,9 +227,9 @@ def test_prompt_injection_fixture_and_grader_are_exercised_offline(tmp_path):
 
 @pytest.mark.parametrize("command", ["why", "review"])
 def test_run_case_dispatches_new_commands_without_calling_api(project, command, monkeypatch):
-    from learn_it.config import Settings
-    from learn_it.features import Session
-    from learn_it.store import Store
+    from codearcheo.config import Settings
+    from codearcheo.features import Session
+    from codearcheo.store import Store
 
     session = Session(project, scan(project), Store(project.root), Settings())
     spec = next(spec for spec in run.load_cases() if spec["name"] == "shop-workflows")
@@ -260,9 +260,9 @@ def test_catalog_rejects_unpinned_sources_and_duplicate_cases():
 
 def test_recorded_github_rationale_case_runs_offline(monkeypatch, tmp_path, capsys):
     fixture = pytest.importorskip("evals.github_project")
-    from learn_it.agent.tools import ProjectTools
+    from codearcheo.agent.tools import ProjectTools
 
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
 
     def answer(session, question):
         tools = ProjectTools(session.project.root)
@@ -298,7 +298,7 @@ def test_missing_repair_metadata_is_not_counted_as_a_measured_improvement(projec
 
 
 def test_evaluation_uses_one_shared_limit_across_projects(monkeypatch, tmp_path):
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
     shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
     specs = [shop | {"name": name, "cases": shop["cases"][:1]} for name in ("first", "second")]
     monkeypatch.setattr(run, "load_cases", lambda: specs)
@@ -328,7 +328,7 @@ def test_unimplemented_citation_repair_stops_before_preparation(option, monkeypa
 
 
 def test_requested_comparison_cannot_succeed_without_repair_metadata(monkeypatch, tmp_path):
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
     shop = next(spec for spec in run.load_cases() if spec["name"] == "shop")
     monkeypatch.setattr(run, "load_cases", lambda: [shop | {"cases": shop["cases"][:1]}])
     monkeypatch.setattr(run, "run_case", lambda *args, **kwargs: [])
@@ -344,7 +344,7 @@ def test_unsupported_repair_case_is_rejected_before_preparation(
     option, case_id, monkeypatch, tmp_path, capsys,
 ):
     cache = tmp_path / "cache"
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(cache))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(cache))
 
     def unexpected_preparation(*args):
         pytest.fail("Unsupported repair must stop before checkout, scan or generation")
@@ -358,7 +358,7 @@ def test_unsupported_repair_case_is_rejected_before_preparation(
 
 def test_project_comparison_only_generates_supported_text_cases(monkeypatch, tmp_path):
     cache = tmp_path / "cache"
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(cache))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(cache))
 
     def fake_ask(session, question):
         answer = (DATABASE_ANSWER if question == shop_case("shop-database")["question"]

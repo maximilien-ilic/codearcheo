@@ -25,7 +25,7 @@ Ces contrôles tournent aussi en CI sous Python 3.11 et 3.14. Le workflow `relea
 peut être lancé manuellement pour reconstruire et conserver les archives pendant sept jours :
 
 ```bash
-gh workflow run release.yml --ref master --repo maximilien-ilic/learn-it
+gh workflow run release.yml --ref master --repo maximilien-ilic/codearcheo
 ```
 
 Ce lancement manuel exécute uniquement la préparation. Le job de publication exige une
@@ -37,7 +37,7 @@ local. La publication dépend de cette vérification, qui teste aussi le transfe
 entre les jobs. Seul le job final `publish` possède la permission OIDC.
 
 Cette préparation complète a été vérifiée sur GitHub le 18 novembre 2026 :
-[exécution 44306945361](https://github.com/maximilien-ilic/learn-it/actions/runs/44306945361),
+[exécution 44306945361](https://github.com/maximilien-ilic/codearcheo/actions/runs/44306945361),
 construction et vérification des archives réussies, publication ignorée. Le
 [relevé](benchmarks/release-preparation-20261118.json) conserve le commit testé et
 l'empreinte de l'artefact. Cette validation ne constitue pas une publication PyPI.
@@ -48,9 +48,9 @@ Depuis le compte PyPI du propriétaire, ajouter un éditeur GitHub avec ces vale
 
 | Champ | Valeur |
 |---|---|
-| Projet PyPI demandé | `learn-it` |
+| Projet PyPI demandé | `codearcheo` |
 | Propriétaire GitHub | `maximilien-ilic` |
-| Dépôt | `learn-it` |
+| Dépôt | `codearcheo` |
 | Fichier du workflow | `release.yml` |
 | Environnement GitHub | `pypi` |
 
@@ -85,11 +85,11 @@ ne lance pas cette publication stable.
 Après publication, vérifier depuis un autre dossier :
 
 ```bash
-uv tool install 'learn-it[mcp,code]==0.2.0'
-learn-it --help
-learn-it scan /chemin/vers/un/projet
+uv tool install 'codearcheo[mcp,code]==0.2.0'
+codearcheo --help
+codearcheo scan /chemin/vers/un/projet
 ```
 
-Pour une installation minimale, utiliser `uv tool install learn-it`. Ces commandes depuis
+Pour une installation minimale, utiliser `uv tool install codearcheo`. Ces commandes depuis
 PyPI ne deviennent utilisables qu'après la publication effective. Les commandes IA exigent
 toujours leur authentification propre.

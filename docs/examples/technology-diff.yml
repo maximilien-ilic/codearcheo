@@ -31,7 +31,7 @@ jobs:
       - name: Compare without an AI call
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: uv run --project tool learn-it diff "$BASE_SHA" -p project > report.md
+        run: uv run --project tool codearcheo diff "$BASE_SHA" -p project > report.md
       - name: Comment for same-repository PRs
         if: github.event.pull_request.head.repo.full_name == github.repository
         env:

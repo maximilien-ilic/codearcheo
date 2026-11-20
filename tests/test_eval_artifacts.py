@@ -5,15 +5,15 @@ import json
 
 import pytest
 
+from codearcheo.agent.runner import AgentError
+from codearcheo.domain import Decision
 from evals import rescore, run
-from learn_it.agent.runner import AgentError
-from learn_it.domain import Decision
 
 
 @pytest.fixture
 def evaluation(tmp_path, monkeypatch):
     workdir = tmp_path / "cache" / "evals"
-    monkeypatch.setenv("LEARN_IT_CACHE_DIR", str(workdir.parent))
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(workdir.parent))
     spec = {
         "name": "reference", "source": "synthetic", "language": "Python",
         "cases": [
@@ -136,7 +136,7 @@ def test_decision_records_are_archived_independently_of_the_mutable_store(evalua
     saved = report["results"][0]["decisions"]
     assert saved[0]["title"] == "FastAPI"
 
-    (workdir / "reference/.learn-it/decisions.json").write_text("[]")
+    (workdir / "reference/.codearcheo/decisions.json").write_text("[]")
     assert rescore.rescore(report, workdir)["results"][0]["passed"]
 
 
