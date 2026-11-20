@@ -315,7 +315,8 @@ def test_a_prose_only_review_never_erases_previous_recommendations(project, monk
     assert len(store.load_recommendations()) == 1
 
 
-def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch):
+@pytest.mark.parametrize("namespace", ["codearcheo", "learn-it"])
+def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch, namespace):
     calls = []
     item = recommendation()
     project = replace(project, origin="https://github.com/owner/repo")
@@ -323,7 +324,8 @@ def test_publication_deduplicates_and_skips_keep_verdict(project, monkeypatch):
     def fake(*args):
         calls.append(args)
         if args[1] == "list":
-            return json.dumps([{"body": recommendations._marker(item), "url": "existing"}])
+            marker = recommendations._marker(item).replace("codearcheo:", f"{namespace}:", 1)
+            return json.dumps([{"body": marker, "url": "existing"}])
         pytest.fail("Should reuse the existing issue")
 
     monkeypatch.setattr(recommendations, "_gh", fake)
