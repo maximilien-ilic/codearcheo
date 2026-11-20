@@ -81,6 +81,7 @@ def run_claude_code(
     root: Path,
     on_usage: Any = None,
     exploration: bool = True,
+    profile: str | None = None,
 ) -> str:
     """Run one task with `claude -p`. `tools` are only the recording tools: the exploration
     tools come from `learn-it serve`, unless `exploration` is off (a tool-free request)."""
@@ -111,10 +112,11 @@ def run_claude_code(
 
     with tempfile.TemporaryDirectory(prefix="learn-it-claude-") as scratch:
         config = Path(scratch) / "mcp.json"
-        servers = {SERVER: {
-            "command": sys.executable,
-            "args": ["-m", "learn_it", "serve", "-p", str(root)],
-        }} if exploration else {}
+        args = ["-m", "learn_it", "serve", "-p", str(root)]
+        if profile is not None:
+            (Path(scratch) / "profile.json").write_text(profile, encoding="utf-8")
+            args += ["--profile-file", str(Path(scratch) / "profile.json")]
+        servers = {SERVER: {"command": sys.executable, "args": args}} if exploration else {}
         config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
         command = [
             executable, "-p", prompt, "--output-format", "json",

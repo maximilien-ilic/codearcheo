@@ -135,7 +135,8 @@ class Session:
         """Same task on the Claude subscription: no streaming and no local limits."""
         options = {"on_usage": self.on_usage} if self.on_usage is not None else {}
         answer = run_claude_code(
-            system, task, list(extra_tools), self.settings, root=self.project.root, **options
+            system, task, list(extra_tools), self.settings, root=self.project.root,
+            profile=self.profile.model_dump_json(), **options
         )
         if not check:
             return answer

@@ -33,3 +33,23 @@ def test_profile_tool_follows_work_in_progress(project):
     result = asyncio.run(server.call_tool("project_profile", {}))
 
     assert json.loads(result.content[0].text)["files"] == files + 1
+
+
+def test_serve_reuses_the_profile_its_parent_just_computed(project, tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    from learn_it import analyzers, cli, mcp_server
+
+    profile = scan(project)
+    path = tmp_path / "profile.json"
+    path.write_text(profile.model_dump_json())
+    served = []
+    monkeypatch.setattr(mcp_server, "serve", served.append)
+    monkeypatch.setattr(analyzers, "scan", lambda _: pytest.fail("serve rescanned"))
+
+    result = CliRunner().invoke(
+        cli.app, ["serve", "-p", str(project.root), "--profile-file", str(path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert served[0].profile.model_dump() == profile.model_dump()

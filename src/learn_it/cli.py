@@ -14,6 +14,7 @@ from rich.markup import escape
 from learn_it import analyzers, features, git, recommendations, render, sources, timeline
 from learn_it.agent.runner import AgentError
 from learn_it.config import Settings, cache_dir_from_env
+from learn_it.domain import ProjectProfile
 from learn_it.export import export_decisions
 from learn_it.features import Session
 from learn_it.store import Store
@@ -368,10 +369,25 @@ def chat(
 
 
 @app.command()
-def serve(project: ProjectOption = ".") -> None:
+def serve(
+    project: ProjectOption = ".",
+    profile_file: Annotated[Path | None, typer.Option(
+        "--profile-file", hidden=True, help="Profil que le moteur claude-code vient de calculer.",
+    )] = None,
+) -> None:
     """Serveur MCP (stdio) : donne les outils du projet à Claude Code, Cursor…"""
     from learn_it import mcp_server
 
     with _friendly_errors():
-        session = _project_session(project, Settings(cache_dir=cache_dir_from_env()))
+        settings = Settings(cache_dir=cache_dir_from_env())
+        if profile_file is None:
+            session = _project_session(project, settings)
+        else:
+            # Written by the parent process just before it started Claude Code: rescanning
+            # would only delay the first request (6 s on golang/go).
+            resolved = sources.resolve(project, settings.cache_dir)
+            profile = ProjectProfile.model_validate_json(profile_file.read_text(encoding="utf-8"))
+            session = Session(
+                resolved, profile, Store(resolved.root), settings, on_tool=render.tool_call
+            )
     mcp_server.serve(session)
