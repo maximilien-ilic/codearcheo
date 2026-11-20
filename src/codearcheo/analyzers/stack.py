@@ -5,10 +5,12 @@ from __future__ import annotations
 import ast
 import json
 import re
+import tokenize
 import tomllib
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from fnmatch import fnmatch
+from io import BytesIO
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -303,10 +305,13 @@ def _with_mysqli(
 def _python_imports(path: Path) -> list[tuple[str, str, str]]:
     """Known frameworks and databases a Python file imports, with the import line that dates
     them. `ast` reads real import statements only: strings and comments cannot fake one."""
-    text = _read(path)
     try:
+        data = _read_bytes(path)
+        header_lines = BytesIO(data.replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
+        encoding, _ = tokenize.detect_encoding(header_lines.readline)
+        text = data.decode(encoding)
         tree = ast.parse(text)
-    except (SyntaxError, ValueError, RecursionError, MemoryError):
+    except (SyntaxError, UnicodeError, LookupError, RecursionError, MemoryError):
         return []  # Python 2 or broken source: no evidence rather than a guess
     lines = text.splitlines()
     found = []
@@ -361,12 +366,16 @@ def with_imports(
     return sorted(found.values(), key=lambda t: (CATEGORIES.index(t.category), t.name.lower()))
 
 
-def _read(path: Path) -> str:
+def _read_bytes(path: Path) -> bytes:
     with path.open("rb") as file:
         data = file.read(MAX_MANIFEST_BYTES + 1)
     if len(data) > MAX_MANIFEST_BYTES:
         raise ValueError("manifest exceeds size limit")
-    return data.decode("utf-8")
+    return data
+
+
+def _read(path: Path) -> str:
+    return _read_bytes(path).decode("utf-8")
 
 
 def _xml(path: Path) -> ET.Element:
