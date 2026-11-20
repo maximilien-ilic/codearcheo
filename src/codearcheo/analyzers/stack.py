@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import tomllib
@@ -171,6 +172,18 @@ _PHP_SINGLE_QUOTED = re.compile(r"(?:\\.|[^'\\])*'", re.DOTALL)
 _PHP_INTERPOLATION = r"\\.|\{\$|\$\{"
 MAX_PHP_FILES = 500
 
+# Without a Python manifest, the imports are the only evidence of a framework or a database.
+_PYTHON_MANIFESTS = {"pyproject.toml", "setup.py", "setup.cfg", "Pipfile"}
+_PYTHON_IMPORTS = {
+    "sqlite3": ("SQLite", "data"), "pymysql": ("MySQL", "data"), "MySQLdb": ("MySQL", "data"),
+    "mysql": ("MySQL", "data"),  # mysql.connector
+    **{module: NOTABLE[module] for module in (
+        "django", "flask", "fastapi", "typer", "click", "sqlalchemy", "alembic", "psycopg",
+        "psycopg2", "asyncpg", "pymongo", "redis", "celery",
+    )},
+}
+MAX_PYTHON_FILES = 500
+
 CATEGORIES = [
     "language", "framework", "ui", "data", "api", "ai", "infra", "ci", "testing", "tooling",
     "library",
@@ -269,6 +282,29 @@ def _with_mysqli(
     found: list[tuple[str, str, str]], mysqli: str | None,
 ) -> list[tuple[str, str, str]]:
     return [*found, ("MySQL", "data", mysqli)] if mysqli else found
+
+
+def _python_imports(path: Path) -> list[tuple[str, str, str]]:
+    """Known frameworks and databases a Python file imports, with the import line that dates
+    them. `ast` reads real import statements only: strings and comments cannot fake one."""
+    text = _read(path)
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return []  # Python 2 or broken source: no evidence rather than a guess
+    lines = text.splitlines()
+    found = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
+            modules = [node.module]
+        else:
+            continue
+        for module in modules:
+            if known := _PYTHON_IMPORTS.get(module.split(".", 1)[0]):
+                found.append((*known, lines[node.lineno - 1].strip()))
+    return found
 
 
 def _read(path: Path) -> str:
@@ -490,6 +526,14 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
     )
     own = set()
     auxiliary_own = set()
+    python_manifest = any(
+        not _priority(f)[0] and (
+            PurePosixPath(f).name in _PYTHON_MANIFESTS
+            or _REQUIREMENTS_FILE.match(PurePosixPath(f).name)
+        )
+        for f in ordered
+    )
+    python_files = 0
     php_files = 0
     for path in ordered:
         if PurePosixPath(path).name in _SELF_DECLARING:
@@ -549,6 +593,14 @@ def detect(root: Path, files: list[str]) -> list[Technology]:
                     add(name, category, path, needle)
             except (OSError, ValueError):
                 pass  # oversized or non-UTF-8 source: no evidence rather than a guess
+
+        if p.suffix == ".py" and not python_manifest and python_files < MAX_PYTHON_FILES:
+            python_files += 1
+            try:
+                for name, category, needle in _python_imports(root / path):
+                    add(name, category, path, needle)
+            except (OSError, ValueError):
+                pass  # oversized or non-UTF-8 source
 
         if path == php_source:
             add("PHP", "language", path)
