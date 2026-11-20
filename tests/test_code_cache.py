@@ -195,3 +195,46 @@ def test_memory_is_kept_per_file_list(project):
     every = code.analyze(project.root)
     only = code.analyze(project.root, ["app.py"])
     assert only is not every and list(only.modules) == ["app.py"]
+
+
+def test_memory_is_invalidated_when_the_go_module_changes(project):
+    (project.root / "pkg").mkdir()
+    (project.root / "pkg/lib.go").write_text("package pkg\n")
+    (project.root / "main.go").write_text('package main\nimport "example.com/demo/pkg"\n')
+    manifest = project.root / "go.mod"
+    manifest.write_text("module example.com/demo\n")
+
+    first = code.analyze(project.root)
+    assert ("main.go", "pkg/lib.go") in first.edges()
+
+    manifest.write_text("module example.com/renamed\n")
+    assert ("main.go", "pkg/lib.go") not in code.analyze(project.root).edges()
+
+
+def test_memory_is_invalidated_by_a_replacement_with_the_same_size_and_mtime(project):
+    import os
+
+    source = project.root / "worker.py"
+    source.write_text("def old(): pass\n")
+    before = source.stat()
+    code.analyze(project.root)
+
+    replacement = project.root / "replacement.py"
+    replacement.write_text("def new(): pass\n")
+    os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+    replacement.replace(source)
+
+    module = code.analyze(project.root).modules["worker.py"]
+    assert [symbol.name for symbol in module.symbols] == ["new"]
+
+
+def test_overlapping_analyses_keep_gc_suspended_until_the_last_exit():
+    import gc
+    from contextlib import ExitStack
+
+    with ExitStack() as first, ExitStack() as second:
+        first.enter_context(code._without_gc())
+        second.enter_context(code._without_gc())
+        first.close()
+        assert not gc.isenabled()
+    assert gc.isenabled()

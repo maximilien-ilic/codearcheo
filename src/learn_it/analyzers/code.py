@@ -18,6 +18,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
+from threading import Lock
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -409,43 +410,54 @@ def _save_cache(root: Path, modules: dict[str, dict]) -> None:
         store.remove(_LEGACY_CACHE_FILE)
 
 
+_GC_LOCK = Lock()
+_GC_USERS = 0
+_GC_WAS_ENABLED = False
+
+
 @contextmanager
 def _without_gc() -> Iterator[None]:
     """The graph is millions of acyclic objects: collection passes reclaim nothing while it is
     built, yet cost 45% of the analysis on golang/go (5.3 s instead of 3.1 s)."""
-    enabled = gc.isenabled()
-    gc.disable()
+    global _GC_USERS, _GC_WAS_ENABLED
+    with _GC_LOCK:
+        if _GC_USERS == 0:
+            _GC_WAS_ENABLED = gc.isenabled()
+            gc.disable()
+        _GC_USERS += 1
     try:
         yield
     finally:
-        if enabled:
-            gc.enable()
+        with _GC_LOCK:
+            _GC_USERS -= 1
+            if _GC_USERS == 0 and _GC_WAS_ENABLED:
+                gc.enable()
 
 
 def analyze(root: Path, files: list[str] | None = None) -> CodeGraph | None:
     """Build a bounded graph from the current safe worktree; None means extra not installed."""
     if not available():
         return None
-    with _without_gc():
-        return _analyze(root, files)
+    return _analyze(root, files)
 
 
 # The last graph, for one project at a time: find_symbol and module_dependencies ask for it on
-# every call. An edit of the same size within one mtime tick would go unseen.
+# every call.
 _LAST_GRAPH: dict[Path, tuple[tuple, CodeGraph]] = {}
 
 
 def _fingerprint(root: Path, files: list[str]) -> tuple:
-    """Each source file's path, size and modification time: any edit, addition or removal
-    of a parsed file changes it."""
+    """Track source files and the Go manifests used for resolving imports."""
     entries = []
     for path in files:
-        if PurePosixPath(path).suffix in EXTENSIONS:
+        relative = PurePosixPath(path)
+        if relative.suffix in EXTENSIONS or relative.name == "go.mod":
             try:
                 info = (root / path).stat()
             except OSError:
                 continue
-            entries.append((path, info.st_size, info.st_mtime_ns))
+            entries.append((path, info.st_dev, info.st_ino, info.st_size,
+                            info.st_mtime_ns, info.st_ctime_ns))
     return tuple(entries)
 
 
@@ -460,7 +472,8 @@ def _analyze(root: Path, files: list[str] | None) -> CodeGraph:
     last = _LAST_GRAPH.get(root)
     if last is not None and last[0] == key:
         return last[1]
-    graph = _build(root, files)
+    with _without_gc():
+        graph = _build(root, files)
     _LAST_GRAPH.clear()
     _LAST_GRAPH[root] = (key, graph)
     return graph
