@@ -1,6 +1,6 @@
 [project]
 name = "learn-it"
-version = "0.1.0"
+version = "0.2.0"
 description = "Interroge n'importe quel projet, comprends ses décisions techniques, améliore-les."
 readme = "README.md"
 license = "MIT"

@@ -6,6 +6,8 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-20
+
 ### Ajouts
 
 - CLI locale pour analyser un dossier ou un dépôt GitHub : `scan`, `overview`, `ask`,
@@ -18,6 +20,12 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 - Moteur API Anthropic et moteur Claude Code utilisant l'authentification de son CLI.
 - Catalogue d'évaluation, archivage des réponses par cas et recalcul hors ligne.
 - Licence MIT et préparation de la publication par Trusted Publishing.
+- Correction des citations disponible sur l'abonnement Claude (moteur `claude-code`).
+- `review --path` pour une revue limitée à un fichier ou un dossier.
+- Projets PHP sans `composer.json` : PHP et base de données déduite de la connexion PDO
+  ou mysqli.
+- Indicateur avec le temps écoulé pendant l'analyse du moteur `claude-code`.
+- Revue Claude côté serveur après la CI de chaque push sur `master`.
 
 ### Corrections
 
@@ -28,8 +36,14 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 - Commandes sans génération indépendantes de la configuration du modèle.
 - Conservation des erreurs de moteur et des vérifications de correction dans les évaluations.
 - Application de la limite de tours configurée au moteur Claude Code.
+- Complétion locale des chemins abrégés : suffixe unique et nom unique dans le périmètre
+  d'une revue ciblée.
 
 ### Performance
 
 - Résolution des imports Go indexée et cache des modules et refus de parsing par contenu.
 - Cache syntaxique gzip : environ 225 à 14 Mio sur le dépôt Go, avec un graphe identique.
+- Effort `medium` par défaut : 32 % de coût en moins que `high`, sans perte mesurée.
+- Profil et résultats d'outils en JSON compact : prompt système plus court de 22 à 35 %.
+- Sur golang/go : scan à chaud de 7,8 à 6,5 s, `find_symbol` de 3,5 à 0,45 s par appel,
+  démarrage de `learn-it serve` de 9,5 à 1 s.

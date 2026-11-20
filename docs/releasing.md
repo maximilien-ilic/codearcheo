@@ -1,8 +1,8 @@
 # Préparer et publier une version
 
-Le ticket #24 prévoit une première publication `v0.2.0` à la fin du projet. La version
-de développement reste actuellement `0.1.0`. Les changements préparés sont décrits dans
-[`CHANGELOG.md`](../CHANGELOG.md), section `Unreleased`.
+Le ticket #24 prévoit une première publication `v0.2.0`. La version du code est passée à
+`0.2.0` le 20 novembre 2026, et ses notes sont dans [`CHANGELOG.md`](../CHANGELOG.md).
+Les changements suivants iront dans la section `Unreleased`.
 
 ## Vérifier le paquet avant la publication
 
