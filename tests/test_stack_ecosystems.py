@@ -353,3 +353,49 @@ def test_php_interpolations_are_code_and_their_strings_are_not(tmp_path, code, e
 def test_deeply_nested_interpolations_do_not_recurse(tmp_path):
     (tmp_path / "db.php").write_text("<?php\n" + '"{$' * 50_000 + "\nnew PDO('pgsql:x');")
     stack.detect(tmp_path, ["db.php"])  # no RecursionError; an unterminated file just ends
+
+
+def test_plain_python_without_manifest_reports_imported_frameworks_and_databases(tmp_path):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "app.py").write_text("from flask import Flask\napp = Flask(__name__)\n")
+    _commit(tmp_path, "Start the app", "2024-02-01T10:00:00+00:00")
+    (tmp_path / "db.py").write_text("import sqlite3\nimport mysql.connector as m\n")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_cache.py").write_text("import redis\n")
+    _commit(tmp_path, "Store orders", "2024-02-03T10:00:00+00:00")
+
+    technologies = {t.name: t for t in scan(Project(tmp_path, "demo")).technologies}
+
+    assert technologies["Flask"].source == "app.py"
+    assert technologies["Flask"].adopted.subject == "Start the app"
+    assert technologies["SQLite"].adopted.subject == "Store orders"
+    assert technologies["MySQL"].source == "db.py"
+    assert technologies["Redis"].auxiliary  # only a test imports it
+    assert {"Flask", "SQLite", "MySQL", "Redis"} == technologies.keys()
+
+
+@pytest.mark.parametrize("code,expected", [
+    ('"""Example:\n\nimport flask\n"""\n# import django\nx = "import sqlite3"\n', set()),
+    ("def load():\n    from sqlalchemy import create_engine\n", {"SQLAlchemy"}),
+    ("from . import flask\nimport requests\nimport json\n", set()),
+    ("print 'python 2'\nimport flask\n", set()),  # unparsable: no guess
+])
+def test_python_imports_are_read_with_ast(tmp_path, code, expected):
+    (tmp_path / "app.py").write_text(code)
+    found = {t.name for t in stack.detect(tmp_path, ["app.py"])}
+    assert found == expected
+
+
+@pytest.mark.parametrize("manifest", ["requirements.txt", "pyproject.toml", "setup.py"])
+def test_a_python_manifest_keeps_its_role_over_imports(tmp_path, manifest):
+    (tmp_path / manifest).write_text("")
+    (tmp_path / "app.py").write_text("import flask\n")
+    assert "Flask" not in {t.name for t in stack.detect(tmp_path, [manifest, "app.py"])}
+
+
+def test_an_example_manifest_does_not_hide_the_project_imports(tmp_path):
+    (tmp_path / "examples").mkdir()
+    (tmp_path / "examples" / "requirements.txt").write_text("")
+    (tmp_path / "app.py").write_text("import flask\n")
+    found = {t.name for t in stack.detect(tmp_path, ["examples/requirements.txt", "app.py"])}
+    assert "Flask" in found
