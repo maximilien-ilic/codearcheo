@@ -324,6 +324,7 @@ def test_default_behavior_keeps_no_session_request_limit_and_16000_output(monkey
 
 
 def test_limit_settings_explicit_options_override_environment(monkeypatch):
+    monkeypatch.setenv("LEARN_IT_BACKEND", "api")
     monkeypatch.setenv("LEARN_IT_MAX_REQUESTS", "invalid")
     monkeypatch.setenv("LEARN_IT_MAX_OUTPUT_TOKENS", "invalid")
     settings = Settings.from_env(max_requests=2, max_output_tokens=123)
