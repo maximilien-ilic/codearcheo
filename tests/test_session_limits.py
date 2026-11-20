@@ -59,6 +59,7 @@ def sse(message):
 
 def client_factory(monkeypatch, handler, *, retries=0, follow_redirects=False):
     created = []
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
 
     def create():
         client = anthropic.Anthropic(
