@@ -24,7 +24,7 @@ def stream_text(text: str) -> None:
 
 def interactive(session: Session, *, read: Callable[[], str] | None = None) -> None:
     read = read or (lambda: typer.prompt("Vous"))
-    system = prompts.SYSTEM.format(profile=session.profile.model_dump_json(indent=1))
+    system = prompts.system(session.profile)
     options = {"limits": session.limits} if session.limits is not None else {}
     agent = ConversationAgent(
         system, ProjectTools(session.project.root).exploration(), session.settings, **options

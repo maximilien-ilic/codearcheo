@@ -4,6 +4,13 @@ The system prompt is the same for every task on a given project, so its prompt c
 shared between commands; the task itself travels in the user message.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from learn_it.domain import ProjectProfile
+
 SYSTEM = """\
 You are learn-it, a senior software architect who helps developers understand a codebase in \
 depth: what it does, how it is built, and above all why it was built this way.
@@ -39,6 +46,11 @@ evidence is missing, say so instead of inventing a rationale.
 {profile}
 </project_profile>
 """
+
+
+def system(profile: ProjectProfile) -> str:
+    """Compact JSON: the profile is re-read on every request of every task."""
+    return SYSTEM.format(profile=profile.model_dump_json(exclude_none=True))
 
 ASK = """\
 Question about the project:

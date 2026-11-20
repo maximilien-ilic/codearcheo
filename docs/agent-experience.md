@@ -2,7 +2,7 @@
 
 Les commandes IA (`ask`, `overview`, `decisions`, `why`, `review`, `chat`) acceptent
 `--model`, `--effort` et `--budget`. Les options explicites priment sur les variables
-d'environnement. Le modèle par défaut reste `claude-opus-5-5`, effort `high`.
+d'environnement. Le modèle par défaut reste `claude-opus-5-5`, effort `medium`.
 
 ```bash
 learn-it ask "Où sont stockées les sessions ?" --effort medium --budget 40000

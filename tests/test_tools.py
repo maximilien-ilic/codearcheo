@@ -29,7 +29,7 @@ def test_list_and_search_skip_secrets(tools):
 
 
 def test_read_file_returns_numbered_lines(tools):
-    assert "    3  app = FastAPI()" in tools.read_file("app.py", 3, 3)
+    assert "\n3\tapp = FastAPI()" in tools.read_file("app.py", 3, 3)
 
 
 @pytest.mark.parametrize("path", ["../outside.txt", "/etc/passwd", ".env", ".git/config"])
