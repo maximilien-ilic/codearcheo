@@ -374,6 +374,26 @@ def test_plain_python_without_manifest_reports_imported_frameworks_and_databases
     assert {"Flask", "SQLite", "MySQL", "Redis"} == technologies.keys()
 
 
+@pytest.mark.parametrize(("encoding", "newline"), [
+    ("latin-1", "\n"),
+    ("latin-1", "\r\n"),
+    ("utf-8-sig", "\n"),
+])
+def test_python_imports_honor_source_encoding(tmp_path, encoding, newline):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    cookie = "latin-1" if encoding == "latin-1" else "utf-8"
+    source = f"#!/usr/bin/env python\n# coding: {cookie}\n# café\nimport flask\n"
+    source = source.replace("\n", newline)
+    (tmp_path / "app.py").write_bytes(source.encode(encoding))
+    _commit(tmp_path, "Import Flask", "2024-02-01T10:00:00+00:00")
+
+    (flask,) = scan(Project(tmp_path, "demo")).technologies
+
+    assert flask.name == "Flask"
+    assert flask.source == "app.py"
+    assert flask.adopted.subject == "Import Flask"
+
+
 @pytest.mark.parametrize("code,expected", [
     ('"""Example:\n\nimport flask\n"""\n# import django\nx = "import sqlite3"\n', set()),
     ("def load():\n    from sqlalchemy import create_engine\n", {"SQLAlchemy"}),
