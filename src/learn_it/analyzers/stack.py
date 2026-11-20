@@ -157,6 +157,7 @@ _PHP_CONNECTION = re.compile(
     r"""
     (?P<close>\?>) | (?://|\#(?!\[))[^\n?]*(?:\?(?!>)[^\n?]*)*
     | /\*.*?(?:\*/|\Z)
+    | <<<[\ \t]*(?P<hq>['"]?)(?P<tag>[A-Za-z_]\w*)(?P=hq)\r?\n.*?(?:\n[\ \t]*(?P=tag)\b|\Z)
     | \bnew\s+\\?PDO\s*\(\s*
         (?P<quote>['"])(?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):
         (?:\\.|(?!(?P=quote))[^\\])*(?P=quote)

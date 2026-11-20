@@ -299,6 +299,8 @@ def test_php_database_signals_need_an_actual_connection(tmp_path, code, expected
     ("""<div data-db="<?php $db = new PDO('sqlite:app.db'); ?>">""", {"SQLite"}),
     ("""<?php echo '?>'; ?> <pre>new PDO('pgsql:example');</pre>""", set()),
     ("""<?php // comment ?> <?= mysqli_connect('host') ?>""", {"MySQL"}),
+    ("<?php\n$x = <<<EOT\nnew PDO('pgsql:x') ?>\nEOT;\n$d = new PDO('sqlite:a');", {"SQLite"}),
+    ("<?php\n$x = <<<'SQL'\nit's new PDO('pgsql:x')\nSQL;\n", set()),
 ])
 def test_php_database_signals_in_mixed_templates(tmp_path, template, expected):
     (tmp_path / "index.php").write_text(template)
