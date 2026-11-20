@@ -5,6 +5,7 @@ import json
 import subprocess
 import zipfile
 from datetime import UTC, datetime, timedelta
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 import yaml
@@ -39,6 +40,7 @@ class GitHub:
         self.visibility = "public"
         self.total_count = len(costs)
         self.sha = SHA
+        self.event = "push"
 
     def __call__(self, endpoint, **options):
         if endpoint == f"repos/{usage.REPO}":
@@ -46,8 +48,10 @@ class GitHub:
         if endpoint.endswith(f"/workflows/{usage.WORKFLOW}"):
             return {"created_at": (NOW - timedelta(days=2)).isoformat()}
         if "/workflows/" in endpoint and "/runs?" in endpoint:
+            if parse_qs(urlsplit(endpoint).query)["event"] != [self.event]:
+                return [{"total_count": 0, "workflow_runs": []}]
             return [{"total_count": self.total_count, "workflow_runs": [
-                {"id": i, "run_attempt": 1, "head_sha": SHA,
+                {"id": i, "run_attempt": 1, "head_sha": SHA, "event": self.event,
                  "created_at": (NOW - timedelta(hours=i)).isoformat()}
                 for i in range(1, len(self.costs) + 1)
             ]}]
@@ -200,7 +204,8 @@ def test_a_rerun_does_not_erase_the_cost_of_the_first_attempt(second_started):
     def request(endpoint, **options):
         if "/workflows/" in endpoint and "/runs?" in endpoint:
             pages = base(endpoint, **options)
-            pages[0]["workflow_runs"][0]["run_attempt"] = 2
+            for run in pages[0]["workflow_runs"]:
+                run["run_attempt"] = 2
             return pages
         if endpoint.endswith("/jobs"):
             jobs = base(endpoint, **options)
@@ -240,6 +245,29 @@ def test_artifacts_from_a_different_commit_are_not_used():
     measured = usage.report(usage.REPO, days=7, now=NOW, request=github)
     assert measured["usage_missing"] == 1
     assert measured["projected_30d_api_equivalent_usd"] is None
+
+
+@pytest.mark.parametrize("sha, expected", [("2" * 40, 0.75), ("invalid", None)])
+def test_report_keeps_push_history_and_accepts_the_upstream_ci_sha(sha, expected):
+    legacy = GitHub(costs=(0.25,), skipped=False)
+    current = GitHub(costs=(0.25, 0.75), skipped=False)
+    current.event = "workflow_run"
+    current.sha = sha
+
+    def request(endpoint, **options):
+        if "/workflows/" in endpoint and "/runs?" in endpoint:
+            pages = current(endpoint, **options)
+            if pages[0]["workflow_runs"]:
+                return [{"total_count": 1, "workflow_runs": pages[0]["workflow_runs"][1:]}]
+        if "/runs/2/" in endpoint or "/artifacts/2/" in endpoint:
+            return current(endpoint, **options)
+        return legacy(endpoint, **options)
+
+    measured = usage.report(usage.REPO, days=7, now=NOW, request=request)
+    assert measured["push_triggers"] == 2
+    assert {run["run_id"]: run["api_equivalent_usd"] for run in measured["runs"]} == {
+        1: 0.25, 2: expected,
+    }
 
 
 def test_a_truncated_history_cannot_produce_a_monthly_projection():

@@ -54,7 +54,10 @@ Cette commande lit l'historique GitHub et les relevés disponibles sans lancer C
 Elle compte les déclenchements sur `master`, toutes les tentatives de ces déclenchements,
 les appels effectivement démarrés et les exécutions ignorées. Un relevé absent reste
 inconnu ; il n'est pas compté comme gratuit.
-Les artefacts sont vérifiés contre le dépôt, le SHA, le numéro d'exécution et sa tentative.
+L'historique inclut les anciens déclenchements directs et les revues lancées par la CI.
+Les artefacts sont vérifiés contre le dépôt, le numéro d'exécution et sa tentative. Pour les
+revues lancées par la CI, le SHA enregistré désigne le commit de la CI. GitHub expose dans
+la liste des revues le SHA de la pointe de la branche par défaut au déclenchement.
 
 La projection à 30 jours conserve la cadence observée et suppose une revue du modèle par
 déclenchement après activation, avec le nombre moyen de tentatives mesuré. La file GitHub

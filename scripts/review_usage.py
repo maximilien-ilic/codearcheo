@@ -130,13 +130,17 @@ def archived_usage(repo: str, run: dict, request=github) -> dict[str, Any] | Non
             usage.get("repository"),
             usage.get("run_id"),
             usage.get("run_attempt"),
-            usage.get("sha"),
         ) != (
             repo,
             run["id"],
             run["run_attempt"],
-            run["head_sha"],
         ):
+            return None
+        sha = usage.get("sha")
+        # A workflow_run executes on the default branch tip but reviews the CI's SHA.
+        if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
+            return None
+        if run["event"] != "workflow_run" and sha != run["head_sha"]:
             return None
         return {"api_equivalent_usd": number(usage.get("api_equivalent_usd"))}
     except (OSError, ValueError, KeyError, RecursionError, zipfile.BadZipFile):
@@ -156,18 +160,21 @@ def report(
     start = max(now - timedelta(days=days), timestamp(workflow["created_at"]))
     if start >= now:
         raise ValueError("La fenêtre d'observation du workflow est vide.")
-    query = urlencode(
-        {
-            "branch": "master",
-            "event": "workflow_run",
-            "per_page": 100,
-            "created": f"{start.isoformat()}..{now.isoformat()}",
-        }
-    )
-    pages = request(f"repos/{repo}/actions/workflows/{WORKFLOW}/runs?{query}", paginate=True)
-    all_runs = {run["id"]: run for page in pages for run in page["workflow_runs"]}
-    if len(all_runs) < pages[0]["total_count"]:
-        raise ValueError("Historique tronqué : réduire --days.")
+    all_runs = {}
+    for event in ("push", "workflow_run"):
+        query = urlencode(
+            {
+                "branch": "master",
+                "event": event,
+                "per_page": 100,
+                "created": f"{start.isoformat()}..{now.isoformat()}",
+            }
+        )
+        pages = request(f"repos/{repo}/actions/workflows/{WORKFLOW}/runs?{query}", paginate=True)
+        event_runs = {run["id"]: run for page in pages for run in page["workflow_runs"]}
+        if len(event_runs) < pages[0]["total_count"]:
+            raise ValueError("Historique tronqué : réduire --days.")
+        all_runs.update(event_runs)
     runs = [run for run in all_runs.values() if start <= timestamp(run["created_at"]) <= now]
     samples = []
     standard_runners = True
