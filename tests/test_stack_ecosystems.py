@@ -295,6 +295,19 @@ def test_php_database_signals_need_an_actual_connection(tmp_path, code, expected
     assert found == expected
 
 
+@pytest.mark.parametrize("template,expected", [
+    ("""<div data-db="<?php $db = new PDO('sqlite:app.db'); ?>">""", {"SQLite"}),
+    ("""<?php echo '?>'; ?> <pre>new PDO('pgsql:example');</pre>""", set()),
+    ("""<?php // comment ?> <?= mysqli_connect('host') ?>""", {"MySQL"}),
+])
+def test_php_database_signals_in_mixed_templates(tmp_path, template, expected):
+    (tmp_path / "index.php").write_text(template)
+
+    found = {t.name for t in stack.detect(tmp_path, ["index.php"]) if t.category == "data"}
+
+    assert found == expected
+
+
 @pytest.mark.parametrize("manifest,source", [
     ("composer.json", "composer.json"),
     ("examples/composer.json", "index.php"),

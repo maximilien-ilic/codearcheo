@@ -152,9 +152,11 @@ _PHP_DATABASES = {
     "mysql": "MySQL", "pgsql": "PostgreSQL", "sqlite": "SQLite", "sqlsrv": "SQL Server",
     "oci": "Oracle",
 }
+_PHP_OPEN = re.compile(r"<\?(?:php(?=\s|\Z)|=)", re.IGNORECASE)
 _PHP_CONNECTION = re.compile(
     r"""
-    //[^\n]* | \#(?!\[)[^\n]* | /\*.*?(?:\*/|\Z)
+    (?P<close>\?>) | (?://|\#(?!\[))[^\n?]*(?:\?(?!>)[^\n?]*)*
+    | /\*.*?(?:\*/|\Z)
     | \bnew\s+\\?PDO\s*\(\s*
         (?P<quote>['"])(?P<driver>mysql|pgsql|sqlite|sqlsrv|oci):
         (?:\\.|(?!(?P=quote))[^\\])*(?P=quote)
@@ -193,11 +195,18 @@ def _php_databases(path: Path) -> list[tuple[str, str, str]]:
     text = _read(path)
     found = []
     mysqli = None
-    for match in _PHP_CONNECTION.finditer(text):
-        if driver := match["driver"]:
-            found.append((_PHP_DATABASES[driver], "data", f"{driver}:"))
-        elif mysqli is None and match["mysqli"]:
-            mysqli = match["mysqli"].rstrip()
+    offset = 0
+    while opening := _PHP_OPEN.search(text, offset):
+        for match in _PHP_CONNECTION.finditer(text, opening.end()):
+            if match["close"]:
+                offset = match.end()
+                break
+            if driver := match["driver"]:
+                found.append((_PHP_DATABASES[driver], "data", f"{driver}:"))
+            elif mysqli is None and match["mysqli"]:
+                mysqli = match["mysqli"].rstrip()
+        else:
+            break  # The last PHP block runs to the end of the file.
     if mysqli:
         found.append(("MySQL", "data", mysqli))
     return found
