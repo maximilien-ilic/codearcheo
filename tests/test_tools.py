@@ -126,3 +126,9 @@ def test_search_filters_raw_git_paths_before_display(project, filename):
 
     assert tools.search_code("QUOTED_SECRET_CANARY") == "No matches."
     assert "ordinary:name.txt:1:ORDINARY_CANARY" in tools.search_code("ORDINARY_CANARY")
+
+
+def test_read_file_preserves_trailing_whitespace(project, tools):
+    (project.root / "example.md").write_text("First line  \nSecond line\n")
+
+    assert "\n1\tFirst line  \n2\tSecond line" in tools.read_file("example.md")

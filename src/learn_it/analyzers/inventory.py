@@ -8,6 +8,7 @@ import stat
 from collections import Counter
 from collections.abc import Iterable
 from fnmatch import translate
+from os.path import normcase
 from pathlib import Path, PurePosixPath
 
 from learn_it import git
@@ -52,7 +53,7 @@ _SECRET = re.compile("|".join(translate(pattern) for pattern in SECRET_PATTERNS)
 
 def is_secret(path: str) -> bool:
     return any(
-        name not in SECRET_EXCEPTIONS and _SECRET.match(name)
+        name not in SECRET_EXCEPTIONS and _SECRET.match(normcase(name))
         for name in PurePosixPath(path).parts
     )
 
@@ -96,8 +97,15 @@ def safe_files(root: Path, paths: Iterable[str]) -> list[str]:
     safe_dirs: dict[PurePosixPath, bool] = {PurePosixPath("."): True}
 
     def safe_dir(folder: PurePosixPath) -> bool:
-        if folder not in safe_dirs:
-            safe_dirs[folder] = safe_dir(folder.parent) and not (root / folder).is_symlink()
+        unchecked = []
+        current = folder
+        while current not in safe_dirs:
+            unchecked.append(current)
+            current = current.parent
+        safe = safe_dirs[current]
+        for current in reversed(unchecked):
+            safe = safe and not (root / current).is_symlink()
+            safe_dirs[current] = safe
         return safe_dirs[folder]
 
     kept = []

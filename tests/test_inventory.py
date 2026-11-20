@@ -1,5 +1,7 @@
 """The project inventory: what may be listed, read and cited."""
 
+from fnmatch import fnmatch
+
 import pytest
 
 from learn_it.analyzers import inventory
@@ -31,7 +33,8 @@ def test_listing_skips_symlinks_secrets_and_symlinked_folders(project, tmp_path,
 
 @pytest.mark.parametrize(("path", "secret"), [
     ("a/.env", True), ("a/.env.prod", True), ("a/.env.example", False), ("k/server.key", True),
-    ("id_rsa.pub", True), ("keys/notes.md", False), ("a.KEY", False), (".npmrc", True),
+    ("id_rsa.pub", True), ("keys/notes.md", False), ("a.KEY", fnmatch("a.KEY", "*.key")),
+    (".npmrc", True),
 ])
 def test_secret_names(path, secret):
     assert inventory.is_secret(path) is secret
@@ -50,3 +53,19 @@ def test_code_analysis_restores_the_garbage_collector(project):
         assert not gc.isenabled()  # a caller's choice is kept
     finally:
         gc.enable()
+
+
+def test_secret_names_follow_filesystem_case_rules(monkeypatch):
+    import ntpath
+
+    monkeypatch.setattr(inventory, "normcase", ntpath.normcase)
+
+    assert inventory.is_secret("config/SERVER.KEY")
+    assert inventory.is_secret("config/.ENV")
+    assert not inventory.is_secret("config/.env.example")
+
+
+def test_listing_can_skip_a_deep_missing_tracked_file(tmp_path):
+    path = "/".join(["a"] * 1100 + ["source.py"])
+
+    assert inventory.safe_files(tmp_path, [path]) == []
