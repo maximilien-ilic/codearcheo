@@ -11,7 +11,7 @@ learn-it decisions                              # les décisions techniques, au 
 learn-it review                                 # garder, améliorer ou remplacer, et par où commencer
 ```
 
-> **Statut :** les neuf commandes fonctionnent et sont testées. Six évaluations complètes via Claude Code donnent de 13 à 14 cas réussis sur 14, dépôt Go compris ; l'effort `medium`, désormais par défaut, coûte 32 % de moins que `high` sans perte mesurée ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
+> **Statut :** les neuf commandes fonctionnent et sont testées. Six évaluations complètes via Claude Code donnent de 13 à 14 cas réussis sur 14, dépôt Go compris ; l'effort `medium`, désormais par défaut, a réduit de 32 % le coût moyen des réponses en équivalent API lors de la comparaison avec `high` ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
 
 ## Le problème
 
@@ -143,21 +143,21 @@ ne peuvent pas appliquer.
 
 **Ce qui marche.** Les neuf commandes sont en place, couvertes par des tests déterministes sous Python 3.11 et 3.14 à chaque PR.
 
-- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter. Sur golang/go, le cache syntaxique passe de 225 à 14 Mio, avec le même graphe. Le scan à chaud prend 6,5 s au lieu de 7,8 s, et `find_symbol` 0,45 s au lieu de 3,5 s par appel ; les [mesures](docs/scan-performance.md) séparent les passages avec cache chaud et vide.
+- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter. Sur golang/go, le cache syntaxique passe de 225 à 14 Mio, avec le même graphe. Le scan à chaud prend 6,5 s au lieu de 7,8 s, et `find_symbol` 0,45 s au lieu de 3,5 s par appel ; les [mesures de la PR #98](https://github.com/maximilien-ilic/learn-it/pull/98) détaillent ces gains de vitesse. Les [mesures du cache](docs/scan-performance.md) séparent les passages avec cache chaud et vide.
 - **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
 - **Les décisions.** Elles s'exportent en ADR (`decisions --export`), avec refus si aucune preuve n'est vérifiable et avertissement pour chaque référence invalide. Les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
-- **Le moteur.** learn-it tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`LEARN_IT_BACKEND=claude-code`), correction des citations comprise. L'effort par défaut est `medium`, et le profil comme les résultats d'outils sont envoyés en JSON compact : le prompt système est 22 à 35 % plus court.
+- **Le moteur.** learn-it tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`LEARN_IT_BACKEND=claude-code`), correction des citations comprise. L'effort par défaut est `medium`. Le profil et les résultats d'outils sont envoyés en JSON compact. Avec le profil compact, le prompt système mesuré est 22 à 35 % plus court sur Express et Go.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`. Une revue Claude côté serveur tourne aussi depuis le 20 novembre, sur l'abonnement, à la fin de la CI de chaque push ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**Ce qui reste à prouver.** Sur les 56 réponses de la mesure 10 et les 28 de la mesure 11, deux échouent au barème, chaque fois sur un nom de fichier seul ambigu. Les complétions locales (suffixe unique, nom unique dans le périmètre de `--path`) en corrigent une partie sans aucun token. La correction des citations par le modèle n'aurait rien changé : elle refuse, par construction, de deviner un nom ambigu. Il reste à mesurer le moteur API.
+**Ce qui reste à prouver.** Sur les 56 réponses de la mesure 10 et les 28 de la mesure 11, deux échouent au barème, sur des chemins abrégés. En rejeu de la mesure 10, la complétion locale résout une des trois citations invalides de la revue Go. La mesure 11 relève un nom ambigu dans une réponse `why` sur Go. Le gain de la correction par le modèle et les résultats du moteur API restent à mesurer.
 
 **Ce qu'il reste à faire.**
 
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
-| 1 | Mesurer le moteur API (variabilité, effort et coût mesurés sur l'abonnement) | [#10] | une clé API |
-| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | des erreurs que le modèle peut corriger : les cas mesurés n'en contiennent pas |
+| 1 | Mesurer la correction des citations et évaluer le moteur API | [#10] | des cas de comparaison et une clé pour le moteur API |
+| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | une amélioration mesurée de la correction des réponses texte (#10) |
 | 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
 | 4 | Estimer le coût mensuel de la revue serveur (active) | [#25] | une semaine d'historique ; autoriser Actions à ouvrir des PR |
 

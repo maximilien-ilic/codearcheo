@@ -347,12 +347,11 @@ Rapports : `results-20261119-225657-5006f91b.json` et `results-20261119-231118-8
   Ce mode sélectionne les cas `ask` et `why` et consigne les autres dans `skipped` ;
   demander explicitement une revue ou des décisions avec `--case` est refusé avant
   tout appel IA, car ces commandes n'ont pas encore de correction intégrée (#34).
-  Sur les cas actuels, elle n'aurait rien à corriger. Dans les 56 réponses obtenues de
-  la mesure 10, une seule contient des citations invalides : la revue Go, une commande
-  `review`, que `--repair-citations` ne couvre pas. Les 40 réponses `ask` et `why` sont
-  toutes valides après la complétion locale. Mesurer un gain demande donc des cas plus
-  durs, ou une correction étendue aux revues et aux décisions (#34).
+  Les 40 réponses `ask` et `why` de la mesure 10 sont valides après la complétion
+  locale. La revue Go en échec sort du périmètre de la comparaison. Dans la mesure 11,
+  la réponse `why` sur Go échoue sur un nom ambigu. Une comparaison avec et sans
+  correction reste à faire pour mesurer son effet sur les réponses.
 - **Le moteur API** : une mesure avec une clé API, pour confirmer ces scores sur l'autre
   moteur.
-- **L'effort par défaut** : la mesure 10 plaide pour `medium`. Une troisième passe par
-  effort consoliderait ce choix.
+- **L'effort**. Une troisième passe en `high` sur la même version compléterait la
+  comparaison. Le changement 6 fixe déjà le défaut à `medium`.
