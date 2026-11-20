@@ -63,4 +63,3 @@ def test_review_follows_master_ci_because_the_action_rejects_push_events():
     assert job["env"]["SHA"] == "${{ github.event.workflow_run.head_sha || github.sha }}"
     checkout = next(s for s in job["steps"] if s.get("uses", "").startswith("actions/checkout"))
     assert checkout["with"]["ref"] == "${{ env.SHA }}"
-
