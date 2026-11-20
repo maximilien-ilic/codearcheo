@@ -40,7 +40,7 @@ def build_server(session: Session) -> MCPServer:
         decisions = session.store.load_decisions()
         if not decisions:
             return "No decision recorded yet: run `learn-it decisions` on this project."
-        return json.dumps([d.model_dump() for d in decisions], ensure_ascii=False, indent=1)
+        return json.dumps([d.model_dump() for d in decisions], ensure_ascii=False)
 
     server = MCPServer(
         name="learn-it",

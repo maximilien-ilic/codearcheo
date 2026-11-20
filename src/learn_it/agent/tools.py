@@ -78,7 +78,7 @@ class ProjectTools(CodeTools):
                 result = github.context("/".join(names), sha, self._github_client)
             except github.GitHubError as exc:
                 raise ToolError(str(exc)) from exc
-            self._github_cache[sha] = _clip(json.dumps(result, ensure_ascii=False, indent=1))
+            self._github_cache[sha] = _clip(json.dumps(result, ensure_ascii=False))
         return self._github_cache[sha]
 
     def _git(self, *args: str, ok: tuple[int, ...] = (0,)) -> str:

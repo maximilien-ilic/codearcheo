@@ -43,7 +43,7 @@ def _bound_result(result: dict[str, Any]) -> dict[str, Any]:
     """Preserve a valid JSON envelope instead of cutting the serialised response mid-string."""
     texts = [*result["pull_requests"], *result["referenced_issues"]]
     texts += [comment for pr in result["pull_requests"] for comment in pr["comments"]]
-    while len(json.dumps(result, ensure_ascii=False, indent=1)) > MAX_CONTEXT:
+    while len(json.dumps(result, ensure_ascii=False)) > MAX_CONTEXT:
         candidates = [item for item in texts if len(item["body"]) > 40]
         if not candidates:
             break  # metadata is bounded separately by number/title limits

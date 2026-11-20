@@ -29,7 +29,7 @@ def test_origin_and_pr_only_rationale_are_available_without_network(tmp_path):
     assert context["referenced_issues"][0]["number"] == 7
     assert "UNTRUSTED" in context["trust"]
     # The cached context is reusable offline without a second client/request.
-    assert tools.github_context(git.head(root)) == json.dumps(context, ensure_ascii=False, indent=1)
+    assert tools.github_context(git.head(root)) == json.dumps(context, ensure_ascii=False)
 
 
 def test_github_tool_refuses_options_or_unsupported_origin(project):
@@ -64,7 +64,7 @@ def test_context_bounds_requests_text_and_ignores_foreign_issue_references():
     assert all(len(pr["body"]) < 2600 for pr in data["pull_requests"])
     assert all(len(pr["comments"]) <= 2 * github.MAX_COMMENTS for pr in data["pull_requests"])
     assert not data["referenced_issues"]  # refs after the size bound are not followed
-    assert len(json.dumps(data, ensure_ascii=False, indent=1)) <= github.MAX_CONTEXT
+    assert len(json.dumps(data, ensure_ascii=False)) <= github.MAX_CONTEXT
 
 
 def test_only_same_repo_numeric_references_are_followed():
