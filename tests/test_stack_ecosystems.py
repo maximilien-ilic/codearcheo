@@ -327,3 +327,13 @@ def test_php_source_prefers_a_main_manifest_over_a_php_file(tmp_path, manifest, 
     php = next(t for t in stack.detect(tmp_path, ["index.php", manifest]) if t.name == "PHP")
 
     assert php.source == source
+
+
+@pytest.mark.xfail(strict=True, reason="heuristic limit (#126): needs a PHP lexer")
+def test_a_heredoc_nested_in_an_interpolation_with_the_same_label(tmp_path):
+    (tmp_path / "db.php").write_text(
+        "<?php\n$x = <<<EOT\n{$obj->method(<<<EOT\ninner\nEOT\n)}\n"
+        "new PDO('pgsql:x')\nEOT;\nnew PDO('sqlite:x');\n"
+    )
+    found = {t.name for t in stack.detect(tmp_path, ["db.php"]) if t.category == "data"}
+    assert found == {"SQLite"}
