@@ -110,6 +110,8 @@ jobs:
                Les commits restent au nom du propriétaire configuré par le workflow,
                sans signature Co-Authored-By ni attribution de coauteur à une IA.
             4. Ouvre un ticket pour chaque défaut non corrigé. Aucun constat : ne crée rien.
+               Le jeton de ce workflow ne peut pas pousser un changement de `.github/workflows/` :
+               pour un tel correctif, joins le diff complet au ticket au lieu de le pousser.
             5. Ajoute à l'issue #4 un compte rendu : plage relue, constats, PR et tickets,
                tests lancés, limites. Commence-le par « Revue serveur (Claude) ».
             6. À la toute fin seulement, publie le statut :

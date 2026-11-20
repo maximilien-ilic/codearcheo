@@ -44,6 +44,14 @@ GitHub exécute une revue à la fois et peut remplacer une revue en attente par 
 plus récent. La base revue permet à l'exécution suivante de couvrir aussi les
 changements des exécutions annulées ou échouées.
 
+## Limites du jeton GitHub
+
+- Le jeton `GITHUB_TOKEN` n'a jamais la permission `workflows`. Un correctif de
+  `.github/workflows/` est donc joint au ticket sous forme de diff, et un humain le pousse.
+- Ouvrir une PR depuis GitHub Actions demande le réglage « Allow GitHub Actions to create and
+  approve pull requests » (Settings → Actions → General). Il est désactivé sur ce dépôt :
+  sans lui, la revue ne peut que commenter et ouvrir des tickets.
+
 ## Charge et coût
 
 ```bash
