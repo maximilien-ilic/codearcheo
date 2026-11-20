@@ -150,7 +150,7 @@ ne peuvent pas appliquer.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`. Une revue Claude côté serveur tourne aussi depuis le 20 novembre, sur l'abonnement, à la fin de la CI de chaque push ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**La version 0.2.0** est publiée sur GitHub ([release](https://github.com/maximilien-ilic/learn-it/releases/tag/v0.2.0)). La publication sur PyPI passe par Trusted Publishing et attend l'approbation du propriétaire.
+**La version 0.2.0** est publiée sur GitHub ([release](https://github.com/maximilien-ilic/learn-it/releases/tag/v0.2.0)). Le premier lancement du workflow a vérifié les archives, puis le job PyPI a été annulé. La publication reste à finaliser via Trusted Publishing ([#24](https://github.com/maximilien-ilic/learn-it/issues/24)).
 
 **La qualité mesurée.** Depuis la mesure 10, sept évaluations complètes sur l'abonnement donnent 95 réponses réussies sur 98. Les trois échecs : deux noms de fichier ambigus, que learn-it refuse de deviner, et une réponse qui dit qu'un choix n'est pas documenté sans employer le mot attendu ([docs/evaluation.md](docs/evaluation.md)).
 
@@ -180,8 +180,8 @@ La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 
 
 Le [CHANGELOG](CHANGELOG.md) suit les changements non publiés. Le
 [guide de publication](docs/releasing.md) décrit la vérification du wheel et de l'archive
-source, leur installation isolée et le workflow Trusted Publishing prévu pour la première
-version PyPI, à la fin du projet.
+source, leur installation isolée et le workflow Trusted Publishing pour la première
+version PyPI.
 
 ### Évaluation
 
