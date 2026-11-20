@@ -168,6 +168,8 @@ Les jalons, l'historique du projet et le détail de chaque étape sont dans [doc
 
 ## Développement
 
+Pour faire évoluer le projet (où ajouter du code, comment le mesurer et le livrer), voir [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Les [commandes de suivi des décisions](docs/decision-workflow.md) décrivent la
 vérification des citations, l'export ADR, les recommandations en JSON, les tickets
 sur confirmation et `learn-it diff`. Voir aussi les
