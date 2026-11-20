@@ -195,7 +195,12 @@ _LEGACY_PROVIDER = re.compile(r'\bprovider\s+"([\w-]+)"\s*\{')
 
 
 def _php_databases(path: Path) -> list[tuple[str, str, str]]:
-    """Databases a PHP file connects to, with the text that dates their adoption."""
+    """Databases a PHP file connects to, with the text that dates their adoption.
+
+    A heuristic over PHP blocks, strings, comments and heredocs, not a PHP lexer. Out of
+    scope: short `<?` tags, connections built at runtime, and a heredoc nested in an
+    interpolation that reuses the outer label (#126). A miss there only adds or drops one
+    database in the profile: the agent checks the code before citing it."""
     text = _read(path)
     found = []
     mysqli = None
