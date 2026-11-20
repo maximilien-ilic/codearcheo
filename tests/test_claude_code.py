@@ -217,7 +217,9 @@ def test_the_profile_reaches_the_model_as_compact_json(project):
 
 
 @pytest.mark.parametrize("terminal", [True, False])
-def test_a_waiting_indicator_shows_in_a_terminal_only(project, fake_claude, monkeypatch, terminal):
+def test_a_waiting_indicator_shows_in_a_terminal_only(
+    project, fake_claude, monkeypatch, capsys, terminal,
+):
     import io
 
     from rich.console import Console
@@ -228,7 +230,11 @@ def test_a_waiting_indicator_shows_in_a_terminal_only(project, fake_claude, monk
     monkeypatch.setattr(render, "err", Console(file=stream, force_terminal=terminal, width=80))
     fake_claude(result="FastAPI depuis `app.py:3`.")
 
-    answer = features.ask(session(project), "Quel framework ?")
+    current = session(project)
+    current.on_usage = lambda _: print("synthetic-stdout")
+    answer = features.ask(current, "Quel framework ?")
 
     assert answer.startswith("FastAPI depuis `app.py:3`.")
     assert ("Claude Code explore le projet" in stream.getvalue()) is terminal
+    assert capsys.readouterr().out == "synthetic-stdout\n"
+    assert "synthetic-stdout" not in stream.getvalue()
