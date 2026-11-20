@@ -117,8 +117,6 @@ jobs:
             6. À la toute fin seulement, publie le statut :
                `gh api repos/${{ github.repository }}/statuses/${{ env.SHA }} -f state=success -f context=claude/review -f description="Revue effectuée"`
 
-      # GITHUB_SHA, pas SHA : sous workflow_run, le rapport rapproche l'artefact du head_sha de
-      # l'exécution de revue, qui est la pointe de master au lancement et non le commit relu.
       - name: Relever les compteurs sans contenu de conversation
         if: always() && env.HAS_TOKEN == 'true' && steps.claude.outcome != 'skipped'
         id: usage
@@ -129,7 +127,7 @@ jobs:
           python3 "$RUNNER_TEMP/review_usage.py" record \
             --execution-file "${EXECUTION_FILE:-$RUNNER_TEMP/claude-execution-output.json}" \
             --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID" \
-            --attempt "$GITHUB_RUN_ATTEMPT" --sha "$GITHUB_SHA" --conclusion "$CONCLUSION" \
+            --attempt "$GITHUB_RUN_ATTEMPT" --sha "$SHA" --conclusion "$CONCLUSION" \
             --output "$RUNNER_TEMP/review-usage/usage.json"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

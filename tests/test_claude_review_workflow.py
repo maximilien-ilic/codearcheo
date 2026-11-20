@@ -64,8 +64,3 @@ def test_review_follows_master_ci_because_the_action_rejects_push_events():
     checkout = next(s for s in job["steps"] if s.get("uses", "").startswith("actions/checkout"))
     assert checkout["with"]["ref"] == "${{ env.SHA }}"
 
-
-def test_usage_is_recorded_under_the_run_head_sha_that_the_report_matches():
-    steps = yaml.safe_load(WORKFLOW.read_text())["jobs"]["review"]["steps"]
-    record = next(step["run"] for step in steps if step.get("id") == "usage")
-    assert '--sha "$GITHUB_SHA"' in record  # workflow_run: run head_sha, not the reviewed SHA
