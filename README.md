@@ -1,70 +1,173 @@
+> Commencé : novembre 2026
+
+<div align="center">
+
 # codearcheo
 
-**Interroge n'importe quel projet. Comprends chaque décision technique. Améliore-les.**
+L'archéologie de ton code : retrouver pourquoi un projet est construit comme il l'est.
+
+![Contributors](https://img.shields.io/github/contributors/maximilien-ilic/codearcheo?color=blue)
+![Forks](https://img.shields.io/github/forks/maximilien-ilic/codearcheo?color=blue)
+![Stars](https://img.shields.io/github/stars/maximilien-ilic/codearcheo?color=yellow)
+![Issues](https://img.shields.io/github/issues/maximilien-ilic/codearcheo?color=green)
+![PyPI](https://img.shields.io/pypi/v/codearcheo?color=blue)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)
+![Tests](https://img.shields.io/badge/tests-591_passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 *Anciennement `learn-it`, renommé le 20 novembre 2026.*
 
-codearcheo analyse un projet (celui sur lequel tu travailles, ou n'importe quel dépôt GitHub) pour répondre à tes questions, reconstituer les décisions techniques qui l'ont façonné, puis dire lesquelles mériteraient d'être revues.
+</div>
 
-```bash
-codearcheo scan https://github.com/owner/repo     # la carte du projet, sans IA
-codearcheo ask "Comment fonctionne l'authentification ?"
-codearcheo decisions                              # les décisions techniques, au format ADR
-codearcheo review                                 # garder, améliorer ou remplacer, et par où commencer
+---
+
+## Table des matières
+
+1. [À propos du projet](#à-propos-du-projet)
+   - [Construit avec](#construit-avec)
+2. [Pour commencer](#pour-commencer)
+   - [Prérequis](#prérequis)
+   - [Installation](#installation)
+3. [Utilisation](#utilisation)
+   - [Configuration](#configuration)
+4. [Comment ça marche](#comment-ça-marche)
+5. [Organisation du code](#organisation-du-code)
+6. [Feuille de route](#feuille-de-route)
+   - [Où en est le projet](#où-en-est-le-projet)
+7. [Contribuer](#contribuer)
+8. [Licence](#licence)
+9. [Contact](#contact)
+10. [Remerciements](#remerciements)
+
+---
+
+## À propos du projet
+
+Le code dit **quoi**. Presque jamais **pourquoi**. Pourquoi PostgreSQL plutôt que MongoDB ?
+Pourquoi ce service à part ? La réponse est éparpillée dans l'historique git, les messages de
+commit, des docs à moitié à jour et la tête de gens partis depuis.
+
+codearcheo est une CLI Python qui fouille un projet local ou un dépôt GitHub comme un
+archéologue fouille un site : elle établit d'abord les faits sans IA (stack, dates d'adoption,
+historique), puis un agent Claude enquête dans le code et l'historique pour répondre à tes
+questions. **Chaque affirmation cite sa source** (`src/db.py:12-40`, `commit a1b2c3d`), et
+codearcheo vérifie que ces références existent.
+
+```console
+$ codearcheo scan https://github.com/maximilien-ilic/Crud-security-formula1
+14 fichiers · langages : PHP (11), SQL (1), CSS (1)
+16 commit(s) · 2 contributeur(s) · du 2026-02-16 au 2026-03-02
+┏━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Techno ┃ Catégorie ┃ Détectée dans ┃ Adoptée                                 ┃
+┡━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ PHP    │ language  │ index.php     │ 2026-02-16 · 8c6635d · add : fichier    │
+│        │           │               │ php                                     │
+│ MySQL  │ data      │ ajouter.php   │ 2026-02-19 · ee7100a · add: function    │
+│        │           │               │ ajouter                                 │
+└────────┴───────────┴───────────────┴─────────────────────────────────────────┘
 ```
 
-> **Statut :** les neuf commandes fonctionnent et sont testées. Six évaluations complètes via Claude Code donnent de 13 à 14 cas réussis sur 14, dépôt Go compris ; l'effort `medium`, désormais par défaut, a réduit de 32 % le coût moyen des réponses en équivalent API lors de la comparaison avec `high` ([docs/evaluation.md](docs/evaluation.md)). Voir [Où en est le projet](#où-en-est-le-projet).
+**Ce que sait faire codearcheo :**
+- Dresser la carte d'un projet sans IA : langages, stack et date d'adoption de chaque techno,
+  zones chaudes, docs, ADR existants, graphe des imports et travail non commité
+- Répondre à n'importe quelle question sur le code, avec des citations vérifiées
+- Reconstituer les décisions techniques (quoi, quand, pourquoi, conséquences) et les exporter en ADR
+- Expliquer pourquoi un fichier, une dépendance ou un choix existe, en remontant jusqu'au commit d'origine
+- Évaluer chaque décision (garder, améliorer ou remplacer), avec effort, impact et plan d'action
+- Suivre l'évolution des technos et des décisions entre deux révisions git
+- Donner les mêmes outils à ton agent (Claude Code, Cursor…) via un serveur MCP
 
-## Le problème
+### Construit avec
 
-Le code dit **quoi**. Presque jamais **pourquoi**.
+- [Python 3.11+](https://www.python.org/)
+- [Typer](https://typer.tiangolo.com/) pour la CLI et [Rich](https://rich.readthedocs.io/) pour l'affichage
+- [Pydantic](https://docs.pydantic.dev/) pour le modèle de données
+- [Claude](https://www.anthropic.com/claude), via le [SDK Anthropic](https://github.com/anthropics/anthropic-sdk-python)
+  ou [Claude Code](https://code.claude.com) sur un abonnement Claude
+- [tree-sitter](https://tree-sitter.github.io/) pour le graphe des imports (Python, JS/TS, Go, Rust)
+- [MCP](https://modelcontextprotocol.io/) pour exposer les outils à d'autres agents
+- [uv](https://docs.astral.sh/uv/), [pytest](https://pytest.org/) et [Ruff](https://docs.astral.sh/ruff/)
 
-Pourquoi PostgreSQL plutôt que MongoDB ? Pourquoi ce monorepo, pourquoi ce service à part ? La réponse est éparpillée dans l'historique git, les messages de commit, des docs à moitié à jour et la tête de gens partis depuis. Comprendre un projet en profondeur prend des semaines. Le modifier sans comprendre ses choix, c'est risquer de casser ce qui tenait pour une bonne raison.
+---
 
-codearcheo rassemble ces indices et les fait parler.
+## Pour commencer
 
-## Ce que ça fait
+### Prérequis
+
+- Python 3.11 ou plus, git et [uv](https://docs.astral.sh/uv/)
+- Pour les commandes IA : [Claude Code](https://code.claude.com) connecté à un abonnement Claude,
+  ou une clé API Anthropic
+
+### Installation
+
+1. Installer la commande depuis PyPI
+```sh
+uv tool install 'codearcheo[mcp,code]'
+```
+
+2. Choisir le moteur : l'abonnement Claude, via Claude Code
+```sh
+export CODEARCHEO_BACKEND=claude-code     # fish : set -Ux CODEARCHEO_BACKEND claude-code
+```
+   ou une clé API : `export ANTHROPIC_API_KEY=sk-ant-...`
+
+3. Vérifier sur un projet, sans IA et gratuitement
+```sh
+codearcheo scan https://github.com/maximilien-ilic/Crud-security-formula1
+```
+
+Pour passer à une nouvelle version : `uv tool upgrade codearcheo`.
+
+---
+
+## Utilisation
+
+La cible est le dossier courant par défaut, un dossier local, ou une URL GitHub
+(en argument pour `scan`, avec `-p` pour les autres commandes).
 
 | Commande | Question à laquelle elle répond | IA |
 |---|---|:---:|
-| `scan [CIBLE]` | De quoi est fait ce projet ? Langages, stack et date d'adoption de chaque techno, activité, fichiers les plus modifiés, docs, travail non commité. | non |
-| `overview` | Comment est-il organisé ? Architecture (avec diagramme), flux principaux, carte du code, ordre de lecture. | oui |
-| `ask "…"` | N'importe quelle question, avec une réponse sourcée. | oui |
-| `decisions` | Quelles décisions techniques ont été prises, quand, pourquoi, avec quelles conséquences ? | oui |
+| `scan [CIBLE]` | De quoi est fait ce projet ? | non |
+| `overview` | Comment est-il organisé ? Architecture avec diagramme, flux, ordre de lecture | oui |
+| `ask "…"` | N'importe quelle question, avec une réponse sourcée | oui |
+| `decisions` | Quelles décisions techniques ont été prises, quand et pourquoi ? | oui |
 | `why <cible>` | Pourquoi ce fichier, cette dépendance ou ce choix existe-t-il ? | oui |
-| `review` | Ces décisions sont-elles toujours les bonnes ? Que changer, à quel coût, par où commencer ? | oui |
-| `chat` | Enchaîner les questions avec historique, streaming et sauvegarde. | oui |
-| `diff [REF]` | Quelles technos et décisions ont changé depuis une révision Git ? | non |
-| `serve` | Les mêmes outils, pour ton agent (Claude Code, Cursor…) via MCP. | — |
+| `review [--path DOSSIER]` | Ces décisions sont-elles toujours les bonnes ? Par où commencer ? | oui |
+| `chat` | Enchaîner les questions (moteur API uniquement) | oui |
+| `diff [REF]` | Qu'est-ce qui a changé depuis une révision git ? | non |
+| `serve` | Les mêmes outils pour ton agent, via MCP | — |
 
-La cible est un dossier local (par défaut le dossier courant) ou une URL GitHub : en argument pour `scan`, avec `-p/--project` pour les autres commandes. Un dépôt GitHub est cloné une fois, historique complet compris, dans `~/.cache/codearcheo/`.
-
-## Démarrage rapide
-
-Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/), et, pour les commandes IA, soit une clé API Anthropic, soit [Claude Code](https://code.claude.com) connecté à un abonnement Claude.
-
-```bash
-git clone https://github.com/maximilien-ilic/codearcheo && cd codearcheo
-uv tool install --editable .          # utilise '.[mcp]' pour serve ou le moteur claude-code
-export ANTHROPIC_API_KEY=sk-ant-...   # ou : ant auth login
-# ou, sans clé, avec ton abonnement Claude : export CODEARCHEO_BACKEND=claude-code
-
+```sh
 cd ~/code/mon-projet
-codearcheo scan                         # gratuit, quelques secondes
-codearcheo ask "Par où passe une commande, de l'API jusqu'à la base ?"
-codearcheo decisions
-codearcheo review
+codearcheo ask "Par où passe une requête, de l'API jusqu'à la base ?"
+codearcheo decisions --export docs/adr       # les décisions, en fichiers ADR
+codearcheo review --path src/api             # une revue limitée à un dossier
+
+# Depuis Claude Code
+claude mcp add codearcheo -- codearcheo serve -p ~/code/mon-projet
 ```
 
-Les résultats sont enregistrés dans `.codearcheo/` à la racine du projet analysé (`profile.json`, `overview.md`, `decisions.md` et `.json`, `review.md`). Ce dossier s'exclut lui-même de git. Le profil est recalculé à chaque commande, donc il suit le travail non commité ; un scan prend moins d'une seconde sur des dépôts de plusieurs milliers de commits.
+Les rapports sont enregistrés dans `.codearcheo/` à la racine du projet analysé
+(`profile.json`, `overview.md`, `decisions.md`, `review.md`). Ce dossier s'exclut lui-même de git.
+Les dépôts GitHub sont clonés une fois dans `~/.cache/codearcheo/`. Chaque commande IA affiche
+son coût et sa durée : comptez de 20 s à 1 min par question sur un petit projet, et quelques
+minutes pour une revue d'un gros dépôt.
 
-### Depuis ton agent, via MCP
+### Configuration
 
-```bash
-claude mcp add codearcheo -- codearcheo serve -p /chemin/vers/mon-projet
-```
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `CODEARCHEO_BACKEND` | `api` | `api` (clé API) ou `claude-code` (abonnement Claude, via `claude -p`) |
+| `CODEARCHEO_MODEL` | `claude-opus-5-5` | modèle Claude |
+| `CODEARCHEO_EFFORT` | `medium` | effort de raisonnement, de `low` à `max` |
+| `CODEARCHEO_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
+| `CODEARCHEO_MAX_ITERATIONS` | `40` | nombre maximal de tours de l'agent |
+| `CODEARCHEO_CACHE_DIR` | `~/.cache/codearcheo` | où sont clonés les dépôts GitHub |
+| `ANTHROPIC_API_KEY` | — | clé API, pour le moteur `api` |
 
-Ton agent dispose alors du profil du projet, des décisions reconstituées et des outils de recherche dans le code et l'historique.
+Les anciennes variables `LEARN_IT_*` restent lues quand les nouvelles sont absentes.
+
+---
 
 ## Comment ça marche
 
@@ -79,132 +182,112 @@ flowchart LR
     P --> M["serveur MCP"]
 ```
 
-1. **Les faits d'abord.** `scan` construit un profil du projet sans IA. La stack vient des manifestes (`pyproject.toml`, `package.json`, `go.mod`, `Cargo.toml`, Dockerfile, compose, CI…), la date d'adoption de chaque techno vient de `git log -S`, et l'historique donne l'activité, les zones chaudes et le travail en cours.
-2. **Puis l'enquête.** L'agent part de ce profil et explore le code comme le ferait un dev : il cherche (`git grep`), lit les passages utiles, remonte l'historique (`git log`, `git show`, `git blame`) jusqu'au commit qui a introduit un choix.
-3. **Des réponses vérifiables.** Chaque affirmation cite sa source (`src/db.py:12-40`, `commit a1b2c3d`), et ce qui est documenté reste séparé de ce qui est déduit.
+1. **Les faits d'abord.** `scan` construit le profil sans IA : la stack vient des manifestes
+   (`pyproject.toml`, `package.json`, `go.mod`, Dockerfile, CI…) ou du code (connexion PDO d'un
+   projet PHP), et la date d'adoption de chaque techno vient de `git log -S`.
+2. **Puis l'enquête.** L'agent part de ce profil et explore comme un développeur : il cherche,
+   lit les passages utiles et remonte l'historique (`git log`, `git show`, `git blame`) jusqu'au
+   commit qui a introduit un choix.
+3. **Des réponses vérifiables.** Chaque citation est contrôlée, et ce qui est documenté reste
+   séparé de ce qui est déduit. Un nom de fichier ambigu est signalé plutôt que deviné.
 
-Principes :
+Les outils de l'agent sont en lecture seule et excluent les fichiers ignorés par git, les fichiers
+sensibles (`.env`, `*.pem`, `id_rsa`…) et les liens symboliques. Pas d'index vectoriel : l'agent
+voit toujours l'état actuel du code, travail non commité compris ([ADR 0002](docs/adr/0002-recherche-agentique.md)).
 
-- **Recherche agentique plutôt que RAG vectoriel.** Pas d'index à reconstruire : l'agent voit toujours l'état actuel du code, y compris le travail non commité d'un projet en cours ([ADR 0002](docs/adr/0002-recherche-agentique.md)).
-- **Outils d'enquête en lecture seule.** L'analyse lit le code et l'historique ; elle exclut les fichiers ignorés par git (`.env`…), les fichiers sensibles connus (`*.pem`, `id_rsa`…) et les internes Git. Les rapports vont dans `.codearcheo/`. L'export ADR est explicite ; la publication de recommandations en tickets exige une confirmation.
-- Les liens symboliques (fichiers et dossiers) sont exclus de l'analyse. Les sorties dans `.codearcheo/` et les chemins du cache GitHub refusent également les liens symboliques.
-- **Local d'abord.** L'analyse tourne sur ta machine ; seuls le profil et les extraits lus par l'agent partent vers l'API Claude.
+---
 
-## Structure du code
+## Organisation du code
 
-```
-src/codearcheo/
-├── cli.py            commandes (Typer)
-├── config.py         réglages lus dans l'environnement
-├── domain.py         modèle de données : ProjectProfile, Technology, Decision…
-├── sources.py        dossier local ou URL GitHub → projet sur disque
-├── git.py            appels à git, sans shell
-├── analyzers/        faits déterministes, sans IA
-│   ├── inventory.py    fichiers, langages, docs
-│   ├── stack.py        stack technique depuis les manifestes
-│   └── history.py      activité, zones chaudes, dates d'adoption
-├── agent/            la partie IA
-│   ├── tools.py        outils en lecture seule (partagés avec MCP)
-│   ├── prompts.py      consignes de chaque tâche
-│   └── runner.py       boucle d'outils Claude
-├── features.py       ask · overview · decisions · why · review
-├── evidence.py       vérification des citations : fichier:ligne et commits
-├── store.py          persistance dans .codearcheo/
-├── render.py         affichage terminal et rapports Markdown
-└── mcp_server.py     codearcheo serve
+- `src/codearcheo/` : le paquet.
+  - `cli.py` : les commandes (Typer). `config.py` : les réglages.
+  - `analyzers/` : les faits sans IA (`inventory.py` fichiers et langages, `stack.py` stack
+    technique, `history.py` historique et dates d'adoption, `code.py` graphe des imports).
+  - `agent/` : la partie IA (`prompts.py` consignes, `tools.py` outils partagés avec MCP,
+    `runner.py` moteur API, `claude_code.py` moteur abonnement).
+  - `features.py` : ask, overview, decisions, why, review.
+  - `evidence.py` : la vérification des citations. `store.py` : les fichiers de `.codearcheo/`.
+  - `mcp_server.py` : `codearcheo serve`.
+- `evals/` : l'évaluation des vraies réponses de Claude sur des projets de référence.
+- `tests/` : les tests déterministes (aucun appel au modèle).
+- `docs/` : les ADR du projet, les mesures et les guides (revues, publication, évaluation).
 
-evals/                évaluation des réponses IA
-├── cases.toml        projets de référence, questions et preuves attendues
-├── shop.py           projet synthétique à l'historique figé (aussi utilisé par les tests)
-├── scoring.py        barème : citations valides, faits, sources, déductions signalées
-└── run.py            exécution avec la vraie API (jamais en CI)
-```
+Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore tout de la CLI.
 
-Les dépendances descendent : `analyzers` ignore tout de l'IA, `agent` ignore tout de la CLI. Pour ajouter une fonctionnalité : un prompt dans `agent/prompts.py`, une fonction dans `features.py`, une commande dans `cli.py`.
+Pour aller plus loin : [suivi des décisions](docs/decision-workflow.md),
+[sources GitHub et ADR](docs/project-sources.md), [graphe des imports](docs/code-structure.md),
+[chat et bilan d'usage](docs/agent-experience.md), [correction des citations](docs/citation-repair.md),
+[évaluation](docs/evaluation.md) et [publication d'une version](docs/releasing.md).
 
-## Configuration
+---
 
-| Variable | Défaut | Rôle |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | — | clé API (ou un profil `ant auth login`) |
-| `CODEARCHEO_BACKEND` | `api` | `api` (crédits API) ou `claude-code` : passe par `claude -p` et l'abonnement Claude, sans streaming ni `chat` |
-| `CODEARCHEO_MODEL` | `claude-opus-5-5` | modèle Claude |
-| `CODEARCHEO_EFFORT` | `medium` | effort de raisonnement, de `low` à `max` ; vide pour les modèles qui ne le gèrent pas |
-| `CODEARCHEO_LANG` | `French` | langue des rapports (`ask` répond dans la langue de la question) |
-| `CODEARCHEO_MAX_ITERATIONS` | `40` | nombre maximal de tours de l'agent ; transmis à `--max-turns` avec Claude Code |
-| `CODEARCHEO_CACHE_DIR` | `~/.cache/codearcheo` | où sont clonés les dépôts GitHub |
+## Feuille de route
 
-`scan`, `diff` et `serve` chargent le projet sans valider les réglages de génération.
-Une limite réservée au moteur API ne bloque donc pas ces commandes lorsque le moteur
-Claude Code est configuré. Les commandes IA continuent de refuser les limites qu'elles
-ne peuvent pas appliquer.
+- [x] Scan déterministe : stack, dates d'adoption à travers les migrations, historique, ADR existants
+- [x] Graphe des imports avec tree-sitter, rapide même sur golang/go
+- [x] Agent Claude avec citations vérifiées et correction facultative des citations
+- [x] Décisions exportées en ADR, revue avec recommandations et tickets
+- [x] Moteur sur l'abonnement Claude, sans clé API
+- [x] Serveur MCP pour d'autres agents
+- [x] Évaluation sur des projets réels (Express, golang/go, itsdangerous…)
+- [x] Revue automatique de chaque commit, par Codex et par Claude côté serveur
+- [x] Version 0.2.0 publiée sur PyPI
+- [ ] Repérer d'autres stacks sans manifeste, comme PHP aujourd'hui
+- [ ] Mesurer et améliorer les réponses sur d'autres langages et des dépôts plus variés
 
-## Où en est le projet
+Le détail des jalons est dans [docs/roadmap.md](docs/roadmap.md).
+
+### Où en est le projet
 
 *État au 20 novembre 2026.*
 
-**Ce qui marche.** Les neuf commandes sont en place, couvertes par des tests déterministes sous Python 3.11 et 3.14 à chaque PR.
+- **La version 0.2.0** est publiée sur [PyPI](https://pypi.org/project/codearcheo/) et
+  [GitHub](https://github.com/maximilien-ilic/codearcheo/releases/tag/v0.2.0).
+- **Les tests.** 591 tests déterministes tournent sous Python 3.11 et 3.14 à chaque PR.
+- **La qualité mesurée.** Depuis la mesure 10, sept évaluations complètes sur l'abonnement
+  donnent 95 réponses réussies sur 98. Les trois échecs : deux noms de fichier ambigus, que
+  codearcheo refuse de deviner, et une réponse qui dit qu'un choix n'est pas documenté sans
+  employer le mot attendu ([docs/evaluation.md](docs/evaluation.md)).
+- **Le coût.** L'effort `medium`, par défaut, coûte 32 % de moins que `high` sans perte mesurée.
+  Une évaluation complète (14 cas) prend environ 13 min.
+- **Les revues.** Chaque commit sur `master` est relu par Codex et par Claude côté serveur
+  ([docs/claude-review.md](docs/claude-review.md)), pour environ 0,10 $ par revue en équivalent API.
+- **Aucun ticket bloquant n'est ouvert.**
 
-- **Le scan.** Il reconnaît Python, JavaScript/TypeScript, Go, Rust, Java/Kotlin, Ruby, PHP, .NET et l'infrastructure (Docker, Kubernetes, Terraform, Helm). Un projet PHP sans `composer.json` est aussi reconnu : la base de données est déduite de sa connexion PDO ou mysqli. Il date chaque techno, y compris à travers une migration de manifeste (`setup.py` → `pyproject.toml`), met à part les technos des exemples et des tests, lit les ADR déjà écrits et construit le graphe des imports avec tree-sitter. Sur golang/go, le cache syntaxique passe de 225 à 14 Mio, avec le même graphe. Le scan à chaud prend 6,5 s au lieu de 7,8 s, et `find_symbol` 0,45 s au lieu de 3,5 s par appel ; les [mesures de la PR #98](https://github.com/maximilien-ilic/codearcheo/pull/98) détaillent ces gains de vitesse. Les [mesures du cache](docs/scan-performance.md) séparent les passages avec cache chaud et vide.
-- **L'agent.** Il cite ses sources, vérifiées automatiquement, et peut corriger ses citations fausses (`--repair-citations`). Il lit aussi les PR GitHub liées aux commits, et chaque commande affiche son coût et sa durée.
-- **Les décisions.** Elles s'exportent en ADR (`decisions --export`), avec refus si aucune preuve n'est vérifiable et avertissement pour chaque référence invalide. Les recommandations peuvent devenir des tickets (`review --issues`), et `diff` suit leur évolution.
-- **Le moteur.** codearcheo tourne avec une clé API, ou sur un abonnement Claude via Claude Code (`CODEARCHEO_BACKEND=claude-code`), correction des citations comprise. L'effort par défaut est `medium`. Le profil et les résultats d'outils sont envoyés en JSON compact. Avec le profil compact, le prompt système mesuré est 22 à 35 % plus court sur Express et Go.
-- **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`. Une revue Claude côté serveur tourne aussi depuis le 20 novembre, sur l'abonnement, à la fin de la CI de chaque push ([docs/claude-review.md](docs/claude-review.md)).
-- **La licence.** Le code est sous licence MIT.
+---
 
-**La version 0.2.0** est publiée sur GitHub ([release](https://github.com/maximilien-ilic/codearcheo/releases/tag/v0.2.0)). Le premier lancement du workflow a vérifié les archives, puis le job PyPI a été annulé. La publication reste à finaliser via Trusted Publishing ([#24](https://github.com/maximilien-ilic/codearcheo/issues/24)).
+## Contribuer
 
-**La qualité mesurée.** Depuis la mesure 10, sept évaluations complètes sur l'abonnement donnent 95 réponses réussies sur 98. Les trois échecs : deux noms de fichier ambigus, que codearcheo refuse de deviner, et une réponse qui dit qu'un choix n'est pas documenté sans employer le mot attendu ([docs/evaluation.md](docs/evaluation.md)).
+Les pull requests sont les bienvenues. Pour un gros changement, ouvre d'abord une issue.
+[CONTRIBUTING.md](CONTRIBUTING.md) explique où ajouter du code, comment mesurer un changement
+et comment le livrer.
 
-**Ce qui pourrait suivre.** Aucun ticket bloquant n'est ouvert. Les pistes sont décrites dans [docs/roadmap.md](docs/roadmap.md), et [CONTRIBUTING.md](CONTRIBUTING.md) explique comment faire évoluer le projet. Une correction des preuves structurées par l'IA (#34, clos) ne serait utile que si une mesure fait apparaître des erreurs que le modèle sait corriger.
-
-Les jalons, l'historique du projet et le détail de chaque étape sont dans [docs/roadmap.md](docs/roadmap.md).
-
-
-## Développement
-
-Pour faire évoluer le projet (où ajouter du code, comment le mesurer et le livrer), voir [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Les [commandes de suivi des décisions](docs/decision-workflow.md) décrivent la
-vérification des citations, l'export ADR, les recommandations en JSON, les tickets
-sur confirmation et `codearcheo diff`. Voir aussi les
-[sources GitHub et ADR](docs/project-sources.md), le
-[graphe des imports](docs/code-structure.md) et le
-[chat, streaming et bilan d'usage](docs/agent-experience.md).
-
-```bash
+```sh
+git clone https://github.com/maximilien-ilic/codearcheo.git && cd codearcheo
 uv sync --all-extras
-uv run pytest
-uv run ruff check .
+uv run ruff check . && uv run pytest
 ```
 
-La CI GitHub (`.github/workflows/ci.yml`) lance ces contrôles sous Python 3.11 et 3.14, sur chaque PR et chaque push sur `master`.
-
-Le [CHANGELOG](CHANGELOG.md) suit les changements non publiés. Le
-[guide de publication](docs/releasing.md) décrit la vérification du wheel et de l'archive
-source, leur installation isolée et le workflow Trusted Publishing pour la première
-version PyPI.
-
-### Évaluation
-
-`pytest` ne couvre que la partie déterministe. Pour mesurer les vraies réponses de Claude, avec une clé API ou avec l'abonnement via Claude Code (`--backend claude-code`) :
-
-```bash
-uv run python -m evals.run           # tous les projets de référence (consomme des tokens)
-uv run python -m evals.run shop      # seulement ceux nommés
-uv run --extra mcp python -m evals.run --backend claude-code   # sur l'abonnement Claude
-uv run --all-extras python -m evals.run --backend claude-code --case go-review-http
-```
-
-Chaque cas de `evals/cases.toml` vérifie que les citations `fichier:ligne` et les commits cités existent, que les faits et les sources attendus sont présents, que ce que rien ne documente est signalé comme déduit, et qu'aucun secret ne fuit. Le texte exact n'est jamais comparé.
-
-Les réponses et les enregistrements sont archivés après chaque cas, avec les réglages et
-les attentes, pour conserver les résultats même en cas d'interruption. `--case` cible une
-mesure précise ; `python -m evals.rescore RAPPORT.json` permet ensuite de renoter les mêmes
-réponses hors ligne. Voir le [protocole et les limites](docs/evaluation.md).
-
-Les décisions techniques de codearcheo sont elles-mêmes documentées dans [`docs/adr/`](docs/adr/), au format ADR que l'outil vise à produire.
+---
 
 ## Licence
 
-MIT, voir [LICENSE](LICENSE).
+Distribué sous licence MIT. Voir [LICENSE](LICENSE).
+
+---
+
+## Contact
+
+Maximilien Ilic — [LinkedIn](https://www.linkedin.com/in/maximilien-ilic/) —
+[GitHub](https://github.com/maximilien-ilic)
+
+---
+
+## Remerciements
+
+- [Claude](https://www.anthropic.com/claude) et [Claude Code](https://code.claude.com), le modèle et le moteur de l'agent
+- [tree-sitter](https://tree-sitter.github.io/), pour l'analyse syntaxique
+- Le [Model Context Protocol](https://modelcontextprotocol.io/), pour partager les outils avec d'autres agents
+- Les projets de référence de l'évaluation : [Express](https://github.com/expressjs/express),
+  [Go](https://github.com/golang/go) et [itsdangerous](https://github.com/pallets/itsdangerous)
+- Le format [ADR](https://adr.github.io/) (Architecture Decision Records)
