@@ -253,3 +253,37 @@ def test_adoption_is_traced_when_the_old_manifest_is_archived(tmp_path):
     assert fastapi.source == "pyproject.toml"
     assert fastapi.adopted.subject == "Adopt FastAPI"
     assert fastapi.adopted_from == "requirements.txt"
+
+
+def test_plain_php_without_manifest_reports_php_and_its_database(tmp_path):
+    _git(tmp_path, "init", "-q", "-b", "main")
+    (tmp_path / "index.php").write_text("<?php include 'header.php'; ?>\n")
+    _commit(tmp_path, "Start the site", "2024-02-01T10:00:00+00:00")
+    (tmp_path / "ajouter.php").write_text(
+        "<?php\n$pdo = new PDO('pgsql:host=localhost;dbname=f1', 'app', '');\n"
+    )
+    (tmp_path / "notes.php").write_text("<?php // TODO: maybe mysql: later, no connection\n")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "fixture.php").write_text("<?php $db = mysqli_connect('h');\n")
+    _commit(tmp_path, "Connect to the database", "2024-02-03T10:00:00+00:00")
+
+    technologies = {t.name: t for t in scan(Project(tmp_path, "demo")).technologies}
+
+    assert technologies["PHP"].source == "index.php"
+    assert technologies["PHP"].adopted.subject == "Start the site"
+    assert technologies["PostgreSQL"].source == "ajouter.php"
+    assert technologies["PostgreSQL"].adopted.subject == "Connect to the database"
+    assert technologies["MySQL"].auxiliary  # only a test fixture connects to it
+    assert {"PHP", "PostgreSQL", "MySQL"} == technologies.keys()
+
+
+@pytest.mark.parametrize("code,expected", [
+    ("$db = new \\PDO(\"mysql:host=db\");", {"MySQL"}),
+    ("$db = new PDO( 'sqlite:/tmp/app.db' );", {"SQLite"}),
+    ("$db = new mysqli('h', 'u', 'p');", {"MySQL"}),
+    ("$dsn = 'mysql:host=db'; // passed to a factory", set()),
+])
+def test_php_database_signals_need_an_actual_connection(tmp_path, code, expected):
+    (tmp_path / "db.php").write_text(f"<?php\n{code}\n")
+    found = {t.name for t in stack.detect(tmp_path, ["db.php"]) if t.category == "data"}
+    assert found == expected
