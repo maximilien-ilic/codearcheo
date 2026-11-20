@@ -49,8 +49,9 @@ changements des exécutions annulées ou échouées.
 - Le jeton `GITHUB_TOKEN` n'a jamais la permission `workflows`. Un correctif de
   `.github/workflows/` est donc joint au ticket sous forme de diff, et un humain le pousse.
 - Ouvrir une PR depuis GitHub Actions demande le réglage « Allow GitHub Actions to create and
-  approve pull requests » (Settings → Actions → General). Il est désactivé sur ce dépôt :
-  sans lui, la revue ne peut que commenter et ouvrir des tickets.
+  approve pull requests » (Settings → Actions → General). Le propriétaire l'a activé le
+  20 novembre : la revue ouvre ses PR correctives elle-même. Elle ne fusionne jamais, et les
+  permissions par défaut du jeton restent en lecture seule.
 
 ## Charge et coût
 
