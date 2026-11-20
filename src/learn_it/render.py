@@ -30,7 +30,7 @@ def waiting(message: str) -> Iterator[None]:
         yield
         return
     columns = (SpinnerColumn(), TextColumn("{task.description}"), TimeElapsedColumn())
-    with Progress(*columns, console=err, transient=True) as progress:
+    with Progress(*columns, console=err, transient=True, redirect_stdout=False) as progress:
         progress.add_task(message, total=None)
         yield
 
