@@ -141,9 +141,7 @@ def close_open_fence(text: str) -> str:
     return text + separator + closing
 
 
-def find_matches(text: str, *, respect_quote_boundaries: bool = False) -> list[CitationMatch]:
-    """Return original citation spans outside fenced source examples and diagrams."""
-    protected, _ = _fences(text, respect_quote_boundaries=respect_quote_boundaries)
+def _inline_code_spans(text: str, protected: list[tuple[int, int]]) -> list[re.Match[str]]:
     # Keep inline code within its Markdown block, including citations inside headings.
     code_spans = []
     offset = 0
@@ -156,6 +154,13 @@ def find_matches(text: str, *, respect_quote_boundaries: bool = False) -> list[C
             offset = heading.end()
         code_spans.extend(_INLINE_CODE.finditer(text, offset, start))
         offset = end
+    return code_spans
+
+
+def find_matches(text: str, *, respect_quote_boundaries: bool = False) -> list[CitationMatch]:
+    """Return original citation spans outside fenced source examples and diagrams."""
+    protected, _ = _fences(text, respect_quote_boundaries=respect_quote_boundaries)
+    code_spans = _inline_code_spans(text, protected)
     explicit = []
     for span in code_spans:
         # Match the citation within its paired delimiters. Keep one backtick at
@@ -201,15 +206,14 @@ def complete_paths(text: str, files: list[str], scope: str | None = None) -> str
     for path in files:
         by_name.setdefault(PurePosixPath(path).name, []).append(path)
     allowed = set(files)
-    named = {c.path for c in find_citations(text) if c.path and "/" in c.path}
-    protected = fenced_spans(text)
+    matches = find_matches(text)
+    named = {m.citation.path for m in matches if m.citation.path and "/" in m.citation.path}
     named |= {
-        match[1].split(":", 1)[0].removeprefix("./")
-        for match in _CODE_SPAN.finditer(text)
-        if not any(match.start() < end and match.end() > start for start, end in protected)
+        span[0][len(span[1]):-len(span[1])].removeprefix("./")
+        for span in _inline_code_spans(text, fenced_spans(text))
     }
     parts, last = [], 0
-    for match in sorted(find_matches(text), key=lambda m: m.start):
+    for match in sorted(matches, key=lambda m: m.start):
         path = match.citation.path
         if not path or path in allowed or match.start < last:
             continue
