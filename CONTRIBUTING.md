@@ -73,6 +73,21 @@ Trois règles tiennent le projet ([ADR](docs/adr/)) :
 Les commits restent au nom du propriétaire, sans ligne `Co-Authored-By` ni mention d'un
 assistant IA.
 
+### Éviter les conflits entre PR
+
+Claude, Codex et la revue serveur ouvrent souvent des PR en même temps sur les mêmes fichiers.
+
+- Juste avant de pousser, rebaser sur `origin/master`, puis relancer ruff et pytest.
+- Ajouter un test **juste après le test voisin** qu'il complète, jamais à la fin d'un fichier
+  de tests partagé : deux ajouts en fin de fichier entrent toujours en conflit.
+- Après chaque fusion sur `master`, vérifier les PR ouvertes
+  (`gh pr list --state open --json number,mergeable`) et rebaser tout de suite celles qui
+  sont `CONFLICTING`.
+- Pour plusieurs PR liées, simuler leur fusion ensemble, dans les deux ordres, dans un
+  worktree détaché.
+- Pour résoudre un conflit entre deux blocs de code semblables, repartir de la version de
+  `master` et y réappliquer le changement, plutôt que de juxtaposer les deux côtés.
+
 ## Publier une version
 
 Voir [docs/releasing.md](docs/releasing.md) : passage de version, notes datées dans le
