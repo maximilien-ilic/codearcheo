@@ -25,7 +25,7 @@ Les trois derniers points ont été fusionnés par la PR [#9], avec 82 tests et 
 
 ## Où on en est
 
-Il reste quatre étapes ouvertes. [#10] n'attend plus que le moteur API, qui demande une clé. [#34] attend des erreurs que le modèle puisse corriger : les cas mesurés n'en contiennent pas, et les complétions locales couvrent ceux qu'on a observés. [#24] attend la fin du projet. [#25] fonctionne : il reste à estimer son coût mensuel à partir d'une semaine d'historique.
+Il reste trois étapes ouvertes. [#10] est clos : le projet est mesuré sur l'abonnement, et le moteur API ne sera pas mesuré, sur décision du propriétaire. [#34] attend des erreurs que le modèle puisse corriger : les cas mesurés n'en contiennent pas, et les complétions locales couvrent ceux qu'on a observés. [#24] attend la fin du projet. [#25] fonctionne : il reste à estimer son coût mensuel à partir d'une semaine d'historique.
 
 ## La suite
 

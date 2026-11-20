@@ -39,13 +39,12 @@ La cible est un dossier local (par défaut le dossier courant) ou une URL GitHub
 
 ## Démarrage rapide
 
-Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/), et, pour les commandes IA, soit une clé API Anthropic, soit [Claude Code](https://code.claude.com) connecté à un abonnement Claude.
+Il faut Python 3.11 ou plus, git, [uv](https://docs.astral.sh/uv/) et, pour les commandes IA, [Claude Code](https://code.claude.com) connecté à un abonnement Claude. Une clé API Anthropic marche aussi.
 
 ```bash
-git clone https://github.com/maximilien-ilic/learn-it && cd learn-it
-uv tool install --editable .          # utilise '.[mcp]' pour serve ou le moteur claude-code
-export ANTHROPIC_API_KEY=sk-ant-...   # ou : ant auth login
-# ou, sans clé, avec ton abonnement Claude : export LEARN_IT_BACKEND=claude-code
+uv tool install "learn-it[mcp,code] @ git+https://github.com/maximilien-ilic/learn-it"
+export LEARN_IT_BACKEND=claude-code   # fish : set -Ux LEARN_IT_BACKEND claude-code
+# avec une clé API à la place : export ANTHROPIC_API_KEY=sk-ant-...
 
 cd ~/code/mon-projet
 learn-it scan                         # gratuit, quelques secondes
@@ -53,6 +52,8 @@ learn-it ask "Par où passe une commande, de l'API jusqu'à la base ?"
 learn-it decisions
 learn-it review
 ```
+
+Pour passer à la dernière version de `master`, relance la commande `uv tool install` avec `--reinstall`. Pour développer learn-it, utilise plutôt un clone : `uv tool install --editable '.[mcp,code]'`.
 
 Les résultats sont enregistrés dans `.learn-it/` à la racine du projet analysé (`profile.json`, `overview.md`, `decisions.md` et `.json`, `review.md`). Ce dossier s'exclut lui-même de git. Le profil est recalculé à chaque commande, donc il suit le travail non commité ; un scan prend moins d'une seconde sur des dépôts de plusieurs milliers de commits.
 
@@ -150,20 +151,18 @@ ne peuvent pas appliquer.
 - **La revue.** Une revue Codex relit chaque commit qui arrive sur `master`. Une revue Claude côté serveur tourne aussi depuis le 20 novembre, sur l'abonnement, à la fin de la CI de chaque push ([docs/claude-review.md](docs/claude-review.md)).
 - **La licence.** Le code est sous licence MIT.
 
-**Ce qui reste à prouver.** Sur les 56 réponses de la mesure 10 et les 28 de la mesure 11, deux échouent au barème, chaque fois sur un nom de fichier seul ambigu. Les complétions locales (suffixe unique, nom unique dans le périmètre de `--path`) en corrigent une partie sans aucun token. La correction des citations par le modèle n'aurait rien changé : elle refuse, par construction, de deviner un nom ambigu. Il reste à mesurer le moteur API.
+**Ce qui reste à prouver.** Sur les 56 réponses de la mesure 10 et les 28 de la mesure 11, deux échouent au barème, chaque fois sur un nom de fichier seul ambigu. Les complétions locales (suffixe unique, nom unique dans le périmètre de `--path`) en corrigent une partie sans aucun token. La correction des citations par le modèle n'aurait rien changé : elle refuse, par construction, de deviner un nom ambigu. Le moteur API n'est pas mesuré : le projet tourne sur l'abonnement.
 
 **Ce qu'il reste à faire.**
 
 | # | Étape | Ticket | En attente de |
 |---|---|---|---|
-| 1 | Mesurer le moteur API (variabilité, effort et coût mesurés sur l'abonnement) | [#10] | une clé API |
-| 2 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | des erreurs que le modèle peut corriger : les cas mesurés n'en contiennent pas |
-| 3 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
-| 4 | Estimer le coût mensuel de la revue serveur (active) | [#25] | une semaine d'historique ; autoriser Actions à ouvrir des PR |
+| 1 | Corriger par l'IA les preuves structurées (complétion locale et garde à l'export faits) | [#34] | des erreurs que le modèle peut corriger : les cas mesurés n'en contiennent pas |
+| 2 | Versions et publication sur PyPI (licence MIT faite) | [#24] | la fin du projet |
+| 3 | Estimer le coût mensuel de la revue serveur (active) | [#25] | une semaine d'historique ; autoriser Actions à ouvrir des PR |
 
 Les jalons, l'historique du projet et le détail de chaque étape sont dans [docs/roadmap.md](docs/roadmap.md).
 
-[#10]: https://github.com/maximilien-ilic/learn-it/issues/10
 [#24]: https://github.com/maximilien-ilic/learn-it/issues/24
 [#25]: https://github.com/maximilien-ilic/learn-it/issues/25
 [#34]: https://github.com/maximilien-ilic/learn-it/issues/34
