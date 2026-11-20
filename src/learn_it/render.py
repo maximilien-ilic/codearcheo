@@ -5,18 +5,34 @@ Reports go to stdout so they can be piped; progress and tool calls go to stderr.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.markup import escape
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 from learn_it.domain import Decision, ProjectProfile
 
 console = Console()
 err = Console(stderr=True)
+
+
+@contextmanager
+def waiting(message: str) -> Iterator[None]:
+    """A spinner and the elapsed time on stderr, in a terminal only: the claude-code engine
+    prints nothing until its answer is complete, which looks like a hang."""
+    if not err.is_terminal:
+        yield
+        return
+    columns = (SpinnerColumn(), TextColumn("{task.description}"), TimeElapsedColumn())
+    with Progress(*columns, console=err, transient=True) as progress:
+        progress.add_task(message, total=None)
+        yield
 
 
 def _day(value: datetime | None) -> str:

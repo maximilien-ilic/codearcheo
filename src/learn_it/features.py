@@ -134,10 +134,11 @@ class Session:
     ) -> str:
         """Same task on the Claude subscription: no streaming and no local limits."""
         options = {"on_usage": self.on_usage} if self.on_usage is not None else {}
-        answer = run_claude_code(
-            system, task, list(extra_tools), self.settings, root=self.project.root,
-            profile=self.profile.model_dump_json(), **options
-        )
+        with render.waiting("Claude Code explore le projet…"):
+            answer = run_claude_code(
+                system, task, list(extra_tools), self.settings, root=self.project.root,
+                profile=self.profile.model_dump_json(), **options
+            )
         if not check:
             return answer
         checked = self.checked(answer, repair=self.repair_citations and not extra_tools)
@@ -150,11 +151,12 @@ class Session:
         single_request: bool = False, on_usage: UsageCallback | None = None, **_: Any,
     ) -> str:
         """The repair request without any tool; `claude -p` cannot cap its output."""
-        return run_claude_code(
-            system, task, list(tools),
-            replace(settings, max_output_tokens=Settings.max_output_tokens),
-            root=self.project.root, on_usage=on_usage, exploration=False,
-        )
+        with render.waiting("Correction des citations…"):
+            return run_claude_code(
+                system, task, list(tools),
+                replace(settings, max_output_tokens=Settings.max_output_tokens),
+                root=self.project.root, on_usage=on_usage, exploration=False,
+            )
 
 
 def _complete_evidence(
