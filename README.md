@@ -233,12 +233,12 @@ Pour aller plus loin : [suivi des décisions](docs/decision-workflow.md),
 - [x] Décisions exportées en ADR, revue avec recommandations et tickets
 - [x] Moteur sur l'abonnement Claude, sans clé API
 - [x] Serveur MCP pour d'autres agents
-- [x] Évaluation sur des projets réels en Python, JavaScript, Go, PHP et Rust
+- [x] Évaluation sur des projets réels en Python, JavaScript, Go, PHP, Rust et Java
 - [x] Revue automatique de chaque commit, par Codex et par Claude côté serveur
 - [x] Version 0.2.0 publiée sur PyPI
 - [x] Stack d'un projet sans manifeste : PHP, Python (`import`) et JavaScript (`require`, `import`)
 - [x] Évaluation qui s'arrête proprement sur une coupure de quota et indique comment reprendre
-- [ ] Étendre l'évaluation à Java et à des dépôts plus variés
+- [ ] Étendre l'évaluation à des dépôts plus variés (monorepos, applications web complètes)
 
 Le détail des jalons est dans [docs/roadmap.md](docs/roadmap.md).
 
@@ -253,7 +253,7 @@ Le détail des jalons est dans [docs/roadmap.md](docs/roadmap.md).
   donnent 123 réponses réussies sur 126. Les trois échecs datent d'avant les derniers
   changements : deux noms de fichier ambigus, que codearcheo refuse de deviner, et une raison
   déduite annoncée sans la formule demandée, que le prompt impose désormais (mesure 13 : 28/28).
-  Les projets PHP et Rust réussissent leurs cas, y compris le cas PHP au barème renforcé
+  Les projets PHP, Rust et Java réussissent leurs cas, y compris le cas PHP au barème renforcé
   ([docs/evaluation.md](docs/evaluation.md)).
 - **Le coût.** L'effort `medium`, par défaut, coûte 32 % de moins que `high` sans perte mesurée.
   Une évaluation complète (14 cas) prend environ 13 min.
