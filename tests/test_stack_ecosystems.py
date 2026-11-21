@@ -457,6 +457,21 @@ def test_javascript_without_package_json_reports_imports_and_their_dates(tmp_pat
     assert technologies["Redis"].auxiliary  # only a test imports it
 
 
+def test_javascript_adoption_uses_tree_sitter_line_numbers(tmp_path):
+    pytest.importorskip("tree_sitter")
+    _git(tmp_path, "init", "-q", "-b", "main")
+    app = tmp_path / "app.js"
+    app.write_text("// before\fafter\n")
+    _commit(tmp_path, "Start the app", "2024-02-01T10:00:00+00:00")
+    app.write_text('// before\fafter\nrequire("express");\n')
+    _commit(tmp_path, "Import Express", "2024-02-03T10:00:00+00:00")
+
+    (express,) = scan(Project(tmp_path, "demo")).technologies
+
+    assert express.needle == 'require("express");'
+    assert express.adopted.subject == "Import Express"
+
+
 @pytest.mark.parametrize("code", [
     '// const db = require("pg");\n/* import mysql from "mysql2"; */\n',
     'const doc = "require(\'mongoose\')";\nconst t = `import x from "express"`;\n',
@@ -472,6 +487,21 @@ def test_a_package_json_keeps_its_role_over_imports(tmp_path):
         "package.json": '{"dependencies": {}}', "app.js": 'require("express");\n',
     })
     assert "Express" not in technologies
+
+
+def test_a_vendored_package_json_does_not_hide_project_imports(tmp_path):
+    technologies = _js_stack(tmp_path, {
+        "vendor/pkg/package.json": "{}", "app.js": 'require("express");\n',
+    })
+    assert technologies["Express"].source == "app.js"
+
+
+def test_main_javascript_import_wins_over_auxiliary_evidence(tmp_path):
+    technologies = _js_stack(tmp_path, {
+        "tests/requirements.txt": "redis\n", "app.js": 'require("ioredis");\n',
+    })
+    assert technologies["Redis"].source == "app.js"
+    assert not technologies["Redis"].auxiliary
 
 
 def test_an_example_package_json_and_node_modules_do_not_change_the_project_stack(tmp_path):

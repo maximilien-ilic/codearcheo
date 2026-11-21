@@ -340,7 +340,9 @@ def with_imports(
     """Add the JS/TS frameworks and databases a project imports when it has no package.json,
     from the syntax graph (None without the code extra), dated by their import line."""
     if graph is None or any(
-        PurePosixPath(path).name == "package.json" and not _priority(path)[0]
+        PurePosixPath(path).name == "package.json"
+        and not is_auxiliary_source(path)
+        and not _VENDORED.intersection(PurePosixPath(path).parts)
         for path in files
     ):
         return technologies
@@ -349,14 +351,18 @@ def with_imports(
         module = graph.modules[path]
         if module.language not in _JS_LANGUAGES or _VENDORED & set(PurePosixPath(path).parts):
             continue
+        auxiliary = is_auxiliary_source(path)
         lines = None
         for item in module.imports:
             known = _JS_IMPORTS.get(_js_package(item.module))
-            if known is None or known[0] in found:
+            if known is None:
+                continue
+            existing = found.get(known[0])
+            if existing is not None and (auxiliary or not existing.auxiliary):
                 continue
             if lines is None:
                 try:
-                    lines = _read(root / path).splitlines()
+                    lines = _read(root / path).split("\n")  # tree-sitter rows count LF
                 except (OSError, ValueError):
                     break
             needle = lines[item.line - 1].strip() if 0 < item.line <= len(lines) else None
