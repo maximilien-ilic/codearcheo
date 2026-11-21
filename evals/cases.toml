@@ -122,6 +122,26 @@ mention = ["middleware"]
 cite_any_file = ["lib/application.js", "lib/express.js"]
 
 [[projects]]
+name = "formula1"
+source = "https://github.com/maximilien-ilic/Crud-security-formula1"
+language = "PHP"
+ref = "3210e62dcb495062e7acadb90e815eaf1b40b4c0"  # verified through GitHub's commit API
+
+[[projects.cases]]
+id = "formula1-security"
+command = "ask"
+question = "Ce CRUD est-il protégé contre l'injection SQL, le XSS et le CSRF ? Cite chaque endroit."
+mention = ["prepare", "htmlspecialchars", "random_bytes"]  # « jeton » en français : pas « token »
+cite_any_file = ["header.php", "details.php", "modifier.php", "formule1.php"]
+
+[[projects.cases]]
+id = "formula1-why-token"
+command = "why"
+target = "le jeton token_article_add de header.php"
+mention = ["random_bytes", "CSRF"]
+cite_any_file = ["header.php"]
+
+[[projects]]
 name = "go"
 source = "https://github.com/golang/go"
 language = "Go"
