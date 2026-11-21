@@ -410,6 +410,16 @@ sans aucune retouche des attentes, qui ont été écrites d'après le code avant
 
 Le catalogue couvre désormais cinq langages : Python, JavaScript, Go, PHP et Rust.
 
+## Mesure 16 : le cas PHP renforcé, 21 novembre 2026
+
+La revue Codex a montré que `formula1-security` validait une réponse qui ne citait que
+`header.php`, sans source pour les requêtes préparées ni pour l'échappement (#160). #164 a précisé
+la question et exige une citation avec numéro de ligne pour chacun des trois groupes de fichiers :
+traitement du formulaire, échappement à l'affichage et génération du jeton. Ce barème plus strict
+n'avait pas été mesuré avec le modèle.
+
+Deux passes sur `1823266` : **2/2**. Le score de la mesure 14 reste associé à l'ancien barème.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
