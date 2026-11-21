@@ -452,6 +452,26 @@ pas été mesuré avec le modèle.
 
 Deux passes sur `3e4c469` : **2/2**. Le score de la mesure 15 reste associé à l'ancien barème.
 
+## Mesure 19 : un monorepo TypeScript complet, 21 novembre 2026
+
+Nouveau projet de référence `create-t3-turbo` (#172) : [`t3-oss/create-t3-turbo`](https://github.com/t3-oss/create-t3-turbo),
+épinglé sur `8f945b7` (956 commits). C'est à la fois un **monorepo** (Turborepo, espaces de travail
+pnpm `apps/`, `packages/`, `tooling/`) et une **application complète** : clients Next.js, Expo et
+TanStack Start, API tRPC, base PostgreSQL via Drizzle, authentification Better Auth. Les attentes
+ont été tirées du code avant la première mesure.
+
+| Cas | Commande | Exige |
+|---|---|---|
+| `t3-decisions` | `decisions` | les décisions Turborepo, tRPC et Drizzle |
+| `t3-database` | `ask` | PostgreSQL, Drizzle et tRPC, avec une citation de `packages/db` |
+| `t3-review` | `review` | tRPC et Drizzle, avec une citation de `packages/api` ou `packages/db` |
+
+Deux passes : **6/6**, sans retouche des attentes (1,60 $ et 1,33 $, environ 5 min chacune).
+Les décisions reconstituées vont au-delà de l'attendu : Drizzle « à la place de Prisma »,
+Better Auth « à la place de NextAuth », catalogues de versions pnpm, paquets internes émettant
+seulement leurs déclarations pour la performance de l'éditeur, et une qualité assurée par
+l'analyse statique en CI, sans tests automatisés.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
