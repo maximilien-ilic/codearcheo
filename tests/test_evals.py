@@ -116,6 +116,22 @@ def test_php_security_requires_sources_for_all_protections(tmp_path):
     assert not failures(score_answer(answer, case, tmp_path))
 
 
+def test_anyhow_narrow_pointer_requires_implementation_evidence(tmp_path):
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "anyhow")
+    case = next(case for case in spec["cases"] if case["id"] == "anyhow-narrow-pointer")
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "lib.rs").write_text("// Error is one word wide.\n", encoding="utf-8")
+    (src / "error.rs").write_text("struct ErrorVTable;\n", encoding="utf-8")
+
+    answer = "La vtable explique la taille d'un mot indiquée par `src/lib.rs:1`."
+    assert failures(score_answer(answer, case, tmp_path)) == {"cite la source vtable"}
+    assert failures(score_answer(answer + " Voir `src/error.rs`.", case, tmp_path)) == {
+        "cite la source vtable",
+    }
+    assert not failures(score_answer(answer + " Voir `src/error.rs:1`.", case, tmp_path))
+
+
 def test_decisions_must_keep_documented_and_inferred_apart(project):
     decisions = decisions_for(project.root)
     decisions[1] = decisions[1].model_copy(update={"rationale_source": "documented"})

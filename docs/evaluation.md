@@ -408,6 +408,9 @@ Nouveau projet de référence `anyhow` (#163) : [`dtolnay/anyhow`](https://githu
 `src/error.rs`) et `anyhow-why-context` (`why` sur le trait `Context`). Deux passes : **4/4**,
 sans aucune retouche des attentes, qui ont été écrites d'après le code avant la première mesure.
 
+Le 4/4 utilise le barème d'origine. Le cas `anyhow-narrow-pointer` exige désormais une
+citation avec numéro de ligne dans `src/error.rs` pour étayer l'explication de la vtable.
+
 Le catalogue couvre désormais cinq langages : Python, JavaScript, Go, PHP et Rust.
 
 ## Ce qu'il reste à mesurer
