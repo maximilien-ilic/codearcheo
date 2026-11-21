@@ -157,9 +157,13 @@ ref = "dd0c0a655a214add8fc986df34ea3823468fa4fb"  # verified through GitHub's co
 [[projects.cases]]
 id = "anyhow-narrow-pointer"
 command = "ask"
-question = "Comment anyhow::Error tient-il dans un seul mot mémoire alors qu'il peut contenir n'importe quelle erreur ?"
+question = """\
+Comment anyhow::Error tient-il dans un seul mot mémoire alors qu'il peut contenir n'importe quelle erreur ? \
+Cite les lignes qui implémentent ce mécanisme."""
 mention = ["vtable"]
-cite_any_file = ["src/error.rs", "src/ptr.rs", "src/lib.rs"]
+
+[projects.cases.cite_file_groups]
+vtable = ["src/error.rs"]
 
 [[projects.cases]]
 id = "anyhow-why-context"
