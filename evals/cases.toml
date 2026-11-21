@@ -185,8 +185,13 @@ cite_any_file = ["gson/src/main/java/com/google/gson/Gson.java"]
 id = "gson-why-reflective"
 command = "why"
 target = "ReflectiveTypeAdapterFactory"
-mention = ["getDeclaredFields"]
-cite_any_file = ["gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java"]
+# A "why" answer explains the role (the fallback factory, registered last) and its BoundField
+# design, not a call such as getDeclaredFields.
+mention = ["BoundField"]
+cite_any_file = [
+    "gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java",
+    "gson/src/main/java/com/google/gson/GsonBuilder.java",
+]
 
 [[projects]]
 name = "go"
