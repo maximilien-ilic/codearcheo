@@ -3,6 +3,7 @@ reference cases must point at evidence that exists. No API call."""
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -478,3 +479,14 @@ def test_a_bare_path_line_citation_counts_as_citing_the_file(project):
     checks = score_answer(answer, case, project.root)
 
     assert "cite app.py ou docker-compose.yml" not in failures(checks)
+
+
+def test_catalog_doc_states_the_real_case_and_language_counts():
+    specs = run.load_cases()
+    cases = sum(len(spec["cases"]) for spec in specs)
+    languages = len({spec["language"] for spec in specs})
+    words = {3: "trois", 4: "quatre", 5: "cinq", 6: "six", 7: "sept", 8: "huit"}
+    doc = (Path(__file__).parents[1] / "docs" / "evaluation-catalog.md").read_text("utf-8")
+    assert f"contient {cases} cas sur {words[languages]} langages" in doc
+    for spec in specs:
+        assert f"| {spec['name']} |" in doc
