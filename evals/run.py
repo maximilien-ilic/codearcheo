@@ -286,6 +286,9 @@ def main(
                   file=sys.stderr)
             save_report(output, report)
             continue
+        if quota_hit:
+            quota_skipped.extend(case["id"] for case in spec["cases"])
+            continue
         started = time.perf_counter()
         project = prepare(spec, workdir)
         prepared = time.perf_counter()
@@ -372,9 +375,7 @@ def main(
         print(f"Qualité : {passed}/{len(results) - errors} réponses évaluables ; "
               f"{errors} réponse(s) indisponible(s).")
     if quota_hit:
-        resume = [case for case in report["selected_cases"] if case not in {
-            result["case"] for result in results if result["status"] != "quota"
-        }]
+        resume = [results[-1]["case"], *quota_skipped]
         report["quota_skipped"] = quota_skipped
         print("Quota Claude atteint : évaluation arrêtée. Reprendre après la réinitialisation avec "
               + " ".join(f"--case {case}" for case in resume), file=sys.stderr)

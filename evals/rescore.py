@@ -34,7 +34,7 @@ def rescore(report: dict[str, Any], projects_dir: Path) -> dict[str, Any]:
     verified = set()
     results = []
     for result in report["results"]:
-        if result["status"] == "error":
+        if result["status"] in ("error", "quota"):
             results.append(dict(result))
             continue  # no model answer to grade; retain the execution error
         name = result["project"]
@@ -98,7 +98,7 @@ def main(path: Path, *, projects_dir: Path | None = None) -> int:
     report["source_report"] = str(path.resolve())
     save_report(output, report)
     passed = sum(result["passed"] for result in report["results"])
-    errors = sum(result["status"] == "error" for result in report["results"])
+    errors = sum(result["status"] in ("error", "quota") for result in report["results"])
     print(f"Recalcul hors ligne : {passed}/{len(report['results']) - errors} réponses évaluables, "
           f"{errors} indisponible(s).")
     if not report["complete"]:
