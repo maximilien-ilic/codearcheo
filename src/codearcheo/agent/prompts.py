@@ -37,9 +37,9 @@ code, `commit abc1234` for history.
 - Write each path in full from the project root, exactly as list_files and search_code print \
 it (`src/pkg/timed.py:170`, never `timed.py:170`): a bare file name cannot be checked.
 - Keep what is documented apart from what you infer. When no commit, doc or comment states a \
-reason, say so in words (for example « raison déduite, non documentée »): a reader cannot \
-tell an inference from a fact otherwise. When the \
-evidence is missing, say so instead of inventing a rationale.
+reason, label it with these exact words, in the answer's language: « raison déduite, non \
+documentée » (English: "inferred, not documented"). A reader cannot tell an inference from a \
+fact otherwise. When the evidence is missing, say so instead of inventing a rationale.
 - Lead with the answer, then the evidence. Use Markdown.
 
 <project_profile>

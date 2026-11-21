@@ -350,6 +350,35 @@ Une évaluation complète en `medium` sur `35070ba`, sans modification locale. C
 
 Rapport : `results-20261120-212809-ecb1087a.json`.
 
+## Changement 7 : une formule fixe pour une raison déduite (#146)
+
+À la mesure 12, une réponse disait « Pas de réponse documentée » sans annoncer la déduction
+comme le demande la consigne. La consigne donnait la formule en exemple ; elle l'impose
+maintenant : « raison déduite, non documentée » (en anglais : « inferred, not documented »).
+Le barème ne change pas.
+
+## Mesure 13 : après le changement 7, 20 et 21 novembre 2026
+
+Deux évaluations complètes en `medium`, sur le code `2da005c`, sans modification locale :
+**28/28**.
+
+| Passe | Résultat | Coût | Durée |
+|---|---|---|---|
+| 1 | 14/14 | 3,56 $ | 12,7 min |
+| 2 | 10/10, puis 4/4 repris | 1,25 $ + 2,33 $ | 7,2 + 6,8 min |
+
+- **shop-database** utilise la formule « non documentée » dans les deux passes ; le cas avait
+  échoué une fois sur sept avant ce changement.
+- **La deuxième passe** a été coupée par la limite de cinq heures de l'abonnement après 10 cas.
+  Les quatre cas restants ont été rejoués avec le même code après la réinitialisation. Cette
+  coupure a mis en évidence un défaut de l'évaluation, corrigé par #155 : elle continuait après
+  le quota et comptait les cas coupés comme des échecs.
+- Sur un si petit échantillon, le changement ne prouve pas un gain ; il ne montre aucune
+  régression.
+
+Rapports : `results-20261120-222353-94f348fc.json`, `results-20261120-223904-eb8b6d14.json` et
+`results-20261121-143539-816e4ea8.json` dans `~/.cache/codearcheo/evals/`.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
