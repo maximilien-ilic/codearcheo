@@ -172,6 +172,37 @@ def test_evaluation_saves_per_case_usage_without_fabricating_an_api_bill(monkeyp
     assert result["usage"][0]["input_tokens"] == 100
 
 
+@pytest.mark.parametrize("message", [
+    "You've hit your session limit · resets 2:10pm (Europe/Paris)",
+    "You've hit your 5-hour limit · resets 2:40am (Europe/Paris) · out of usage credits",
+])
+def test_a_quota_error_stops_the_evaluation_and_names_the_cases_to_resume(
+    monkeypatch, tmp_path, capsys, message,
+):
+    from evals.scoring import Check
+
+    monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "shop")
+    monkeypatch.setattr(run, "load_cases", lambda: [spec | {"cases": spec["cases"][:3]}])
+    ran = []
+
+    def fake_case(session, case, canary, *, capture):
+        ran.append(case["id"])
+        if len(ran) == 2:
+            capture["error"] = f"Claude Code a échoué : {message}"
+            return [Check("réponse obtenue", False, capture["error"])]
+        return []
+
+    monkeypatch.setattr(run, "run_case", fake_case)
+    assert run.main(["shop"]) == 3
+    first, second, third = (case["id"] for case in spec["cases"][:3])
+    assert ran == [first, second]  # no case runs after the quota
+    report = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
+    assert [r["status"] for r in report["results"]] == ["passed", "quota"]
+    assert report["quota_skipped"] == [third] and not report["complete"]
+    assert f"--case {second} --case {third}" in capsys.readouterr().err
+
+
 def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
     from codearcheo.config import Settings
     from codearcheo.features import Session

@@ -38,6 +38,9 @@ from evals.scoring import Check, score_answer, score_decisions
 
 CASES = Path(__file__).with_name("cases.toml")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
+# Claude Code's usage-limit messages ("You've hit your session limit", "…your 5-hour limit",
+# "out of usage credits"): every later case would fail the same way.
+QUOTA_ERROR = re.compile(r"hit your [\w -]*limit|out of usage credits|usage limit", re.IGNORECASE)
 REPAIR_COMMANDS = {"ask", "why"}
 
 
@@ -252,6 +255,8 @@ def main(
     )
     workdir = settings.cache_dir / "evals"
     results = []
+    quota_hit = False
+    quota_skipped: list[str] = []
     measurements = []
     workdir.mkdir(parents=True, exist_ok=True)
     output = workdir / f"results-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}.json"
@@ -300,6 +305,9 @@ def main(
         session = Session(project, profile, Store(project.root), settings, limits=limits)
         session.repair_citations = repair_citations or compare_citations
         for case in spec["cases"]:
+            if quota_hit:
+                quota_skipped.append(case["id"])
+                continue
             usage = []
 
             def record_usage(summary: UsageSummary, *, sink: list[dict] = usage) -> None:
@@ -333,9 +341,12 @@ def main(
                         "Métadonnées de correction absentes ; le mode demandé n'a pas été vérifié.",
                     ))
             passed = all(check.ok for check in checks)
+            status = "error" if "error" in captured else ("passed" if passed else "failed")
+            if status == "error" and QUOTA_ERROR.search(captured["error"]):
+                status, quota_hit = "quota", True
             results.append(
                 {"case": case["id"], "project": spec["name"], "passed": passed,
-                 "status": "error" if "error" in captured else ("passed" if passed else "failed"),
+                 "status": status,
                  "case_definition": case, "canary": spec.get("canary"), **captured,
                  "elapsed_seconds": time.perf_counter() - started,
                  "usage": usage,
@@ -356,10 +367,19 @@ def main(
     passed = sum(result["passed"] for result in results)
     print(f"\n{passed}/{len(results)} cas réussis · {settings.model}, effort {settings.effort}, "
           f"moteur {settings.backend}")
-    errors = sum(result["status"] == "error" for result in results)
+    errors = sum(result["status"] in ("error", "quota") for result in results)
     if errors:
         print(f"Qualité : {passed}/{len(results) - errors} réponses évaluables ; "
               f"{errors} réponse(s) indisponible(s).")
+    if quota_hit:
+        resume = [case for case in report["selected_cases"] if case not in {
+            result["case"] for result in results if result["status"] != "quota"
+        }]
+        report["quota_skipped"] = quota_skipped
+        print("Quota Claude atteint : évaluation arrêtée. Reprendre après la réinitialisation avec "
+              + " ".join(f"--case {case}" for case in resume), file=sys.stderr)
+        save_report(output, report)
+        return 3
     report["complete"] = True
     save_report(output, report)
     return 0 if results and passed == len(results) else 1
