@@ -427,6 +427,8 @@ Deux passes sur `1823266` : **2/2**. Le score de la mesure 14 reste associé à 
 
 Nouveau projet de référence `gson` (#167) : [`google/gson`](https://github.com/google/gson), épinglé
 sur `e5f02ab` (2 280 commits). Deux cas, deux passes chacun : **4/4 avec la définition retenue**.
+Ce score correspond au barème de la mesure 17. Les deux cas Java exigent désormais une
+citation avec numéro de ligne dans l'un des fichiers prévus par le cas.
 
 - `gson-adapter-lookup` (`ask` : comment Gson trouve le `TypeAdapter` d'un type récursif) réussit
   aux deux passes : parcours des `TypeAdapterFactory` dans `Gson.getAdapter`, et `FutureTypeAdapter`.
