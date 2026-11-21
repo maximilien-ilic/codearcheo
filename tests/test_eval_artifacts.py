@@ -165,6 +165,26 @@ def test_rescoring_refuses_changed_source_even_at_the_same_commit(evaluation):
     assert not list(workdir.glob("rescore-*.json"))
 
 
+def test_rescoring_preserves_quota_errors(evaluation, monkeypatch, capsys):
+    workdir, _ = evaluation
+
+    def answer(session, question):
+        if question == "second":
+            raise AgentError("You've hit your session limit")
+        return "FastAPI dans `app.py:3`."
+
+    monkeypatch.setattr(run.features, "ask", answer)
+    assert run.main([], backend="claude-code") == 3
+    source, original = load_report(workdir)
+    capsys.readouterr()
+
+    assert rescore.main(source) == 1
+    rescored = json.loads(next(workdir.glob("rescore-*.json")).read_text())
+    assert rescored["results"][0]["previous_passed"]
+    assert rescored["results"][1] == original["results"][1]
+    assert "1/1 réponses évaluables, 1 indisponible(s)" in capsys.readouterr().out
+
+
 def test_rescoring_preserves_instrumentation_failures(evaluation):
     workdir, _ = evaluation
     assert run.main([], case_ids=["first"]) == 0

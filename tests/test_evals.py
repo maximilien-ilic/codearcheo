@@ -182,8 +182,20 @@ def test_a_quota_error_stops_the_evaluation_and_names_the_cases_to_resume(
     from evals.scoring import Check
 
     monkeypatch.setenv("CODEARCHEO_CACHE_DIR", str(tmp_path / "cache"))
-    spec = next(spec for spec in run.load_cases() if spec["name"] == "shop")
-    monkeypatch.setattr(run, "load_cases", lambda: [spec | {"cases": spec["cases"][:3]}])
+    specs = {spec["name"]: spec for spec in run.load_cases()}
+    spec = specs["shop"]
+    later = specs["itsdangerous"]
+    incompatible = specs["github-rationale"]
+    monkeypatch.setattr(
+        run, "load_cases", lambda: [spec | {"cases": spec["cases"][:3]}, later, incompatible],
+    )
+    prepare = run.prepare
+
+    def prepare_first_project(project_spec, workdir):
+        assert project_spec["name"] == "shop"
+        return prepare(project_spec, workdir)
+
+    monkeypatch.setattr(run, "prepare", prepare_first_project)
     ran = []
 
     def fake_case(session, case, canary, *, capture):
@@ -194,13 +206,16 @@ def test_a_quota_error_stops_the_evaluation_and_names_the_cases_to_resume(
         return []
 
     monkeypatch.setattr(run, "run_case", fake_case)
-    assert run.main(["shop"]) == 3
+    assert run.main([], backend="claude-code") == 3
     first, second, third = (case["id"] for case in spec["cases"][:3])
     assert ran == [first, second]  # no case runs after the quota
     report = json.loads(next((tmp_path / "cache/evals").glob("results-*.json")).read_text())
     assert [r["status"] for r in report["results"]] == ["passed", "quota"]
-    assert report["quota_skipped"] == [third] and not report["complete"]
-    assert f"--case {second} --case {third}" in capsys.readouterr().err
+    pending = [third, *(case["id"] for case in later["cases"])]
+    assert report["quota_skipped"] == pending and not report["complete"]
+    assert report["skipped"] == [case["id"] for case in incompatible["cases"]]
+    resume = capsys.readouterr().err.splitlines()[-1]
+    assert resume.endswith(" ".join(f"--case {case}" for case in [second, *pending]))
 
 
 def test_decisions_evaluation_checks_the_rendered_answer(project, monkeypatch):
