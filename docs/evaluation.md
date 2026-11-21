@@ -423,6 +423,24 @@ n'avait pas été mesuré avec le modèle.
 
 Deux passes sur `1823266` : **2/2**. Le score de la mesure 14 reste associé à l'ancien barème.
 
+## Mesure 17 : un projet Java, 21 novembre 2026
+
+Nouveau projet de référence `gson` (#167) : [`google/gson`](https://github.com/google/gson), épinglé
+sur `e5f02ab` (2 280 commits). Deux cas, deux passes chacun : **4/4 avec la définition retenue**.
+
+- `gson-adapter-lookup` (`ask` : comment Gson trouve le `TypeAdapter` d'un type récursif) réussit
+  aux deux passes : parcours des `TypeAdapterFactory` dans `Gson.getAdapter`, et `FutureTypeAdapter`.
+- **`gson-why-reflective` a été corrigé après deux échecs.** La première version exigeait
+  `getDeclaredFields`, un détail d'implémentation qui répond à « comment », pas à « pourquoi ».
+  Les deux réponses étaient justes : adaptateur de dernier recours, enregistré en dernier
+  (`GsonBuilder.java:986-997`), né du prototype MiniGson de 2011, organisé autour de `BoundField`.
+  Le cas exige maintenant `BoundField`, l'abstraction centrale du fichier, et accepte la citation
+  de `GsonBuilder.java`, où sa place de repli est définie. Recalculées hors ligne, les deux
+  réponses passent.
+- Leçon pour les prochains cas `why` : exiger le rôle ou la conception, pas un appel de fonction.
+
+Le catalogue couvre désormais six langages : Python, JavaScript, Go, PHP, Rust et Java.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
