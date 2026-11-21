@@ -169,6 +169,26 @@ mention = ["with_context"]
 cite_any_file = ["src/context.rs", "src/lib.rs"]
 
 [[projects]]
+name = "gson"
+source = "https://github.com/google/gson"
+language = "Java"
+ref = "e5f02ab6c24567d3ca5200afc4076337746b3349"  # verified through GitHub's commit API
+
+[[projects.cases]]
+id = "gson-adapter-lookup"
+command = "ask"
+question = "Comment Gson trouve-t-il le TypeAdapter d'un type, y compris pour un type qui se référence lui-même ?"
+mention = ["TypeAdapterFactory", "FutureTypeAdapter"]
+cite_any_file = ["gson/src/main/java/com/google/gson/Gson.java"]
+
+[[projects.cases]]
+id = "gson-why-reflective"
+command = "why"
+target = "ReflectiveTypeAdapterFactory"
+mention = ["getDeclaredFields"]
+cite_any_file = ["gson/src/main/java/com/google/gson/internal/bind/ReflectiveTypeAdapterFactory.java"]
+
+[[projects]]
 name = "go"
 source = "https://github.com/golang/go"
 language = "Go"
