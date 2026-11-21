@@ -379,6 +379,23 @@ Deux évaluations complètes en `medium`, sur le code `2da005c`, sans modificati
 Rapports : `results-20261120-222353-94f348fc.json`, `results-20261120-223904-eb8b6d14.json` et
 `results-20261121-143539-816e4ea8.json` dans `~/.cache/codearcheo/evals/`.
 
+## Mesure 14 : un projet PHP, 21 novembre 2026
+
+Nouveau projet de référence `formula1` (#160) : [`maximilien-ilic/Crud-security-formula1`](https://github.com/maximilien-ilic/Crud-security-formula1),
+un CRUD en PHP natif sans `composer.json`, épinglé sur `3210e62`. Deux cas : `formula1-security`
+(`ask` sur l'injection SQL, le XSS et le CSRF) et `formula1-why-token` (`why` sur le jeton CSRF de
+`header.php`). Deux passes chacun : **4/4 avec la définition retenue**.
+
+- **Une correction de la définition, faite avant toute mesure de référence.** La première version
+  de `formula1-security` exigeait le mot « token ». La première réponse a échoué sur ce seul
+  point. Elle était pourtant juste : requêtes préparées, `htmlspecialchars`, jeton de session
+  généré par `random_bytes` et vérifié dans les traitements, et même une faille d'autorisation
+  dans `traitement_formule1.php`. Elle disait « jeton », en français. Le cas exige maintenant
+  `random_bytes`, preuve du mécanisme réel indépendante de la langue. « CSRF » aurait été trop
+  facile, puisque la question le contient. Recalculées hors ligne avec la nouvelle définition,
+  les deux réponses passent.
+- Le catalogue couvre désormais quatre langages : Python, JavaScript, Go et PHP.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :

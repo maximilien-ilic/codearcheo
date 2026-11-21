@@ -131,7 +131,7 @@ ref = "3210e62dcb495062e7acadb90e815eaf1b40b4c0"  # verified through GitHub's co
 id = "formula1-security"
 command = "ask"
 question = "Ce CRUD est-il protégé contre l'injection SQL, le XSS et le CSRF ? Cite chaque endroit."
-mention = ["prepare", "htmlspecialchars", "token"]
+mention = ["prepare", "htmlspecialchars", "random_bytes"]  # « jeton » en français : pas « token »
 cite_any_file = ["header.php", "details.php", "modifier.php", "formule1.php"]
 
 [[projects.cases]]
