@@ -133,6 +133,41 @@ def test_anyhow_narrow_pointer_requires_implementation_evidence(tmp_path):
     assert not failures(score_answer(answer + " Voir `src/error.rs:1`.", case, tmp_path))
 
 
+@pytest.mark.parametrize(
+    ("case_id", "terms", "source_label", "source_path"),
+    [
+        (
+            "gson-adapter-lookup", "TypeAdapterFactory et FutureTypeAdapter",
+            "recherche du TypeAdapter", "Gson.java",
+        ),
+        (
+            "gson-why-reflective", "BoundField",
+            "adaptateur réflexif", "GsonBuilder.java",
+        ),
+        (
+            "gson-why-reflective", "BoundField", "adaptateur réflexif",
+            "internal/bind/ReflectiveTypeAdapterFactory.java",
+        ),
+    ],
+)
+def test_gson_cases_require_lines_in_the_expected_source(
+    tmp_path, case_id, terms, source_label, source_path,
+):
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "gson")
+    case = next(case for case in spec["cases"] if case["id"] == case_id)
+    path = f"gson/src/main/java/com/google/gson/{source_path}"
+    source = tmp_path / path
+    source.parent.mkdir(parents=True)
+    source.write_text("// Source synthétique.\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("# Gson\n", encoding="utf-8")
+
+    answer = f"{terms}. Voir `README.md:1` et "
+    assert failures(score_answer(answer + f"`{path}`.", case, tmp_path)) == {
+        f"cite la source {source_label}",
+    }
+    assert not failures(score_answer(answer + f"`{path}:1`.", case, tmp_path))
+
+
 def test_decisions_must_keep_documented_and_inferred_apart(project):
     decisions = decisions_for(project.root)
     decisions[1] = decisions[1].model_copy(update={"rationale_source": "documented"})
