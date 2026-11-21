@@ -441,6 +441,15 @@ sur `e5f02ab` (2 280 commits). Deux cas, deux passes chacun : **4/4 avec la déf
 
 Le catalogue couvre désormais six langages : Python, JavaScript, Go, PHP, Rust et Java.
 
+## Mesure 18 : le cas Rust renforcé, 21 novembre 2026
+
+La revue Codex a montré que `anyhow-narrow-pointer` validait une réponse dont la seule citation
+(`src/lib.rs`) établit la taille d'un mot, sans source pour la vtable (#163). #168 a précisé la
+question et exige une citation numérotée de l'implémentation dans `src/error.rs`. Ce barème n'avait
+pas été mesuré avec le modèle.
+
+Deux passes sur `3e4c469` : **2/2**. Le score de la mesure 15 reste associé à l'ancien barème.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :
