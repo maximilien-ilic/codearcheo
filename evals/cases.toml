@@ -223,13 +223,17 @@ id = "t3-database"
 command = "ask"
 question = "Quelle base de données ce monorepo utilise-t-il, et comment les applications y accèdent-elles ? Cite les lignes."
 mention = ["PostgreSQL", "Drizzle", "tRPC"]
-cite_any_file = ["packages/db/src/client.ts", "packages/db/drizzle.config.ts"]
+[projects.cases.cite_file_groups]
+"Drizzle et PostgreSQL" = ["packages/db/src/client.ts", "packages/db/drizzle.config.ts"]
+"API tRPC" = ["packages/api/src/trpc.ts", "packages/api/src/root.ts"]
 
 [[projects.cases]]
 id = "t3-review"
 command = "review"
 mention = ["tRPC", "Drizzle"]
-cite_any_file = ["packages/api/src/trpc.ts", "packages/api/src/root.ts", "packages/db/src/client.ts"]
+[projects.cases.cite_file_groups]
+"Drizzle et PostgreSQL" = ["packages/db/src/client.ts", "packages/db/drizzle.config.ts"]
+"API tRPC" = ["packages/api/src/trpc.ts", "packages/api/src/root.ts"]
 
 [[projects]]
 name = "go"
