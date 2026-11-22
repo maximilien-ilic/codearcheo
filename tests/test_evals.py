@@ -168,6 +168,32 @@ def test_gson_cases_require_lines_in_the_expected_source(
     assert not failures(score_answer(answer + f"`{path}:1`.", case, tmp_path))
 
 
+@pytest.mark.parametrize("case_id", ["t3-database", "t3-review"])
+def test_t3_cases_require_numbered_sources_for_database_and_api(tmp_path, case_id):
+    spec = next(spec for spec in run.load_cases() if spec["name"] == "create-t3-turbo")
+    case = next(case for case in spec["cases"] if case["id"] == case_id)
+    database = "packages/db/src/client.ts"
+    api = "packages/api/src/trpc.ts"
+    for path in (database, api):
+        source = tmp_path / path
+        source.parent.mkdir(parents=True)
+        source.write_text("// Source synthétique.\n", encoding="utf-8")
+
+    (tmp_path / "README.md").write_text("# Monorepo\n", encoding="utf-8")
+
+    answer = "PostgreSQL, Drizzle et tRPC. Voir `README.md:1`."
+    assert failures(score_answer(f"{answer} `{database}` `{api}`", case, tmp_path)) == {
+        "cite la source Drizzle et PostgreSQL", "cite la source API tRPC",
+    }
+    assert failures(score_answer(f"{answer} `{database}:1`", case, tmp_path)) == {
+        "cite la source API tRPC",
+    }
+    assert failures(score_answer(f"{answer} `{api}:1`", case, tmp_path)) == {
+        "cite la source Drizzle et PostgreSQL",
+    }
+    assert not failures(score_answer(f"{answer} `{database}:1` `{api}:1`", case, tmp_path))
+
+
 def test_decisions_must_keep_documented_and_inferred_apart(project):
     decisions = decisions_for(project.root)
     decisions[1] = decisions[1].model_copy(update={"rationale_source": "documented"})

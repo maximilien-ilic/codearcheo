@@ -472,6 +472,10 @@ Better Auth « à la place de NextAuth », catalogues de versions pnpm, paquets 
 seulement leurs déclarations pour la performance de l'éditeur, et une qualité assurée par
 l'analyse statique en CI, sans tests automatisés.
 
+Le score de 6/6 correspond au barème d'origine. Le catalogue exige depuis une
+citation avec numéro de ligne pour chacun des deux mécanismes, Drizzle/PostgreSQL
+et API tRPC, dans les cas `t3-database` et `t3-review`.
+
 ## Ce qu'il reste à mesurer
 
 - **La correction des citations par le modèle**, désormais possible sur l'abonnement (#74) :

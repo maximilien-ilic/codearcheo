@@ -8,6 +8,8 @@ dans la section « Unreleased » ; chaque publication reçoit une section datée
 
 - Les tests des limites API et du rejeu GitHub passent aussi lorsque
   `CODEARCHEO_BACKEND=claude-code` est exporté.
+- Les cas `t3-database` et `t3-review` exigent des citations numérotées pour la
+  base Drizzle/PostgreSQL et l'API tRPC.
 
 ## [0.2.0] - 2026-11-20
 
