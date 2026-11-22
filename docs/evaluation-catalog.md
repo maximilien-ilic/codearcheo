@@ -1,6 +1,6 @@
 # Cas de référence
 
-Le catalogue contient 21 cas sur six langages, validés hors réseau par la CI.
+Le catalogue contient 24 cas sur sept langages, validés hors réseau par la CI.
 Il couvre `ask`, `decisions`, `why` et `review`. Les projets publics sont épinglés
 sur un SHA complet ; `prepare` refuse une référence flottante. Le code de ces
 projets n'est jamais exécuté.
@@ -15,6 +15,7 @@ projets n'est jamais exécuté.
 | formula1 | PHP | 2 | `3210e62dcb495062e7acadb90e815eaf1b40b4c0` |
 | anyhow | Rust | 2 | `dd0c0a655a214add8fc986df34ea3823468fa4fb` |
 | gson | Java | 2 | `e5f02ab6c24567d3ca5200afc4076337746b3349` |
+| create-t3-turbo | TypeScript | 3 | `8f945b7bb3bfb3ca8358d48b1ff0214079bc11ee` (monorepo : apps, API tRPC, base Drizzle) |
 | go | Go | 3 | `cc2737b0ca9c8a1a0d1fcc26142277e27152a1f2` |
 | github-rationale | Python | 1 | Historique synthétique + réponses GitHub enregistrées ; raison écrite seulement dans la PR |
 

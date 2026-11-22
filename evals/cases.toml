@@ -204,6 +204,34 @@ mention = ["BoundField"]
 ]
 
 [[projects]]
+name = "create-t3-turbo"
+source = "https://github.com/t3-oss/create-t3-turbo"
+language = "TypeScript"
+ref = "8f945b7bb3bfb3ca8358d48b1ff0214079bc11ee"  # verified through GitHub's commit API
+
+[[projects.cases]]
+id = "t3-decisions"
+command = "decisions"
+decisions = [
+  { match = "Turbo" },
+  { match = "tRPC" },
+  { match = "Drizzle" },
+]
+
+[[projects.cases]]
+id = "t3-database"
+command = "ask"
+question = "Quelle base de données ce monorepo utilise-t-il, et comment les applications y accèdent-elles ? Cite les lignes."
+mention = ["PostgreSQL", "Drizzle", "tRPC"]
+cite_any_file = ["packages/db/src/client.ts", "packages/db/drizzle.config.ts"]
+
+[[projects.cases]]
+id = "t3-review"
+command = "review"
+mention = ["tRPC", "Drizzle"]
+cite_any_file = ["packages/api/src/trpc.ts", "packages/api/src/root.ts", "packages/db/src/client.ts"]
+
+[[projects]]
 name = "go"
 source = "https://github.com/golang/go"
 language = "Go"
